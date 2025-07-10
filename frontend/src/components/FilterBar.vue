@@ -84,17 +84,8 @@
         </div>
       </div>
 
-      <!-- ボタン -->
+      <!-- リセットボタンのみ -->
       <div class="flex gap-2">
-        <button
-          @click="applyFilter"
-          :disabled="loading"
-          :class="compact ? 'px-3 py-1 text-sm' : 'px-6 py-2'"
-          class="bg-primary-500 text-white rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <span v-if="loading">{{ $t('dateFilter.searching') }}</span>
-          <span v-else>{{ compact ? $t('dateFilter.search') : $t('dateFilter.apply') }}</span>
-        </button>
         <button
           @click="clearFilter"
           :disabled="loading"
@@ -140,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
 import { useConversationStore } from '../stores/conversations'
 
 const emit = defineEmits(['filter'])
@@ -166,6 +157,7 @@ const filters = ref({
 const selectedProjects = ref([])
 const projects = ref([])
 const isDropdownOpen = ref(false)
+let isInitialized = false
 
 // クイックフィルター
 const quickFilters = ref([
@@ -224,16 +216,6 @@ const removeProject = (projectId) => {
   selectedProjects.value = selectedProjects.value.filter(id => id !== projectId)
 }
 
-const applyFilter = () => {
-  const filterData = {
-    startDate: filters.value.startDate || null,
-    endDate: filters.value.endDate || null,
-    projects: selectedProjects.value.length ? selectedProjects.value : null,
-    offset: 0,
-    limit: 100
-  }
-  emit('filter', filterData)
-}
 
 const clearFilter = () => {
   filters.value = {
@@ -241,13 +223,11 @@ const clearFilter = () => {
     endDate: '',
   }
   selectedProjects.value = []
-  emit('filter', { offset: 0, limit: 100 })
 }
 
 const applyQuickFilter = (quick) => {
   filters.value.startDate = quick.startDate
   filters.value.endDate = quick.endDate
-  applyFilter()
 }
 
 const closeDropdown = (event) => {
@@ -267,6 +247,25 @@ onMounted(async () => {
 
   // クリックイベントリスナーを追加
   document.addEventListener('click', closeDropdown)
+
+  // 初期化完了後にwatchEffectを設定
+  setTimeout(() => {
+    isInitialized = true
+
+    // 検索ステートの変更を自動検知して検索実行
+    watchEffect(() => {
+      // 日付、プロジェクトのいずれかが変更されると自動実行
+      const filterData = {
+        startDate: filters.value.startDate || null,
+        endDate: filters.value.endDate || null,
+        projects: selectedProjects.value.length ? selectedProjects.value : null,
+        offset: 0,
+        limit: 100
+      }
+
+      emit('filter', filterData)
+    })
+  }, 100)
 })
 
 onUnmounted(() => {

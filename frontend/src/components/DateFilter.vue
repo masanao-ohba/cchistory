@@ -145,6 +145,8 @@ const applyQuickFilter = (quick) => {
   applyFilter()
 }
 
+
+
 // ライフサイクル
 onMounted(async () => {
   try {
