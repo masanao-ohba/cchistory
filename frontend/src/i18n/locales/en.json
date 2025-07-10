@@ -1,0 +1,57 @@
+{
+  "conversations": {
+    "title": "Conversation History",
+    "showing": "Showing {count} conversations",
+    "showingFiltered": "Showing {count} of {total} conversations",
+    "loading": "Loading data...",
+    "noConversations": "No conversations found",
+    "noConversationsHint": "Try changing your filter criteria.",
+    "user": "You",
+    "assistant": "Assistant",
+    "showMore": "Show More",
+    "collapse": "Collapse",
+    "loadMore": "Load More",
+    "newConversationsLoaded": "Loaded {count} new conversations"
+  },
+  "search": {
+    "placeholder": "Search by keyword...",
+    "button": "Search",
+    "foundMessages": "Found {count} messages for '{keyword}'",
+    "noMessagesFound": "No messages found matching '{keyword}'"
+  },
+  "dateFilter": {
+    "title": "Date Filter",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "reset": "Reset",
+    "search": "Search",
+    "searching": "Searching...",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days"
+  },
+  "statistics": {
+    "title": "Statistics",
+    "totalConversations": "Total Conversations",
+    "filteredResults": "Filtered Results",
+    "uniqueSessions": "Unique Sessions",
+    "totalProjects": "Total Projects",
+    "dailyConversations": "Daily Conversations (Last 30 Days)",
+    "items": " items"
+  },
+  "language": {
+    "switch": "Switch Language",
+    "japanese": "日本語",
+    "english": "English",
+    "chinese": "中文",
+    "korean": "한국어"
+  },
+  "app": {
+    "subtitle": "Search and Filter Conversation History",
+    "backToTop": "Back to Top",
+    "realTimeUpdate": "Real-time Update",
+    "offline": "Offline"
+  }
+}

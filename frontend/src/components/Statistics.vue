@@ -7,7 +7,7 @@
           {{ formatNumber(stats.total_conversations || 0) }}
         </div>
         <div class="text-sm text-gray-500 uppercase tracking-wide">
-          全会話数
+          {{ $t('statistics.totalConversations') }}
         </div>
       </div>
 
@@ -17,7 +17,7 @@
           {{ formatNumber(filteredCount) }}
         </div>
         <div class="text-sm text-gray-500 uppercase tracking-wide">
-          フィルター結果
+          {{ $t('statistics.filteredResults') }}
         </div>
       </div>
 
@@ -27,7 +27,7 @@
           {{ formatNumber(stats.unique_sessions || 0) }}
         </div>
         <div class="text-sm text-gray-500 uppercase tracking-wide">
-          セッション数
+          {{ $t('statistics.uniqueSessions') }}
         </div>
       </div>
 
@@ -37,14 +37,14 @@
           {{ formatNumber(stats.projects || 0) }}
         </div>
         <div class="text-sm text-gray-500 uppercase tracking-wide">
-          プロジェクト数
+          {{ $t('statistics.totalProjects') }}
         </div>
       </div>
     </div>
 
     <!-- 日別グラフ（簡易版） -->
     <div class="mt-4">
-      <h3 class="text-lg font-medium text-gray-900 mb-3">日別会話数（過去30日）</h3>
+      <h3 class="text-lg font-medium text-gray-900 mb-3">{{ $t('statistics.dailyConversations') }}</h3>
       <div class="flex items-end space-x-1 h-20 bg-gray-50 border border-gray-200 rounded p-1">
         <div
           v-for="(day, index) in dailyData"
@@ -54,7 +54,7 @@
             day.count > 0 ? 'bg-blue-400 hover:bg-blue-500' : 'bg-gray-200'
           ]"
           :style="{ height: day.count > 0 ? `${Math.max(5, (day.count / maxDaily) * 100)}%` : '2px' }"
-          :title="`${day.date}: ${day.count}件`"
+          :title="`${day.date}: ${day.count}${$t('statistics.items')}`"
         ></div>
       </div>
     </div>

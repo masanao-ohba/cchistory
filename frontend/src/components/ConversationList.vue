@@ -2,23 +2,23 @@
   <div class="bg-white rounded-lg shadow-md overflow-hidden">
     <!-- ヘッダー -->
     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-      <h2 class="text-xl font-semibold text-gray-900">会話履歴</h2>
+      <h2 class="text-xl font-semibold text-gray-900">{{ $t('conversations.title') }}</h2>
       <p class="text-sm text-gray-500 mt-1">
-        {{ totalCount && totalCount > conversations.length ? `${totalCount.toLocaleString()}件中 ${conversations.length.toLocaleString()}件を表示中` : `${conversations.length.toLocaleString()}件の会話を表示中` }}
+        {{ totalCount && totalCount > conversations.length ? $t('conversations.showingFiltered', { count: conversations.length.toLocaleString(), total: totalCount.toLocaleString() }) : $t('conversations.showing', { count: conversations.length.toLocaleString() }) }}
       </p>
     </div>
 
     <!-- ローディング -->
     <div v-if="loading && conversations.length === 0" class="p-8 text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-      <p class="text-gray-500 mt-4">データを読み込んでいます...</p>
+      <p class="text-gray-500 mt-4">{{ $t('conversations.loading') }}</p>
     </div>
 
     <!-- 会話がない場合 -->
     <div v-else-if="conversations.length === 0" class="p-8 text-center">
       <div class="text-gray-400 text-6xl mb-4">💬</div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">会話が見つかりません</h3>
-      <p class="text-gray-500">フィルター条件を変更してみてください。</p>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">{{ $t('conversations.noConversations') }}</h3>
+      <p class="text-gray-500">{{ $t('conversations.noConversationsHint') }}</p>
     </div>
 
     <!-- 会話リスト -->
@@ -58,7 +58,7 @@
                   : 'text-green-700'
               ]"
             >
-              {{ conversation.type === 'user' ? 'あなた' : 'アシスタント' }}
+              {{ conversation.type === 'user' ? $t('conversations.user') : $t('conversations.assistant') }}
             </span>
           </div>
 
@@ -88,7 +88,7 @@
               : 'text-green-600 hover:text-green-800'
           ]"
         >
-          {{ expandedItems.has(index) ? '折りたたむ' : 'もっと見る' }}
+          {{ expandedItems.has(index) ? $t('conversations.collapse') : $t('conversations.showMore') }}
         </button>
 
       </div>
@@ -97,7 +97,7 @@
     <!-- もっと読み込むボタン -->
     <div v-if="hasMore" class="p-6 bg-gray-50 border-t border-gray-200">
       <div v-if="lastLoadedCount > 0" class="mb-3 text-center text-sm text-green-600 font-medium animate-pulse">
-        ✓ {{ lastLoadedCount }}件の新しい会話を読み込みました
+        ✓ {{ $t('conversations.newConversationsLoaded', { count: lastLoadedCount }) }}
       </div>
       <button
         @click="handleLoadMore"
@@ -110,9 +110,9 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          読み込み中...
+          {{ $t('conversations.loading') }}
         </span>
-        <span v-else>もっと読み込む {{ loadMoreRangeText }}</span>
+        <span v-else>{{ $t('conversations.loadMore') }} {{ loadMoreRangeText }}</span>
       </button>
     </div>
   </div>

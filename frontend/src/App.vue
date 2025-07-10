@@ -4,8 +4,13 @@
     <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500"
             :class="{ 'transform -translate-y-full opacity-0': isScrolled }">
       <div class="max-w-7xl mx-auto px-4 py-6">
-        <h1 class="text-3xl font-bold">Claude Conversations History Viewer</h1>
-        <p class="text-purple-100 mt-2">会話履歴の検索とフィルタリング</p>
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-3xl font-bold">Claude Conversations History Viewer</h1>
+            <p class="text-purple-100 mt-2">{{ $t('app.subtitle') }}</p>
+          </div>
+          <LanguageSwitcher />
+        </div>
       </div>
     </header>
 
@@ -56,7 +61,7 @@
       v-show="isScrolled"
       @click="scrollToTop"
       class="fixed bottom-4 left-4 bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-40"
-      title="トップへ戻る"
+      :title="$t('app.backToTop')"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
@@ -68,13 +73,13 @@
       v-if="wsConnected"
       class="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm z-40"
     >
-      🟢 リアルタイム更新中
+      🟢 {{ $t('app.realTimeUpdate') }}
     </div>
     <div
       v-else
       class="fixed bottom-4 right-4 bg-yellow-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm z-40"
     >
-      🟡 オフライン
+      🟡 {{ $t('app.offline') }}
     </div>
   </div>
 </template>
@@ -85,6 +90,7 @@ import DateFilter from './components/DateFilter.vue'
 import Statistics from './components/Statistics.vue'
 import ConversationList from './components/ConversationList.vue'
 import SearchBox from './components/SearchBox.vue'
+import LanguageSwitcher from './components/LanguageSwitcher.vue'
 import { useConversationStore } from './stores/conversations'
 
 const store = useConversationStore()

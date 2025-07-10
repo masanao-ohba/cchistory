@@ -4,13 +4,13 @@
       <!-- 開始日 -->
       <div>
         <label v-if="!compact" for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
-          開始日
+          {{ $t('dateFilter.from') }}
         </label>
         <input
           id="startDate"
           v-model="filters.startDate"
           type="date"
-          :placeholder="compact ? '開始日' : ''"
+          :placeholder="compact ? $t('dateFilter.from') : ''"
           :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-2'"
           class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         />
@@ -19,13 +19,13 @@
       <!-- 終了日 -->
       <div>
         <label v-if="!compact" for="endDate" class="block text-sm font-medium text-gray-700 mb-2">
-          終了日
+          {{ $t('dateFilter.to') }}
         </label>
         <input
           id="endDate"
           v-model="filters.endDate"
           type="date"
-          :placeholder="compact ? '終了日' : ''"
+          :placeholder="compact ? $t('dateFilter.to') : ''"
           :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-2'"
           class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         />
@@ -39,8 +39,8 @@
           :class="compact ? 'px-3 py-1 text-sm' : 'px-6 py-2'"
           class="bg-primary-500 text-white rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <span v-if="loading">検索中...</span>
-          <span v-else>{{ compact ? '検索' : 'フィルター' }}</span>
+          <span v-if="loading">{{ $t('dateFilter.searching') }}</span>
+          <span v-else>{{ compact ? $t('dateFilter.search') : $t('dateFilter.apply') }}</span>
         </button>
         <button
           @click="clearFilter"
@@ -48,7 +48,7 @@
           :class="compact ? 'px-3 py-1 text-sm' : 'px-6 py-2'"
           class="bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          クリア
+          {{ $t('dateFilter.reset') }}
         </button>
       </div>
     </div>
@@ -57,11 +57,11 @@
     <div v-if="!compact" class="mt-4 flex flex-wrap gap-2">
       <button
         v-for="quick in quickFilters"
-        :key="quick.label"
+        :key="quick.key"
         @click="applyQuickFilter(quick)"
         class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
       >
-        {{ quick.label }}
+        {{ $t(`dateFilter.${quick.key}`) }}
       </button>
     </div>
   </div>
@@ -97,22 +97,22 @@ const projects = ref([])
 // クイックフィルター
 const quickFilters = ref([
   {
-    label: '今日',
+    key: 'today',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   },
   {
-    label: '昨日',
+    key: 'yesterday',
     startDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
     endDate: new Date(Date.now() - 86400000).toISOString().split('T')[0]
   },
   {
-    label: '過去7日',
+    key: 'last7Days',
     startDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   },
   {
-    label: '過去30日',
+    key: 'last30Days',
     startDate: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   }
