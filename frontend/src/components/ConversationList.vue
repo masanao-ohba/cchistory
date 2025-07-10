@@ -29,8 +29,8 @@
         class="transition-all duration-200 hover:scale-[1.005]"
         :class="[
           'rounded-lg p-3 shadow-sm',
-          conversation.type === 'user' 
-            ? 'bg-blue-50 ml-0 mr-12' 
+          conversation.type === 'user'
+            ? 'bg-blue-50 ml-0 mr-12'
             : 'bg-green-50 ml-12 mr-0'
         ]"
       >
@@ -38,30 +38,30 @@
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center space-x-3">
             <!-- アバター風アイコン -->
-            <div 
+            <div
               :class="[
                 'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold',
-                conversation.type === 'user' 
-                  ? 'bg-blue-500' 
+                conversation.type === 'user'
+                  ? 'bg-blue-500'
                   : 'bg-green-500'
               ]"
             >
               {{ conversation.type === 'user' ? 'U' : 'A' }}
             </div>
-            
+
             <!-- タイプラベル -->
             <span
               :class="[
                 'text-sm font-medium',
-                conversation.type === 'user' 
-                  ? 'text-blue-700' 
+                conversation.type === 'user'
+                  ? 'text-blue-700'
                   : 'text-green-700'
               ]"
             >
               {{ conversation.type === 'user' ? 'あなた' : 'アシスタント' }}
             </span>
           </div>
-          
+
           <!-- タイムスタンプ -->
           <time class="text-xs text-gray-500">
             {{ formatTimestamp(conversation.timestamp) }}
@@ -69,12 +69,12 @@
         </div>
 
         <!-- コンテンツ -->
-        <div 
+        <div
           :class="[
             'leading-relaxed break-words rounded-md p-3 bg-white text-gray-900 markdown-content',
             { 'line-clamp-3': !expandedItems.has(index) }
           ]"
-          v-html="renderMarkdown(conversation.content)"
+          v-html="renderMarkdown(conversation.content, conversation.searchKeyword)"
         ></div>
 
         <!-- 展開/折りたたみボタン -->
@@ -83,14 +83,14 @@
           @click="toggleExpand(index)"
           :class="[
             'mt-2 text-sm font-medium hover:underline',
-            conversation.type === 'user' 
-              ? 'text-blue-600 hover:text-blue-800' 
+            conversation.type === 'user'
+              ? 'text-blue-600 hover:text-blue-800'
               : 'text-green-600 hover:text-green-800'
           ]"
         >
           {{ expandedItems.has(index) ? '折りたたむ' : 'もっと見る' }}
         </button>
-        
+
       </div>
     </div>
 
@@ -158,30 +158,40 @@ const lastLoadedCount = ref(0)
 // 計算プロパティ
 const loadMoreRangeText = computed(() => {
   if (!props.totalCount || props.conversations.length === 0) return ''
-  
+
   const start = props.conversations.length + 1
   const defaultBatchSize = 100 // デフォルトの読み込み件数
   const remaining = props.totalCount - props.conversations.length
   const end = props.conversations.length + Math.min(defaultBatchSize, remaining)
-  
+
   return `(${start.toLocaleString()}件〜${end.toLocaleString()}件)`
 })
 
 // メソッド
-const renderMarkdown = (content) => {
+const renderMarkdown = (content, searchKeyword = null) => {
   if (!content) return ''
-  return md.render(content)
+
+  // まずMarkdownをレンダリング
+  let renderedContent = md.render(content)
+
+  // 検索キーワードがある場合、レンダリング後のHTMLにハイライトを適用
+  if (searchKeyword) {
+    const regex = new RegExp(`(${searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    renderedContent = renderedContent.replace(regex, '<mark>$1</mark>')
+  }
+
+  return renderedContent
 }
 
 const handleLoadMore = () => {
   const prevCount = props.conversations.length
   emit('load-more')
-  
+
   // 少し待ってから新しく読み込まれた件数を計算
   setTimeout(() => {
     const newCount = props.conversations.length
     lastLoadedCount.value = newCount - prevCount
-    
+
     // 3秒後にメッセージを非表示
     setTimeout(() => {
       lastLoadedCount.value = 0
@@ -304,5 +314,10 @@ const shouldShowToggleButton = (content) => {
 
 .markdown-content :deep(th) {
   @apply bg-gray-50 font-semibold;
+}
+
+/* 検索ハイライト */
+.markdown-content :deep(mark) {
+  @apply bg-yellow-200 px-1 py-0.5 rounded-sm font-medium;
 }
 </style>

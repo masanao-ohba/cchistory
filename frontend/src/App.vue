@@ -18,6 +18,13 @@
           :loading="loading"
           :compact="isScrolled"
         />
+        <div class="pb-4">
+          <SearchBox
+            ref="searchBoxRef"
+            @search="handleSearch"
+            @clear="handleClearSearch"
+          />
+        </div>
       </div>
     </div>
 
@@ -77,6 +84,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import DateFilter from './components/DateFilter.vue'
 import Statistics from './components/Statistics.vue'
 import ConversationList from './components/ConversationList.vue'
+import SearchBox from './components/SearchBox.vue'
 import { useConversationStore } from './stores/conversations'
 
 const store = useConversationStore()
@@ -89,6 +97,11 @@ const hasMore = ref(true)
 const wsConnected = ref(false)
 const isScrolled = ref(false)
 const totalCount = ref(0)
+
+// 検索関連
+const searchKeyword = ref('')
+const originalConversations = ref([])
+const searchBoxRef = ref(null)
 
 // 要素への参照（必要最小限）
 
@@ -153,8 +166,14 @@ const handleFilter = async (filters) => {
   try {
     const result = await store.getConversations(filters)
     conversations.value = result.conversations
+    originalConversations.value = [...result.conversations]
     totalCount.value = result.total
     hasMore.value = result.total > result.conversations.length
+    
+    // 検索が有効な場合は再検索
+    if (searchKeyword.value) {
+      performSearch(searchKeyword.value)
+    }
   } catch (error) {
     console.error('Filter error:', error)
   } finally {
@@ -170,11 +189,18 @@ const loadMore = async () => {
     const filters = store.currentFilters
     const result = await store.getConversations({
       ...filters,
-      offset: conversations.value.length
+      offset: originalConversations.value.length
     })
-    conversations.value.push(...result.conversations)
+    originalConversations.value.push(...result.conversations)
     totalCount.value = result.total
-    hasMore.value = conversations.value.length < result.total
+    hasMore.value = originalConversations.value.length < result.total
+    
+    // 検索が有効な場合は再検索
+    if (searchKeyword.value) {
+      performSearch(searchKeyword.value)
+    } else {
+      conversations.value = [...originalConversations.value]
+    }
   } catch (error) {
     console.error('Load more error:', error)
   } finally {
@@ -187,8 +213,14 @@ const loadConversations = async (force = false) => {
   try {
     const result = await store.getConversations({}, force)
     conversations.value = result.conversations
+    originalConversations.value = [...result.conversations]
     totalCount.value = result.total
     hasMore.value = result.total > result.conversations.length
+    
+    // 検索が有効な場合は再検索
+    if (searchKeyword.value) {
+      performSearch(searchKeyword.value)
+    }
   } catch (error) {
     console.error('Load conversations error:', error)
   } finally {
@@ -201,6 +233,53 @@ const loadStats = async () => {
     stats.value = await store.getStats()
   } catch (error) {
     console.error('Load stats error:', error)
+  }
+}
+
+// 検索関連の関数
+const performSearch = (keyword) => {
+  if (!keyword || !originalConversations.value.length) {
+    conversations.value = [...originalConversations.value]
+    if (searchBoxRef.value) {
+      searchBoxRef.value.setSearchResults(null)
+    }
+    return
+  }
+
+  const searchLower = keyword.toLowerCase()
+  const filteredConversations = originalConversations.value.filter(conversation => {
+    return conversation.content.toLowerCase().includes(searchLower)
+  })
+
+  // 検索キーワードを保存してConversationListで使用
+  const conversationsWithKeyword = filteredConversations.map(conversation => {
+    return {
+      ...conversation,
+      searchKeyword: keyword
+    }
+  })
+
+  conversations.value = conversationsWithKeyword
+  
+  // 検索結果をSearchBoxに通知
+  if (searchBoxRef.value) {
+    searchBoxRef.value.setSearchResults({
+      total: filteredConversations.length,
+      keyword: keyword
+    })
+  }
+}
+
+const handleSearch = (keyword) => {
+  searchKeyword.value = keyword
+  performSearch(keyword)
+}
+
+const handleClearSearch = () => {
+  searchKeyword.value = ''
+  conversations.value = [...originalConversations.value]
+  if (searchBoxRef.value) {
+    searchBoxRef.value.setSearchResults(null)
   }
 }
 
