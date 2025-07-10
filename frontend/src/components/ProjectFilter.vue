@@ -98,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useConversationStore } from '../stores/conversations'
 
 const emit = defineEmits(['filter'])
@@ -153,6 +153,7 @@ const removeProject = (projectId) => {
   selectedProjects.value = selectedProjects.value.filter(id => id !== projectId)
 }
 
+
 const applyFilter = () => {
   const filterData = {
     projects: selectedProjects.value.length ? selectedProjects.value : []
@@ -171,6 +172,8 @@ const closeDropdown = (event) => {
   }
 }
 
+
+
 // ライフサイクル
 onMounted(async () => {
   try {
@@ -182,17 +185,14 @@ onMounted(async () => {
 
   // クリックイベントリスナーを追加
   document.addEventListener('click', closeDropdown)
+
+  // 初期化完了フラグを設定
+  setTimeout(() => {
+    isInitialized = true
+  }, 100)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdown)
 })
-
-// プロジェクト選択の変更を監視して自動検索
-watch(selectedProjects, (newVal, oldVal) => {
-  // toggleAllProjectsやremoveProjectから呼ばれる場合は重複実行を避ける
-  if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
-    applyFilter()
-  }
-}, { deep: true })
 </script>
