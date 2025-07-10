@@ -32,6 +32,16 @@
     "last7Days": "過去7日",
     "last30Days": "過去30日"
   },
+  "projectFilter": {
+    "title": "プロジェクトフィルター",
+    "projects": "プロジェクト",
+    "all": "すべて",
+    "apply": "適用",
+    "reset": "リセット",
+    "applying": "適用中...",
+    "allProjects": "すべてのプロジェクト",
+    "projectsSelected": "{count}個のプロジェクト選択中"
+  },
   "statistics": {
     "title": "統計",
     "totalConversations": "全会話数",

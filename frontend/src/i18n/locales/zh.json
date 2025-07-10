@@ -32,6 +32,16 @@
     "last7Days": "过去7天",
     "last30Days": "过去30天"
   },
+  "projectFilter": {
+    "title": "项目过滤器",
+    "projects": "项目",
+    "all": "全部",
+    "apply": "应用",
+    "reset": "重置",
+    "applying": "应用中...",
+    "allProjects": "所有项目",
+    "projectsSelected": "已选择{count}个项目"
+  },
   "statistics": {
     "title": "统计",
     "totalConversations": "总对话数",

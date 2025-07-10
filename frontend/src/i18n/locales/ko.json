@@ -32,6 +32,16 @@
     "last7Days": "지난 7일",
     "last30Days": "지난 30일"
   },
+  "projectFilter": {
+    "title": "프로젝트 필터",
+    "projects": "프로젝트",
+    "all": "전체",
+    "apply": "적용",
+    "reset": "재설정",
+    "applying": "적용 중...",
+    "allProjects": "모든 프로젝트",
+    "projectsSelected": "{count}개 프로젝트 선택됨"
+  },
   "statistics": {
     "title": "통계",
     "totalConversations": "총 대화 수",

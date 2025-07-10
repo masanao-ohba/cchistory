@@ -32,6 +32,16 @@
     "last7Days": "Last 7 Days",
     "last30Days": "Last 30 Days"
   },
+  "projectFilter": {
+    "title": "Project Filter",
+    "projects": "Projects",
+    "all": "All",
+    "apply": "Apply",
+    "reset": "Reset",
+    "applying": "Applying...",
+    "allProjects": "All Projects",
+    "projectsSelected": "{count} projects selected"
+  },
   "statistics": {
     "title": "Statistics",
     "totalConversations": "Total Conversations",

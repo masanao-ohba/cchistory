@@ -18,7 +18,7 @@
     <!-- 固定フィルター（スクロール時にコンパクト表示） -->
     <div class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4">
-        <DateFilter
+        <FilterBar
           @filter="handleFilter"
           :loading="loading"
           :compact="isScrolled"
@@ -39,7 +39,7 @@
       <div class="max-w-7xl mx-auto px-4 pt-4 pb-4">
         <Statistics
           :stats="stats"
-          :filtered-count="conversations.length"
+          :filtered-count="searchKeyword ? conversations.length : (totalCount || conversations.length)"
         />
       </div>
     </div>
@@ -50,8 +50,8 @@
       <ConversationList
         :conversations="conversations"
         :loading="loading"
-        :has-more="hasMore"
-        :total-count="totalCount"
+        :has-more="searchKeyword ? false : hasMore"
+        :total-count="searchKeyword ? conversations.length : totalCount"
         @load-more="loadMore"
       />
     </main>
@@ -86,7 +86,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import DateFilter from './components/DateFilter.vue'
+import FilterBar from './components/FilterBar.vue'
 import Statistics from './components/Statistics.vue'
 import ConversationList from './components/ConversationList.vue'
 import SearchBox from './components/SearchBox.vue'
@@ -108,6 +108,9 @@ const totalCount = ref(0)
 const searchKeyword = ref('')
 const originalConversations = ref([])
 const searchBoxRef = ref(null)
+
+// フィルター管理
+const currentFilters = ref({})
 
 // 要素への参照（必要最小限）
 
@@ -168,6 +171,7 @@ const connectWebSocket = () => {
 
 // イベントハンドラー
 const handleFilter = async (filters) => {
+  currentFilters.value = filters
   loading.value = true
   try {
     const result = await store.getConversations(filters)
@@ -192,11 +196,13 @@ const loadMore = async () => {
 
   loading.value = true
   try {
-    const filters = store.currentFilters
-    const result = await store.getConversations({
-      ...filters,
-      offset: originalConversations.value.length
-    })
+    const filters = {
+      ...currentFilters.value,
+      offset: originalConversations.value.length,
+      limit: 100
+    }
+    
+    const result = await store.getConversations(filters)
     originalConversations.value.push(...result.conversations)
     totalCount.value = result.total
     hasMore.value = originalConversations.value.length < result.total

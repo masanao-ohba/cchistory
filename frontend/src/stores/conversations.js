@@ -18,7 +18,7 @@ export const useConversationStore = defineStore('conversations', {
       try {
         const response = await api.get('/projects')
         this.projects = response.data.projects
-        return this.projects
+        return response.data
       } catch (error) {
         console.error('Error fetching projects:', error)
         throw error
