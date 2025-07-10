@@ -80,7 +80,7 @@
 
         <!-- 展開/折りたたみボタン -->
         <button
-          v-if="conversation.content.length > 200"
+          v-if="shouldShowToggleButton(conversation.content)"
           @click="toggleExpand(index)"
           :class="[
             'mt-2 text-sm font-medium hover:underline',
@@ -193,6 +193,14 @@ const toggleExpand = (index) => {
   } else {
     expandedItems.value.add(index)
   }
+}
+
+// 「もっと見る」ボタンを表示するかどうかの判定
+const shouldShowToggleButton = (content) => {
+  // 改行で分割して行数をカウント
+  const lines = content.split('\n')
+  // 3行以上、または1行が長すぎる場合にボタンを表示
+  return lines.length > 3 || content.length > 200
 }
 </script>
 
