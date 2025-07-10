@@ -29,8 +29,9 @@ services:
       target: development  # 開発ステージを使用
     container_name: cchistory-frontend
     volumes:
-      - ./frontend:/app:ro  # ホットリロード用（読み取り専用）
+      - ./frontend:/app  # ホットリロード用
       - /app/node_modules  # node_modulesは除外
+      - vite-cache:/tmp/vite-cache  # Viteキャッシュ用ボリューム
     networks:
       - cchistory-network
     depends_on:
@@ -58,3 +59,6 @@ services:
 networks:
   cchistory-network:
     driver: bridge
+
+volumes:
+  vite-cache:

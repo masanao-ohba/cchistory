@@ -10,6 +10,7 @@ export default defineConfig({
       usePolling: true
     }
   },
+  cacheDir: '/tmp/vite-cache',
   build: {
     outDir: 'dist',
     sourcemap: false,
