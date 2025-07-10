@@ -1,0 +1,57 @@
+{
+  "conversations": {
+    "title": "对话历史",
+    "showing": "显示 {count} 个对话",
+    "showingFiltered": "显示 {total} 个对话中的 {count} 个",
+    "loading": "正在加载数据...",
+    "noConversations": "未找到对话",
+    "noConversationsHint": "请尝试更改过滤条件。",
+    "user": "您",
+    "assistant": "助手",
+    "showMore": "显示更多",
+    "collapse": "收起",
+    "loadMore": "加载更多",
+    "newConversationsLoaded": "已加载 {count} 条新对话"
+  },
+  "search": {
+    "placeholder": "按关键词搜索...",
+    "button": "搜索",
+    "foundMessages": "找到 {count} 条包含“{keyword}”的消息",
+    "noMessagesFound": "未找到匹配“{keyword}”的消息"
+  },
+  "dateFilter": {
+    "title": "日期过滤器",
+    "from": "开始日期",
+    "to": "结束日期",
+    "apply": "应用",
+    "reset": "重置",
+    "search": "搜索",
+    "searching": "搜索中...",
+    "today": "今天",
+    "yesterday": "昨天",
+    "last7Days": "过去7天",
+    "last30Days": "过去30天"
+  },
+  "statistics": {
+    "title": "统计",
+    "totalConversations": "总对话数",
+    "filteredResults": "过滤结果",
+    "uniqueSessions": "会话数",
+    "totalProjects": "总项目数",
+    "dailyConversations": "日常对话（过去30天）",
+    "items": "个"
+  },
+  "language": {
+    "switch": "切换语言",
+    "japanese": "日本語",
+    "english": "English",
+    "chinese": "中文",
+    "korean": "한국어"
+  },
+  "app": {
+    "subtitle": "搜索和过滤对话历史",
+    "backToTop": "返回顶部",
+    "realTimeUpdate": "实时更新",
+    "offline": "离线"
+  }
+}

@@ -4,7 +4,7 @@
       <input
         v-model="searchKeyword"
         type="text"
-        placeholder="キーワードで検索..."
+        :placeholder="$t('search.placeholder')"
         class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
         @input="handleSearch"
       />
@@ -27,10 +27,10 @@
     <!-- 検索結果サマリー -->
     <div v-if="searchKeyword && searchResults !== null" class="mt-2 text-sm text-gray-600">
       <span v-if="searchResults.total > 0">
-        「{{ searchKeyword }}」で {{ searchResults.total }} 件のメッセージが見つかりました
+        {{ $t('search.foundMessages', { keyword: searchKeyword, count: searchResults.total }) }}
       </span>
       <span v-else>
-        「{{ searchKeyword }}」に一致するメッセージは見つかりませんでした
+        {{ $t('search.noMessagesFound', { keyword: searchKeyword }) }}
       </span>
     </div>
   </div>
