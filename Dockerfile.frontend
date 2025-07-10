@@ -1,0 +1,46 @@
+# 開発ステージ
+FROM node:18-alpine AS development
+
+# 開発用ツールをインストール
+RUN apk add --no-cache python3 make g++ \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# package.jsonをコピー
+COPY frontend/package.json ./
+
+# package-lock.jsonがない場合もあるので、存在確認してコピー
+COPY frontend/package-lock.json* ./
+
+# 依存関係をインストール
+RUN npm install
+
+# 開発サーバーを起動
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# ビルドステージ
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# 依存関係ファイルのみ先にコピー（キャッシュ効率化）
+COPY frontend/package.json frontend/package-lock.json* ./
+
+# 依存関係をインストール（package.json変更時のみ実行）
+RUN npm install --silent
+
+# ソースコードをコピー（依存関係キャッシュを無効化させない）
+COPY frontend/ .
+
+# ビルド
+RUN npm run build
+
+# 本番ステージ
+FROM nginx:alpine
+
+# ビルド成果物をコピー
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Nginxの設定は別途docker-compose.ymlでマウント
+EXPOSE 80
