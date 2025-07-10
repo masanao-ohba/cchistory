@@ -71,12 +71,11 @@
         <!-- コンテンツ -->
         <div 
           :class="[
-            'leading-relaxed whitespace-pre-wrap break-words rounded-md p-3 bg-white text-gray-900',
+            'leading-relaxed break-words rounded-md p-3 bg-white text-gray-900 markdown-content',
             { 'line-clamp-3': !expandedItems.has(index) }
           ]"
-        >
-          {{ conversation.content }}
-        </div>
+          v-html="renderMarkdown(conversation.content)"
+        ></div>
 
         <!-- 展開/折りたたみボタン -->
         <button
@@ -121,6 +120,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import MarkdownIt from 'markdown-it'
 
 const emit = defineEmits(['load-more'])
 const props = defineProps({
@@ -142,6 +142,15 @@ const props = defineProps({
   }
 })
 
+// Markdownパーサーの初期化
+const md = new MarkdownIt({
+  html: false,
+  xhtmlOut: false,
+  breaks: true,
+  linkify: true,
+  typographer: true
+})
+
 // 展開状態管理
 const expandedItems = ref(new Set())
 const lastLoadedCount = ref(0)
@@ -159,6 +168,11 @@ const loadMoreRangeText = computed(() => {
 })
 
 // メソッド
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  return md.render(content)
+}
+
 const handleLoadMore = () => {
   const prevCount = props.conversations.length
   emit('load-more')
@@ -210,5 +224,85 @@ const shouldShowToggleButton = (content) => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Markdownコンテンツのスタイリング */
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  @apply font-bold text-gray-900 mb-2 mt-4;
+}
+
+.markdown-content :deep(h1) { @apply text-xl; }
+.markdown-content :deep(h2) { @apply text-lg; }
+.markdown-content :deep(h3) { @apply text-base; }
+
+.markdown-content :deep(p) {
+  @apply mb-3 last:mb-0 leading-relaxed;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  @apply mb-3 pl-6;
+}
+
+.markdown-content :deep(li) {
+  @apply mb-1;
+}
+
+.markdown-content :deep(ul li) {
+  @apply list-disc;
+}
+
+.markdown-content :deep(ol li) {
+  @apply list-decimal;
+}
+
+.markdown-content :deep(blockquote) {
+  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-3;
+}
+
+.markdown-content :deep(code) {
+  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800;
+}
+
+.markdown-content :deep(pre) {
+  @apply bg-gray-100 p-3 rounded-md overflow-x-auto mb-3 border;
+}
+
+.markdown-content :deep(pre code) {
+  @apply bg-transparent p-0 text-sm;
+}
+
+.markdown-content :deep(a) {
+  @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+.markdown-content :deep(strong) {
+  @apply font-bold;
+}
+
+.markdown-content :deep(em) {
+  @apply italic;
+}
+
+.markdown-content :deep(hr) {
+  @apply border-gray-300 my-4;
+}
+
+.markdown-content :deep(table) {
+  @apply w-full border-collapse border border-gray-300 mb-3;
+}
+
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  @apply border border-gray-300 px-3 py-2 text-left;
+}
+
+.markdown-content :deep(th) {
+  @apply bg-gray-50 font-semibold;
 }
 </style>
