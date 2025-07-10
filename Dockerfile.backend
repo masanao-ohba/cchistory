@@ -1,0 +1,35 @@
+FROM python:3.11-alpine
+
+# 必要なパッケージをインストール（本番用最小構成 + wget for healthcheck）
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    tzdata \
+    wget \
+    && rm -rf /var/cache/apk/*
+
+# タイムゾーン設定
+ENV TZ=Asia/Tokyo
+RUN cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# 依存関係ファイルのみ先にコピー（キャッシュ効率化）
+COPY backend/requirements.txt .
+
+# 依存関係をインストール（requirements.txt変更時のみ実行）
+RUN pip install --no-cache-dir -r requirements.txt
+
+# アプリケーションコードをコピー（依存関係キャッシュを無効化させない）
+COPY backend/ .
+
+# 非rootユーザーを作成
+RUN adduser -D -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# ポート8000を公開
+EXPOSE 8000
+
+# アプリケーションを起動
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

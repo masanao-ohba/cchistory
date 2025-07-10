@@ -1,0 +1,209 @@
+<template>
+  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <!-- ヘッダー -->
+    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900">会話履歴</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        {{ totalCount ? `${totalCount.toLocaleString()}件中 ${conversations.length.toLocaleString()}件の会話を表示中` : `${conversations.length.toLocaleString()}件の会話を表示中` }}
+      </p>
+    </div>
+
+    <!-- ローディング -->
+    <div v-if="loading && conversations.length === 0" class="p-8 text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
+      <p class="text-gray-500 mt-4">データを読み込んでいます...</p>
+    </div>
+
+    <!-- 会話がない場合 -->
+    <div v-else-if="conversations.length === 0" class="p-8 text-center">
+      <div class="text-gray-400 text-6xl mb-4">💬</div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">会話が見つかりません</h3>
+      <p class="text-gray-500">フィルター条件を変更してみてください。</p>
+    </div>
+
+    <!-- 会話リスト -->
+    <div v-else class="space-y-3">
+      <div
+        v-for="(conversation, index) in conversations"
+        :key="`${conversation.session_id}-${index}`"
+        class="transition-all duration-200 hover:scale-[1.005]"
+        :class="[
+          'rounded-lg p-3 shadow-sm border',
+          conversation.type === 'user' 
+            ? 'bg-blue-50 border-blue-200 ml-0 mr-12' 
+            : 'bg-green-50 border-green-200 ml-12 mr-0'
+        ]"
+      >
+        <!-- メタ情報 -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <!-- アバター風アイコン -->
+            <div 
+              :class="[
+                'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold',
+                conversation.type === 'user' 
+                  ? 'bg-blue-500' 
+                  : 'bg-green-500'
+              ]"
+            >
+              {{ conversation.type === 'user' ? 'U' : 'A' }}
+            </div>
+            
+            <!-- タイプラベル -->
+            <span
+              :class="[
+                'text-sm font-medium',
+                conversation.type === 'user' 
+                  ? 'text-blue-700' 
+                  : 'text-green-700'
+              ]"
+            >
+              {{ conversation.type === 'user' ? 'あなた' : 'アシスタント' }}
+            </span>
+          </div>
+          
+          <!-- タイムスタンプ -->
+          <time class="text-xs text-gray-500">
+            {{ formatTimestamp(conversation.timestamp) }}
+          </time>
+        </div>
+
+        <!-- コンテンツ -->
+        <div 
+          :class="[
+            'leading-relaxed whitespace-pre-wrap break-words rounded-md p-3',
+            conversation.type === 'user' 
+              ? 'bg-white text-gray-900 border border-blue-100' 
+              : 'bg-white text-gray-900 border border-green-100',
+            { 'line-clamp-3': !expandedItems.has(index) }
+          ]"
+        >
+          {{ conversation.content }}
+        </div>
+
+        <!-- 展開/折りたたみボタン -->
+        <button
+          v-if="conversation.content.length > 200"
+          @click="toggleExpand(index)"
+          :class="[
+            'mt-2 text-sm font-medium hover:underline',
+            conversation.type === 'user' 
+              ? 'text-blue-600 hover:text-blue-800' 
+              : 'text-green-600 hover:text-green-800'
+          ]"
+        >
+          {{ expandedItems.has(index) ? '折りたたむ' : 'もっと見る' }}
+        </button>
+        
+      </div>
+    </div>
+
+    <!-- もっと読み込むボタン -->
+    <div v-if="hasMore" class="p-6 bg-gray-50 border-t border-gray-200">
+      <div v-if="lastLoadedCount > 0" class="mb-3 text-center text-sm text-green-600 font-medium animate-pulse">
+        ✓ {{ lastLoadedCount }}件の新しい会話を読み込みました
+      </div>
+      <button
+        @click="handleLoadMore"
+        :disabled="loading"
+        class="w-full px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+        :class="{ 'animate-pulse': loading }"
+      >
+        <span v-if="loading" class="flex items-center justify-center">
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          読み込み中...
+        </span>
+        <span v-else>もっと読み込む {{ loadMoreRangeText }}</span>
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+const emit = defineEmits(['load-more'])
+const props = defineProps({
+  conversations: {
+    type: Array,
+    default: () => []
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  hasMore: {
+    type: Boolean,
+    default: false
+  },
+  totalCount: {
+    type: Number,
+    default: 0
+  }
+})
+
+// 展開状態管理
+const expandedItems = ref(new Set())
+const lastLoadedCount = ref(0)
+
+// 計算プロパティ
+const loadMoreRangeText = computed(() => {
+  if (!props.totalCount || props.conversations.length === 0) return ''
+  
+  const start = props.conversations.length + 1
+  const defaultBatchSize = 100 // デフォルトの読み込み件数
+  const remaining = props.totalCount - props.conversations.length
+  const end = props.conversations.length + Math.min(defaultBatchSize, remaining)
+  
+  return `(${start.toLocaleString()}件〜${end.toLocaleString()}件)`
+})
+
+// メソッド
+const handleLoadMore = () => {
+  const prevCount = props.conversations.length
+  emit('load-more')
+  
+  // 少し待ってから新しく読み込まれた件数を計算
+  setTimeout(() => {
+    const newCount = props.conversations.length
+    lastLoadedCount.value = newCount - prevCount
+    
+    // 3秒後にメッセージを非表示
+    setTimeout(() => {
+      lastLoadedCount.value = 0
+    }, 3000)
+  }, 500)
+}
+const formatTimestamp = (timestamp) => {
+  const date = new Date(timestamp)
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Tokyo'
+  }).format(date)
+}
+
+const toggleExpand = (index) => {
+  if (expandedItems.value.has(index)) {
+    expandedItems.value.delete(index)
+  } else {
+    expandedItems.value.add(index)
+  }
+}
+</script>
+
+<style scoped>
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
