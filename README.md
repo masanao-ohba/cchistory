@@ -322,4 +322,4 @@ MIT License
 
 ## 作者
 
-Claude Code Companion
+Masanao Ohba
