@@ -4,7 +4,7 @@
     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
       <h2 class="text-xl font-semibold text-gray-900">会話履歴</h2>
       <p class="text-sm text-gray-500 mt-1">
-        {{ totalCount ? `${totalCount.toLocaleString()}件中 ${conversations.length.toLocaleString()}件の会話を表示中` : `${conversations.length.toLocaleString()}件の会話を表示中` }}
+        {{ totalCount && totalCount > conversations.length ? `${totalCount.toLocaleString()}件中 ${conversations.length.toLocaleString()}件を表示中` : `${conversations.length.toLocaleString()}件の会話を表示中` }}
       </p>
     </div>
 
@@ -28,10 +28,10 @@
         :key="`${conversation.session_id}-${index}`"
         class="transition-all duration-200 hover:scale-[1.005]"
         :class="[
-          'rounded-lg p-3 shadow-sm border',
+          'rounded-lg p-3 shadow-sm',
           conversation.type === 'user' 
-            ? 'bg-blue-50 border-blue-200 ml-0 mr-12' 
-            : 'bg-green-50 border-green-200 ml-12 mr-0'
+            ? 'bg-blue-50 ml-0 mr-12' 
+            : 'bg-green-50 ml-12 mr-0'
         ]"
       >
         <!-- メタ情報 -->
@@ -71,10 +71,7 @@
         <!-- コンテンツ -->
         <div 
           :class="[
-            'leading-relaxed whitespace-pre-wrap break-words rounded-md p-3',
-            conversation.type === 'user' 
-              ? 'bg-white text-gray-900 border border-blue-100' 
-              : 'bg-white text-gray-900 border border-green-100',
+            'leading-relaxed whitespace-pre-wrap break-words rounded-md p-3 bg-white text-gray-900',
             { 'line-clamp-3': !expandedItems.has(index) }
           ]"
         >

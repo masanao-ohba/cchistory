@@ -11,6 +11,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro
+      - ./backend:/app:ro
     networks:
       - cchistory-network
     restart: unless-stopped

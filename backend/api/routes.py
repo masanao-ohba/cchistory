@@ -50,26 +50,57 @@ async def get_conversations(
             conversations = await parser.parse_project(project_dir)
             all_conversations.extend(conversations)
 
-        # 日付フィルタリング
+        # ソート（タイムスタンプ昇順）
+        all_conversations.sort(key=lambda x: x["timestamp"])
+
+        # 日付フィルタリング（会話の流れを保持）
         if start_date or end_date:
-            filtered = []
-            for conv in all_conversations:
+            # まず日付範囲内のメッセージを特定
+            date_filtered_indices = set()
+            for i, conv in enumerate(all_conversations):
                 conv_date = datetime.fromisoformat(conv["timestamp"].replace('Z', '+00:00'))
                 conv_date = conv_date.astimezone(tz).date()
 
+                in_date_range = True
                 if start_date and end_date:
-                    if start_date <= conv_date <= end_date:
-                        filtered.append(conv)
+                    in_date_range = start_date <= conv_date <= end_date
                 elif start_date:
-                    if conv_date >= start_date:
-                        filtered.append(conv)
+                    in_date_range = conv_date >= start_date
                 elif end_date:
-                    if conv_date <= end_date:
-                        filtered.append(conv)
-            all_conversations = filtered
+                    in_date_range = conv_date <= end_date
 
-        # ソート（タイムスタンプ昇順）
-        all_conversations.sort(key=lambda x: x["timestamp"])
+                if in_date_range:
+                    date_filtered_indices.add(i)
+
+            # 各セッションの最初のメッセージがアシスタントの場合、ユーザーメッセージを追加
+            enhanced_indices = set(date_filtered_indices)
+            session_first_indices = {}
+
+            # 日付範囲内の各セッションの最初のインデックスを特定
+            for i in sorted(date_filtered_indices):
+                session_id = all_conversations[i]["session_id"]
+                if session_id not in session_first_indices:
+                    session_first_indices[session_id] = i
+
+            # 各セッションの最初がアシスタントならユーザーメッセージまで遡る
+            for session_id, first_idx in session_first_indices.items():
+                if all_conversations[first_idx]["type"] == "assistant":
+                    # このセッションの開始（ユーザーメッセージ）を探す
+                    for j in range(first_idx - 1, -1, -1):
+                        if all_conversations[j]["session_id"] == session_id:
+                            enhanced_indices.add(j)
+                            if all_conversations[j]["type"] == "user":
+                                break
+                        else:
+                            # 異なるセッションに到達
+                            break
+
+            # インデックス順に会話を構築
+            filtered_conversations = []
+            for i in sorted(enhanced_indices):
+                filtered_conversations.append(all_conversations[i])
+
+            all_conversations = filtered_conversations
 
         # ページング
         total = len(all_conversations)

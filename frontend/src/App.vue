@@ -1,7 +1,8 @@
 <template>
   <div id="app" class="min-h-screen bg-gray-50">
     <!-- ヘッダー（スクロール時に隠れる） -->
-    <header v-show="!isScrolled" ref="headerRef" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500"
+            :class="{ 'transform -translate-y-full opacity-0': isScrolled }">
       <div class="max-w-7xl mx-auto px-4 py-6">
         <h1 class="text-3xl font-bold">Claude Conversations History Viewer</h1>
         <p class="text-purple-100 mt-2">会話履歴の検索とフィルタリング</p>
@@ -10,7 +11,7 @@
 
 
     <!-- 固定フィルター（スクロール時にコンパクト表示） -->
-    <div ref="filterRef" class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
+    <div class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4">
         <DateFilter
           @filter="handleFilter"
@@ -21,7 +22,8 @@
     </div>
 
     <!-- 統計情報（スクロール時に隠れる） -->
-    <div v-show="!isScrolled" ref="statsRef" class="transition-all duration-500">
+    <div class="transition-all duration-500"
+         :class="{ 'transform -translate-y-full opacity-0 pointer-events-none': isScrolled }">
       <div class="max-w-7xl mx-auto px-4 pt-4 pb-4">
         <Statistics
           :stats="stats"
@@ -88,21 +90,18 @@ const wsConnected = ref(false)
 const isScrolled = ref(false)
 const totalCount = ref(0)
 
-// 要素への参照
-const headerRef = ref(null)
-const filterRef = ref(null)
-const statsRef = ref(null)
+// 要素への参照（必要最小限）
 
 // WebSocket接続
 let ws = null
 
-// スクロール検出
+// スクロール検出（シンプルな固定閾値）
 const handleScroll = () => {
   const currentScrollY = window.scrollY
-
-  // シンプルな判定：100px以上でコンパクト表示
-  const shouldBeScrolled = currentScrollY > 100
-
+  const threshold = 150
+  
+  const shouldBeScrolled = currentScrollY > threshold
+  
   if (isScrolled.value !== shouldBeScrolled) {
     isScrolled.value = shouldBeScrolled
   }

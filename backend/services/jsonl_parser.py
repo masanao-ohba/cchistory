@@ -103,6 +103,7 @@ class JSONLParser:
             '</command-message>',
             '<command-name>',
             '</command-name>',
+            '(no content)',
             '<local-command-stdout>',
             '<user-memory-input>',
             'Your todo list has changed',
