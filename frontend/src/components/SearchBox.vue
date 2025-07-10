@@ -22,6 +22,19 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
       </button>
+
+      <!-- 関連スレッド表示オプション（右上配置） -->
+      <div v-if="searchKeyword" class="absolute -top-8 right-0">
+        <label class="inline-flex items-center text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+          <input
+            type="checkbox"
+            v-model="showRelatedThreads"
+            @change="handleOptionsChange"
+            class="mr-1 rounded border-gray-300 text-primary-500 focus:ring-primary-500 text-xs"
+          />
+          {{ $t('search.showRelatedThreads') }}
+        </label>
+      </div>
     </div>
 
     <!-- 検索結果サマリー -->
@@ -39,10 +52,11 @@
 <script setup>
 import { ref, watch, defineEmits } from 'vue'
 
-const emit = defineEmits(['search', 'clear'])
+const emit = defineEmits(['search', 'clear', 'optionsChange'])
 
 const searchKeyword = ref('')
 const searchResults = ref(null)
+const showRelatedThreads = ref(true) // デフォルトON
 
 // デバウンス用のタイマー
 let searchTimer = null
@@ -56,12 +70,25 @@ const handleSearch = () => {
   // 300ms後に検索実行
   searchTimer = setTimeout(() => {
     if (searchKeyword.value.trim()) {
-      emit('search', searchKeyword.value.trim())
+      emit('search', {
+        keyword: searchKeyword.value.trim(),
+        showRelatedThreads: showRelatedThreads.value
+      })
     } else {
       emit('clear')
       searchResults.value = null
     }
   }, 300)
+}
+
+const handleOptionsChange = () => {
+  // オプション変更時にも検索を再実行
+  if (searchKeyword.value.trim()) {
+    emit('search', {
+      keyword: searchKeyword.value.trim(),
+      showRelatedThreads: showRelatedThreads.value
+    })
+  }
 }
 
 const clearSearch = () => {

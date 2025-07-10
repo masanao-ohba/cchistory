@@ -48,6 +48,12 @@ export const useConversationStore = defineStore('conversations', {
         if (filters.limit) {
           params.append('limit', filters.limit)
         }
+        if (filters.keyword) {
+          params.append('keyword', filters.keyword)
+        }
+        if (filters.showRelatedThreads !== undefined) {
+          params.append('show_related_threads', filters.showRelatedThreads)
+        }
 
         // キャッシュ無効化のため
         if (force) {

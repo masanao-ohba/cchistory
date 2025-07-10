@@ -11,13 +11,15 @@
     "showMore": "Show More",
     "collapse": "Collapse",
     "loadMore": "Load More",
+    "loadMoreRange": "({start}〜{end} items)",
     "newConversationsLoaded": "Loaded {count} new conversations"
   },
   "search": {
     "placeholder": "Search by keyword...",
     "button": "Search",
     "foundMessages": "Found {count} messages for '{keyword}'",
-    "noMessagesFound": "No messages found matching '{keyword}'"
+    "noMessagesFound": "No messages found matching '{keyword}'",
+    "showRelatedThreads": "Show all related threads"
   },
   "dateFilter": {
     "title": "Date Filter",

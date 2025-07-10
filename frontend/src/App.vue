@@ -3,11 +3,11 @@
     <!-- ヘッダー（スクロール時に隠れる） -->
     <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500"
             :class="{ 'transform -translate-y-full opacity-0': isScrolled }">
-      <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="max-w-7xl mx-auto px-4 py-3">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-3xl font-bold">Claude Conversations History Viewer</h1>
-            <p class="text-purple-100 mt-2">{{ $t('app.subtitle') }}</p>
+            <h1 class="text-xl font-bold">Claude Conversations History Viewer</h1>
+            <p class="text-purple-100 mt-1 text-sm">{{ $t('app.subtitle') }}</p>
           </div>
           <LanguageSwitcher />
         </div>
@@ -23,7 +23,7 @@
           :loading="loading"
           :compact="isScrolled"
         />
-        <div class="pb-4">
+        <div class="pb-3 pt-2">
           <SearchBox
             ref="searchBoxRef"
             @search="handleSearch"
@@ -114,7 +114,8 @@ const searchState = reactive({
   startDate: null,
   endDate: null,
   projects: [],
-  keyword: ''
+  keyword: '',
+  showRelatedThreads: true
 })
 
 // 初期化フラグ
@@ -135,24 +136,36 @@ watch(searchState, async (newState) => {
       startDate: newState.startDate,
       endDate: newState.endDate,
       projects: newState.projects.length ? newState.projects : null,
+      keyword: newState.keyword || null,
+      showRelatedThreads: newState.showRelatedThreads,
       offset: 0,
       limit: 100
     }
 
-    // 日付やプロジェクトでフィルタリング
+    // バックエンドで統合検索を実行
     const result = await store.getConversations(filters)
-    originalConversations.value = result.conversations
+    
+    // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
+    if (!newState.keyword) {
+      result.conversations = result.conversations.map(conv => {
+        const { search_keyword, ...cleanConv } = conv
+        return cleanConv
+      })
+    }
+    
+    conversations.value = result.conversations
+    originalConversations.value = newState.keyword ? [] : result.conversations
     totalCount.value = result.total
     hasMore.value = result.total > result.conversations.length
 
-    // キーワード検索
-    if (newState.keyword) {
-      performSearch(newState.keyword)
-    } else {
-      conversations.value = [...originalConversations.value]
-      if (searchBoxRef.value) {
-        searchBoxRef.value.setSearchResults(null)
-      }
+    // 検索結果の統計を更新
+    if (newState.keyword && searchBoxRef.value) {
+      searchBoxRef.value.setSearchResults({
+        total: result.search_match_count,
+        keyword: newState.keyword
+      })
+    } else if (searchBoxRef.value) {
+      searchBoxRef.value.setSearchResults(null)
     }
   } catch (error) {
     console.error('Search error:', error)
@@ -221,7 +234,7 @@ const handleFilter = async (filters) => {
 }
 
 const loadMore = async () => {
-  if (loading.value || !hasMore.value) return
+  if (loading.value || !hasMore.value || searchState.keyword) return
 
   loading.value = true
   try {
@@ -238,12 +251,7 @@ const loadMore = async () => {
     totalCount.value = result.total
     hasMore.value = originalConversations.value.length < result.total
 
-    // 検索が有効な場合は再検索
-    if (searchState.keyword) {
-      performSearch(searchState.keyword)
-    } else {
-      conversations.value = [...originalConversations.value]
-    }
+    conversations.value = [...originalConversations.value]
   } catch (error) {
     console.error('Load more error:', error)
   } finally {
@@ -259,11 +267,6 @@ const loadConversations = async (force = false) => {
     originalConversations.value = [...result.conversations]
     totalCount.value = result.total
     hasMore.value = result.total > result.conversations.length
-
-    // 検索が有効な場合は再検索
-    if (searchKeyword.value) {
-      performSearch(searchKeyword.value)
-    }
   } catch (error) {
     console.error('Load conversations error:', error)
   } finally {
@@ -279,41 +282,16 @@ const loadStats = async () => {
   }
 }
 
-// 検索関連の関数
-const performSearch = (keyword) => {
-  if (!keyword || !originalConversations.value.length) {
-    conversations.value = [...originalConversations.value]
-    if (searchBoxRef.value) {
-      searchBoxRef.value.setSearchResults(null)
-    }
-    return
+
+const handleSearch = (searchData) => {
+  if (typeof searchData === 'string') {
+    // 後方互換性のため文字列も受け付ける
+    searchState.keyword = searchData
+  } else {
+    // 新しいオブジェクト形式
+    searchState.keyword = searchData.keyword
+    searchState.showRelatedThreads = searchData.showRelatedThreads
   }
-
-  const searchLower = keyword.toLowerCase()
-  const filteredConversations = originalConversations.value.filter(conversation => {
-    return conversation.content.toLowerCase().includes(searchLower)
-  })
-
-  const conversationsWithKeyword = filteredConversations.map(conversation => {
-    return {
-      ...conversation,
-      searchKeyword: keyword
-    }
-  })
-
-  conversations.value = conversationsWithKeyword
-  searchKeyword.value = keyword
-
-  if (searchBoxRef.value) {
-    searchBoxRef.value.setSearchResults({
-      total: filteredConversations.length,
-      keyword: keyword
-    })
-  }
-}
-
-const handleSearch = (keyword) => {
-  searchState.keyword = keyword
 }
 
 const handleClearSearch = () => {

@@ -74,7 +74,7 @@
             'leading-relaxed break-words rounded-md p-3 bg-white text-gray-900 markdown-content',
             { 'line-clamp-3': !expandedItems.has(index) }
           ]"
-          v-html="renderMarkdown(conversation.content, conversation.searchKeyword)"
+          v-html="renderMarkdown(conversation.content, conversation.search_keyword)"
         ></div>
 
         <!-- 展開/折りたたみボタン -->
@@ -120,7 +120,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MarkdownIt from 'markdown-it'
+
+const { t: $t } = useI18n()
 
 const emit = defineEmits(['load-more'])
 const props = defineProps({
@@ -164,7 +167,7 @@ const loadMoreRangeText = computed(() => {
   const remaining = props.totalCount - props.conversations.length
   const end = props.conversations.length + Math.min(defaultBatchSize, remaining)
 
-  return `(${start.toLocaleString()}件〜${end.toLocaleString()}件)`
+  return $t('conversations.loadMoreRange', { start: start.toLocaleString(), end: end.toLocaleString() })
 })
 
 // メソッド
@@ -174,10 +177,13 @@ const renderMarkdown = (content, searchKeyword = null) => {
   // まずMarkdownをレンダリング
   let renderedContent = md.render(content)
 
-  // 検索キーワードがある場合、レンダリング後のHTMLにハイライトを適用
-  if (searchKeyword) {
+  // 検索キーワードがある場合のみ、レンダリング後のHTMLにハイライトを適用
+  if (searchKeyword && searchKeyword.trim()) {
     const regex = new RegExp(`(${searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
     renderedContent = renderedContent.replace(regex, '<mark>$1</mark>')
+  } else {
+    // キーワードがない場合は既存の<mark>タグを除去
+    renderedContent = renderedContent.replace(/<mark>(.*?)<\/mark>/gi, '$1')
   }
 
   return renderedContent

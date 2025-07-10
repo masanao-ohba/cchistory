@@ -98,7 +98,7 @@
     </div>
 
     <!-- クイックフィルター -->
-    <div v-if="!compact" class="mt-4 flex flex-wrap gap-2">
+    <div v-if="!compact" class="mt-4 mb-2 flex flex-wrap gap-2">
       <button
         v-for="quick in quickFilters"
         :key="quick.key"
