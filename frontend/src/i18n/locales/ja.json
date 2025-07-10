@@ -11,13 +11,15 @@
     "showMore": "もっと見る",
     "collapse": "折りたたむ",
     "loadMore": "もっと読み込む",
+    "loadMoreRange": "({start}〜{end}件)",
     "newConversationsLoaded": "{count}件の新しい会話を読み込みました"
   },
   "search": {
     "placeholder": "キーワードで検索...",
     "button": "検索",
     "foundMessages": "「{keyword}」で {count} 件のメッセージが見つかりました",
-    "noMessagesFound": "「{keyword}」に一致するメッセージは見つかりませんでした"
+    "noMessagesFound": "「{keyword}」に一致するメッセージは見つかりませんでした",
+    "showRelatedThreads": "関連スレッド全てを表示する"
   },
   "dateFilter": {
     "title": "日付フィルター",

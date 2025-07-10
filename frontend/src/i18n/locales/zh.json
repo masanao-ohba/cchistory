@@ -11,11 +11,13 @@
     "showMore": "显示更多",
     "collapse": "收起",
     "loadMore": "加载更多",
+    "loadMoreRange": "({start}〜{end}项)",
     "newConversationsLoaded": "已加载 {count} 条新对话"
   },
   "search": {
     "placeholder": "按关键词搜索...",
     "button": "搜索",
+    "showRelatedThreads": "显示所有相关线程",
     "foundMessages": "找到 {count} 条包含“{keyword}”的消息",
     "noMessagesFound": "未找到匹配“{keyword}”的消息"
   },

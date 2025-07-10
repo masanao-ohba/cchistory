@@ -45,17 +45,29 @@
     <!-- 日別グラフ（簡易版） -->
     <div class="mt-4">
       <h3 class="text-lg font-medium text-gray-900 mb-3">{{ $t('statistics.dailyConversations') }}</h3>
-      <div class="flex items-end space-x-1 h-20 bg-gray-50 border border-gray-200 rounded p-1">
-        <div
-          v-for="(day, index) in dailyData"
-          :key="index"
-          :class="[
-            'flex-1 rounded-t transition-all duration-300',
-            day.count > 0 ? 'bg-blue-400 hover:bg-blue-500' : 'bg-gray-200'
-          ]"
-          :style="{ height: day.count > 0 ? `${Math.max(5, (day.count / maxDaily) * 100)}%` : '2px' }"
-          :title="`${day.date}: ${day.count}${$t('statistics.items')}`"
-        ></div>
+      <div class="bg-gray-50 border border-gray-200 rounded p-1">
+        <div class="flex items-end space-x-1 h-20">
+          <div
+            v-for="(day, index) in dailyData"
+            :key="index"
+            :class="[
+              'flex-1 rounded-t transition-all duration-300',
+              day.count > 0 ? 'bg-blue-400 hover:bg-blue-500' : 'bg-gray-200'
+            ]"
+            :style="{ height: day.count > 0 ? `${Math.max(5, (day.count / maxDaily) * 100)}%` : '2px' }"
+            :title="`${formatDate(day.date)}: ${day.count}${$t('statistics.items')}`"
+          ></div>
+        </div>
+        <!-- 日付ラベル -->
+        <div class="flex space-x-1 mt-1 text-xs text-gray-500">
+          <div
+            v-for="(day, index) in dailyData"
+            :key="index"
+            class="flex-1 text-center"
+          >
+            {{ formatDateLabel(day.date, index) }}
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -110,4 +122,24 @@ const maxDaily = computed(() => {
   const max = Math.max(...dailyData.value.map(d => d.count))
   return max > 0 ? max : 1
 })
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date)
+}
+
+const formatDateLabel = (dateString, index) => {
+  const date = new Date(dateString)
+  const day = date.getDate()
+  
+  // 最初、最後、または月の1日、または5の倍数の日のみ表示
+  if (index === 0 || index === dailyData.value.length - 1 || day === 1 || day % 5 === 0) {
+    return `${date.getMonth() + 1}/${day}`
+  }
+  return ''
+}
 </script>
