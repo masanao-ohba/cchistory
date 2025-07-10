@@ -25,7 +25,7 @@ class JSONLParser:
         logger.info(f"Found {len(jsonl_files)} JSONL files in {project_dir}")
 
         # 各ファイルを並行処理で解析
-        tasks = [self.parse_file(file_path) for file_path in jsonl_files]
+        tasks = [self.parse_file(file_path, project_dir) for file_path in jsonl_files]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
@@ -36,7 +36,7 @@ class JSONLParser:
 
         return conversations
 
-    async def parse_file(self, file_path: Path) -> List[Dict[str, Any]]:
+    async def parse_file(self, file_path: Path, project_dir: Path = None) -> List[Dict[str, Any]]:
         """単一のJSONLファイルを解析"""
         conversations = []
 
@@ -58,7 +58,7 @@ class JSONLParser:
                             continue
 
                         data = json.loads(line.strip())
-                        conversation = self._extract_conversation(data, file_path.name)
+                        conversation = self._extract_conversation(data, file_path.name, project_dir)
 
                         if conversation:
                             conversations.append(conversation)
@@ -130,12 +130,22 @@ class JSONLParser:
 
         return False
 
-    def _extract_conversation(self, data: Dict[str, Any], filename: str) -> Dict[str, Any]:
+    def _extract_conversation(self, data: Dict[str, Any], filename: str, project_dir: Path = None) -> Dict[str, Any]:
         """JSONLデータから会話情報を抽出"""
         try:
             timestamp = data.get('timestamp', '')
             session_id = data.get('sessionId', '')
             message_type = data.get('type', '')
+
+            # プロジェクト情報を準備
+            project_info = None
+            if project_dir:
+                from config import Config
+                project_info = {
+                    'id': project_dir.name,
+                    'display_name': Config.get_project_display_name(project_dir),
+                    'path': str(project_dir)
+                }
 
             if message_type == 'user':
                 message = data.get('message', {})
@@ -161,13 +171,18 @@ class JSONLParser:
                         return None
                     content = content_str
 
-                return {
+                result = {
                     'timestamp': timestamp,
                     'type': 'user',
                     'content': content,
                     'session_id': session_id,
                     'filename': filename
                 }
+                
+                if project_info:
+                    result['project'] = project_info
+                
+                return result
 
             elif message_type == 'assistant':
                 message = data.get('message', {})
@@ -185,13 +200,18 @@ class JSONLParser:
 
                 # テキストコンテンツがある場合のみ追加
                 if content_text:
-                    return {
+                    result = {
                         'timestamp': timestamp,
                         'type': 'assistant',
                         'content': content_text,
                         'session_id': session_id,
                         'filename': filename
                     }
+                    
+                    if project_info:
+                        result['project'] = project_info
+                    
+                    return result
 
         except Exception as e:
             logger.error(f"Error extracting conversation: {e}")

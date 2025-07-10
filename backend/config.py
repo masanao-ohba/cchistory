@@ -60,6 +60,59 @@ class Config:
         return project_names
 
     @classmethod
+    def get_project_display_name(cls, project_dir: Path) -> str:
+        """プロジェクトディレクトリのパスから表示用の短縮名を生成"""
+        # Claude内部形式から元のパスを復元
+        # 例: -Users-masanao-oba-workspace-reserve-auto-api -> /Users/masanao.oba/workspace/reserve-auto/api
+        internal_name = project_dir.name
+        if internal_name.startswith('-'):
+            # 先頭のハイフンを除去してスラッシュに変換
+            original_path = internal_name[1:].replace('-', '/')
+
+            # パスの構成要素から意味のある部分を抽出
+            parts = original_path.split('/')
+
+            # workspace以降を取得（一般的なパターン）
+            if 'workspace' in parts:
+                workspace_idx = parts.index('workspace')
+                if workspace_idx + 1 < len(parts):
+                    project_parts = parts[workspace_idx + 1:]
+                    # 末尾が'.claude', 'projects'なら除外
+                    if project_parts[-1] in ['.claude', 'projects']:
+                        project_parts = project_parts[:-1]
+                    return '/'.join(project_parts)
+
+            # Documents以降を取得（別のパターン）
+            if 'Documents' in parts:
+                docs_idx = parts.index('Documents')
+                if docs_idx + 1 < len(parts):
+                    project_parts = parts[docs_idx + 1:]
+                    if project_parts[-1] in ['.claude', 'projects']:
+                        project_parts = project_parts[:-1]
+                    return '/'.join(project_parts)
+
+            # ホームディレクトリ以降を取得
+            home_indicators = ['Users', 'home']
+            for indicator in home_indicators:
+                if indicator in parts:
+                    home_idx = parts.index(indicator)
+                    if home_idx + 2 < len(parts):  # /Users/username/...
+                        project_parts = parts[home_idx + 2:]
+                        if project_parts[-1] in ['.claude', 'projects']:
+                            project_parts = project_parts[:-1]
+                        return '/'.join(project_parts)
+
+            # 最後の2-3セグメントを取得（フォールバック）
+            if len(parts) >= 2:
+                project_parts = parts[-3:] if len(parts) >= 3 else parts[-2:]
+                if project_parts[-1] in ['.claude', 'projects']:
+                    project_parts = project_parts[:-1]
+                return '/'.join(project_parts)
+
+        # 内部形式でない場合はそのまま返す
+        return internal_name
+
+    @classmethod
     def get_project_dirs(cls) -> List[Path]:
         """利用可能なプロジェクトディレクトリを取得"""
         if not cls.CLAUDE_PROJECTS_PATH.exists():
@@ -84,3 +137,30 @@ class Config:
         # CLAUDE_PROJECTSが設定されていない場合は全プロジェクトを返す
         logger.warning("CLAUDE_PROJECTS not configured, returning all directories")
         return all_dirs
+
+    @classmethod
+    def get_project_info(cls) -> List[dict]:
+        """プロジェクト情報（ID、表示名、パス）を取得"""
+        project_dirs = cls.get_project_dirs()
+        projects = []
+        display_names = set()  # 重複チェック用
+
+        for project_dir in project_dirs:
+            display_name = cls.get_project_display_name(project_dir)
+
+            # 重複チェックと調整
+            original_display_name = display_name
+            counter = 1
+            while display_name in display_names:
+                display_name = f"{original_display_name} ({counter})"
+                counter += 1
+
+            display_names.add(display_name)
+
+            projects.append({
+                'id': project_dir.name,
+                'display_name': display_name,
+                'path': str(project_dir)
+            })
+
+        return projects

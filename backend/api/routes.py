@@ -18,13 +18,7 @@ tz = pytz.timezone(Config.TIMEZONE)
 @router.get("/projects")
 async def get_projects():
     """利用可能なプロジェクト一覧を取得"""
-    projects = []
-    for project_dir in Config.get_project_dirs():
-        projects.append({
-            "id": project_dir.name,
-            "name": project_dir.name.replace("-", " ").title(),
-            "path": str(project_dir)
-        })
+    projects = Config.get_project_info()
     return {"projects": projects}
 
 @router.get("/conversations")
