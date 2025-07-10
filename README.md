@@ -18,13 +18,13 @@ Claude CLIの会話履歴を閲覧・検索するためのモダンなWebアプ�
 - 🎯 **マルチプロジェクト対応** - 複数のClaude Projectsを統合表示
 - 🔧 **設定可能** - 環境変数による柔軟な設定
 
-## スクリーンショット
+## 画面概要
 
 **UI概要:**
 
 | 検索・フィルター機能 |
 |---------------------|
-| **開始日** \| **終了日** \| **プロジェクト選択** \| **実行ボタン** |
+| **開始日** \| **終了日** \| **実行ボタン** |
 
 | 統計表示 |
 |----------|
@@ -49,15 +49,15 @@ APIの実装についてお手伝いします...
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/your-username/claude-conversations-history-viewer.git
-cd claude-conversations-history-viewer
+git clone https://github.com/masanao-ohba/cchistory.git
+cd cchistory
 ```
 
 ### 2. 環境設定
 
 ```bash
 # 設定ファイルをコピー
-cp .env.sample .env
+cp .env.example .env
 
 # 必要に応じて設定を編集
 vim .env
@@ -79,14 +79,12 @@ docker-compose logs -f
 
 ## 開発
 
-### 開発用起動（ホットリロード有効）
-
 ```bash
 # 開発用Docker Composeで起動
-docker-compose -f docker-compose.dev.yml up --build
+docker-compose -f docker-compose.yml up --build
 
 # ログを確認
-docker-compose -f docker-compose.dev.yml logs -f
+docker-compose -f docker-compose.yml logs -f
 ```
 
 開発用では以下のポートでアクセス可能：
@@ -95,15 +93,6 @@ docker-compose -f docker-compose.dev.yml logs -f
 
 ファイルを編集すると自動でリロードされます。
 
-### 本番用起動
-
-```bash
-# 本番用Docker Composeで起動
-docker-compose up --build
-
-# アクセス
-# http://localhost:18080
-```
 
 ## 設定
 
