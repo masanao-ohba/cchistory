@@ -26,13 +26,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      target: development  # 開発ステージを使用
     container_name: cchistory-frontend
+    volumes:
+      - ./frontend:/app:ro  # ホットリロード用（読み取り専用）
+      - /app/node_modules  # node_modulesは除外
     networks:
       - cchistory-network
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]  # 開発サーバー起動
 
   nginx:
     image: nginx:alpine
