@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white transition-all duration-300" :class="compact ? 'p-3' : 'p-6 mb-8 rounded-lg'">
+  <div class="bg-white transition-all duration-300" :class="compact ? 'p-3' : 'p-6 rounded-lg'">
     <div class="grid grid-cols-1 gap-4 items-end" :class="compact ? 'md:grid-cols-6' : 'md:grid-cols-4'">
       <!-- 開始日 -->
       <div>
