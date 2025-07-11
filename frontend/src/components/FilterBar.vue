@@ -132,7 +132,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useConversationStore } from '../stores/conversations'
+
+const { t: $t } = useI18n()
 
 const emit = defineEmits(['filter'])
 const props = defineProps({
@@ -186,13 +189,13 @@ const quickFilters = ref([
 // 計算プロパティ
 const selectedProjectsText = computed(() => {
   if (selectedProjects.value.length === 0) {
-    return props.compact ? 'All Projects' : 'すべてのプロジェクト'
+    return $t('projectFilter.allProjects')
   }
   if (selectedProjects.value.length === 1) {
     const project = projects.value.find(p => p.id === selectedProjects.value[0])
     return project ? project.display_name : 'Unknown'
   }
-  return `${selectedProjects.value.length} projects selected`
+  return $t('projectFilter.projectsSelected', { count: selectedProjects.value.length })
 })
 
 const selectedProjectsDetails = computed(() => {

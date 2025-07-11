@@ -26,6 +26,8 @@ async def get_conversations(
     start_date: Optional[date] = Query(None, description="開始日（日本時間）"),
     end_date: Optional[date] = Query(None, description="終了日（日本時間）"),
     projects: List[str] = Query(default=[], alias="project[]", description="プロジェクトID"),
+    keyword: Optional[str] = Query(None, description="検索キーワード"),
+    show_related_threads: bool = Query(True, description="関連スレッド全体を表示"),
     offset: int = Query(0, ge=0, description="オフセット"),
     limit: int = Query(100, ge=1, le=1000, description="取得件数")
 ):
@@ -96,6 +98,54 @@ async def get_conversations(
 
             all_conversations = filtered_conversations
 
+        # キーワード検索処理
+        search_match_count = 0
+        if keyword:
+            keyword_lower = keyword.lower()
+
+            # 最初にキーワードマッチするメッセージ数をカウント
+            search_match_count = sum(1 for conv in all_conversations if keyword_lower in conv["content"].lower())
+
+            if show_related_threads:
+                # 関連スレッド全体を表示：キーワードにマッチするメッセージが含まれるセッションの全メッセージを取得
+                matching_session_ids = set()
+                for conv in all_conversations:
+                    if keyword_lower in conv["content"].lower():
+                        matching_session_ids.add(conv["session_id"])
+
+                # マッチしたセッションの全メッセージを取得
+                thread_conversations = [
+                    conv for conv in all_conversations
+                    if conv["session_id"] in matching_session_ids
+                ]
+
+                # キーワードマッチフラグとハイライト用のキーワードを追加
+                for conv in thread_conversations:
+                    conv["is_search_match"] = keyword_lower in conv["content"].lower()
+                    conv["search_keyword"] = keyword
+
+                all_conversations = thread_conversations
+            else:
+                # キーワードにマッチするメッセージのみを表示
+                keyword_conversations = [
+                    conv for conv in all_conversations
+                    if keyword_lower in conv["content"].lower()
+                ]
+
+                # キーワードマッチフラグとハイライト用のキーワードを追加
+                for conv in keyword_conversations:
+                    conv["is_search_match"] = True
+                    conv["search_keyword"] = keyword
+
+                all_conversations = keyword_conversations
+        else:
+            # キーワードがない場合は、既存のsearch_keywordフィールドを除去
+            for conv in all_conversations:
+                if "search_keyword" in conv:
+                    del conv["search_keyword"]
+                if "is_search_match" in conv:
+                    del conv["is_search_match"]
+
         # ページング
         total = len(all_conversations)
         conversations = all_conversations[offset:offset + limit]
@@ -108,6 +158,7 @@ async def get_conversations(
             "total": total,
             "offset": offset,
             "limit": limit,
+            "search_match_count": search_match_count,
             "stats": {
                 "total_conversations": total,
                 "unique_sessions": len(unique_sessions)
