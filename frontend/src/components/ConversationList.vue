@@ -75,6 +75,7 @@
             { 'line-clamp-3': !expandedItems.has(index) }
           ]"
           v-html="renderMarkdown(conversation.content, conversation.search_keyword)"
+          @click="handleCodeCopy"
         ></div>
 
         <!-- 展開/折りたたみボタン -->
@@ -154,9 +155,62 @@ const md = new MarkdownIt({
   typographer: true
 })
 
+// コードブロックのカスタムレンダラー
+const originalCodeBlockRender = md.renderer.rules.code_block || md.renderer.rules.fence
+md.renderer.rules.code_block = md.renderer.rules.fence = function(tokens, idx, options, env, self) {
+  const token = tokens[idx]
+  const code = token.content.trim()
+  const lang = token.info ? token.info.trim() : ''
+  const id = `code-block-${Math.random().toString(36).substr(2, 9)}`
+
+  return `<div class="code-block-container">
+    <div class="code-block-header">
+      <span class="code-language">${lang || 'text'}</span>
+      <button class="copy-button" data-code-id="${id}" title="コピー">
+        <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <svg class="check-icon icon-hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20,6 9,17 4,12"></polyline>
+        </svg>
+      </button>
+    </div>
+    <pre class="code-block-content"><code id="${id}" class="language-${lang}">${md.utils.escapeHtml(code)}</code></pre>
+  </div>`
+}
+
 // 展開状態管理
 const expandedItems = ref(new Set())
 const lastLoadedCount = ref(0)
+
+// クリップボードコピー機能
+const copyToClipboard = async (codeId) => {
+  try {
+    const codeElement = document.getElementById(codeId)
+    if (!codeElement) return
+
+    const code = codeElement.textContent
+    await navigator.clipboard.writeText(code)
+
+    // ボタンのアイコンを一時的に変更
+    const button = document.querySelector(`[data-code-id="${codeId}"]`)
+    if (button) {
+      const copyIcon = button.querySelector('.copy-icon')
+      const checkIcon = button.querySelector('.check-icon')
+
+      copyIcon.classList.add('icon-hidden')
+      checkIcon.classList.remove('icon-hidden')
+
+      setTimeout(() => {
+        copyIcon.classList.remove('icon-hidden')
+        checkIcon.classList.add('icon-hidden')
+      }, 2000)
+    }
+  } catch (err) {
+    console.error('クリップボードへのコピーに失敗:', err)
+  }
+}
 
 // 計算プロパティ
 const loadMoreRangeText = computed(() => {
@@ -231,6 +285,17 @@ const shouldShowToggleButton = (content) => {
   const lines = content.split('\n')
   // 3行以上、または1行が長すぎる場合にボタンを表示
   return lines.length > 3 || content.length > 200
+}
+
+// クリックイベントハンドラー
+const handleCodeCopy = (event) => {
+  const button = event.target.closest('.copy-button')
+  if (button) {
+    const codeId = button.getAttribute('data-code-id')
+    if (codeId) {
+      copyToClipboard(codeId)
+    }
+  }
 }
 </script>
 
@@ -325,5 +390,42 @@ const shouldShowToggleButton = (content) => {
 /* 検索ハイライト */
 .markdown-content :deep(mark) {
   @apply bg-yellow-200 px-1 py-0.5 rounded-sm font-medium;
+}
+
+/* コードブロックのスタイリング */
+.markdown-content :deep(.code-block-container) {
+  @apply relative mb-4 rounded-lg overflow-hidden border border-gray-300;
+}
+
+.markdown-content :deep(.code-block-header) {
+  @apply flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200;
+}
+
+.markdown-content :deep(.code-language) {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.markdown-content :deep(.copy-button) {
+  @apply flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200;
+}
+
+.markdown-content :deep(.copy-button svg) {
+  @apply text-gray-600;
+}
+
+.markdown-content :deep(.copy-button:hover svg) {
+  @apply text-gray-800;
+}
+
+.markdown-content :deep(.code-block-content) {
+  @apply m-0 bg-gray-100;
+}
+
+.markdown-content :deep(.code-block-content code) {
+  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed;
+}
+
+.markdown-content :deep(.icon-hidden) {
+  display: none;
 }
 </style>
