@@ -69,3 +69,4 @@ Thumbs.db
 frontend/dist/
 backend/.pytest_cache/
 .pytest_cache/
+CLAUDE.md

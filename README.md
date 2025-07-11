@@ -2,167 +2,161 @@
 
 A modern web application for viewing and searching Claude CLI conversation history.
 
-Claude CLIの会話履歴を閲覧・検索するためのモダンなWebアプリケーションです。
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.x-green.svg)](https://vuejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
 
-## 特徴
+## Features
 
-- 🚀 **軽量で高速** - Docker化されたマイクロサービス構成
-- 📱 **レスポンシブデザイン** - モダンなUIで快適な閲覧体験
-- 🔍 **柔軟な検索** - 日付・プロジェクト別フィルタリング
-- ⚡ **リアルタイム更新** - WebSocketによる自動更新
-- 🎯 **マルチプロジェクト対応** - 複数のClaude Projectsを統合表示
-- 🔧 **設定可能** - 環境変数による柔軟な設定
+- 🚀 **Lightweight & Fast** - Dockerized microservice architecture
+- 📱 **Responsive Design** - Modern UI for comfortable browsing experience
+- 🔍 **Flexible Search** - Filter by date, project, and keywords
+- ⚡ **Real-time Updates** - Automatic updates via WebSocket
+- 🎯 **Multi-project Support** - Integrated display of multiple Claude projects
+- 🔧 **Configurable** - Flexible configuration through environment variables
 
-## 画面概要
+## Screenshots
 
-**UI概要:**
+![Claude Conversations History Viewer](screenshot.png)
 
-| 検索・フィルター機能 |
-|---------------------|
-| **開始日** \| **終了日** \| **実行ボタン** |
+*Main interface showing conversation history with search and filtering capabilities*
 
-| 統計表示 |
-|----------|
-| **42,257** 全会話数 \| **1,234** フィルター結果 \| **156** セッション \| **3** プロジェクト |
-
-**会話履歴表示:**
-```
-[User] 2024-01-15 14:30:45
-APIの実装についてサポートしてください...
-
-[Assistant] 2024-01-15 14:31:02  
-APIの実装についてお手伝いします...
-```
-
-## 必要要件
+## Requirements
 
 - Docker & Docker Compose
-- Claude CLI（`~/.claude/projects`にデータが存在する）
+- Claude CLI (with data in `~/.claude/projects`)
 
-## クイックスタート
+## Quick Start
 
-### 1. リポジトリのクローン
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/masanao-ohba/cchistory.git
 cd cchistory
 ```
 
-### 2. 環境設定
+### 2. Configuration
 
 ```bash
-# 設定ファイルをコピー
+# Copy the configuration file
 cp .env.example .env
 
-# 必要に応じて設定を編集
+# Edit the configuration as needed
 vim .env
 ```
 
-### 3. 起動
+### 3. Launch
 
 ```bash
-# Docker Composeで起動
+# Start with Docker Compose
 docker-compose up -d
 
-# ログを確認
+# Check logs
 docker-compose logs -f
 ```
 
-### 4. アクセス
+### 4. Access
 
-ブラウザで http://localhost:18080 にアクセス
+Open your browser and navigate to http://localhost:18080
 
-## 開発
+## Development
 
 ```bash
-# 開発用Docker Composeで起動
+# Start with development Docker Compose
 docker-compose -f docker-compose.yml up --build
 
-# ログを確認
+# Check logs
 docker-compose -f docker-compose.yml logs -f
 ```
 
-開発用では以下のポートでアクセス可能：
-- フロントエンド: http://localhost:3000 （Vite開発サーバー）
-- バックエンド: http://localhost:8000 （FastAPI）
+In development mode, you can access:
+- Frontend: http://localhost:3000 (Vite dev server)
+- Backend: http://localhost:8000 (FastAPI)
 
-ファイルを編集すると自動でリロードされます。
+Files are automatically reloaded when edited.
 
+## Configuration
 
-## 設定
+### Environment Variables
 
-### 環境変数
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VIEWER_PORT` | `18080` | Application port |
+| `CLAUDE_PROJECTS_PATH` | `~/.claude/projects` | Path to Claude projects |
+| `CLAUDE_PROJECTS` | - | Specific project paths (comma-separated or JSON array) |
+| `TIMEZONE` | `Asia/Tokyo` | Display timezone |
+| `LOG_LEVEL` | `INFO` | Logging level |
 
-| 変数名 | デフォルト値 | 説明 |
-|--------|-------------|------|
-| `VIEWER_PORT` | `18080` | アプリケーションのポート |
-| `CLAUDE_PROJECTS_PATH` | `~/.claude/projects` | Claude projectsのパス |
-| `TIMEZONE` | `Asia/Tokyo` | タイムゾーン |
-| `LOG_LEVEL` | `INFO` | ログレベル |
+### Changing Port
 
-### ポートの変更
-
-他のサービスとポートが競合する場合：
+If the port conflicts with other services:
 
 ```bash
-# .envファイルを編集
+# Edit .env file
 echo "VIEWER_PORT=19080" >> .env
 
-# 再起動
+# Restart
 docker-compose down
 docker-compose up -d
 ```
 
-### カスタムClaude Projectsパス
+### Custom Claude Projects Path
 
 ```bash
-# .envファイルを編集
+# Edit .env file
 echo "CLAUDE_PROJECTS_PATH=/path/to/your/claude/projects" >> .env
 
-# 再起動
+# Restart
 docker-compose down
 docker-compose up -d
 ```
 
-## 使用方法
+### Specific Project Selection
 
-### 基本操作
+```bash
+# Select specific projects (comma-separated)
+echo "CLAUDE_PROJECTS=project1,project2" >> .env
 
-1. **全件表示**: 初期状態では全ての会話が表示されます
-2. **日付フィルター**: 開始日・終了日を指定して期間検索
-3. **プロジェクトフィルター**: 特定のプロジェクトのみ表示
-4. **クイックフィルター**: 今日、昨日、過去7日、過去30日の便利ボタン
+# Or use JSON array format
+echo 'CLAUDE_PROJECTS=["project1", "project2"]' >> .env
+```
 
-### リアルタイム更新
+## Usage
 
-- WebSocketにより、新しい会話が自動的に反映されます
-- 画面右下のインジケーターで接続状態を確認できます
+### Basic Operations
 
-### パフォーマンス
+1. **View All**: Initially displays all conversations
+2. **Date Filter**: Search by date range using start and end dates
+3. **Project Filter**: Display only specific projects
+4. **Keyword Search**: Search within conversation content
+5. **Quick Filters**: Convenient buttons for Today, Yesterday, Past 7 days, Past 30 days
 
-- 大量のデータに対応するため、ページング機能を実装
-- 初回表示は100件、「もっと読み込む」で追加取得
-- ファイル変更の監視とキャッシュ機能により高速動作
+### Real-time Updates
 
-## アーキテクチャ
+- WebSocket automatically reflects new conversations
+- Connection status indicator in the bottom right corner
 
-**Docker Container:**
+### Performance
+
+- Pagination for handling large amounts of data
+- Initial display of 100 items, load more on demand
+- Fast operation through file monitoring and caching
+
+## Architecture
+
+**Docker Container Structure:**
 ```
 ├── Nginx (Port 80)
-│   ├── リバースプロキシ
-│   └── 静的ファイル配信
+│   ├── Reverse Proxy
+│   └── Static File Serving
 ├── Vue.js Frontend  
-│   ├── モダンなSPA
+│   ├── Modern SPA
 │   └── Tailwind CSS
 └── FastAPI Backend (Port 8000)
     ├── REST API
     ├── WebSocket  
-    └── ファイル監視
+    └── File Watcher
 ```
 
 **↑ Volume Mount (Read-Only)**
@@ -176,41 +170,42 @@ docker-compose up -d
     └── session3.jsonl
 ```
 
-### 技術スタック
+### Technology Stack
 
-**バックエンド:**
-- FastAPI (高性能Python Webフレームワーク)
-- uvicorn (ASGIサーバー)
-- watchdog (ファイル監視)
-- WebSocket (リアルタイム通信)
+**Backend:**
+- FastAPI (High-performance Python web framework)
+- uvicorn (ASGI server)
+- watchdog (File monitoring)
+- WebSocket (Real-time communication)
 
-**フロントエンド:**
+**Frontend:**
 - Vue 3 (Composition API)
-- Vite (高速ビルドツール)
-- Pinia (状態管理)
-- Tailwind CSS (ユーティリティファーストCSS)
+- Vite (Fast build tool)
+- Pinia (State management)
+- Tailwind CSS (Utility-first CSS)
 
-**インフラ:**
+**Infrastructure:**
 - Docker & Docker Compose
-- Nginx (リバースプロキシ)
-- Alpine Linux (軽量コンテナイメージ)
+- Nginx (Reverse proxy)
+- Alpine Linux (Lightweight container images)
 
-## API仕様
+## API Specification
 
-### エンドポイント
+### Endpoints
 
 #### GET `/api/conversations`
 
-会話履歴を取得
+Retrieve conversation history
 
-**パラメータ:**
-- `start_date` (optional): 開始日 (YYYY-MM-DD)
-- `end_date` (optional): 終了日 (YYYY-MM-DD)
-- `project[]` (optional): プロジェクトID（複数指定可）
-- `offset` (optional): オフセット (default: 0)
-- `limit` (optional): 取得件数 (default: 100, max: 1000)
+**Parameters:**
+- `start_date` (optional): Start date (YYYY-MM-DD)
+- `end_date` (optional): End date (YYYY-MM-DD)
+- `project[]` (optional): Project IDs (multiple allowed)
+- `keyword` (optional): Search keyword
+- `offset` (optional): Offset (default: 0)
+- `limit` (optional): Number of items (default: 100, max: 1000)
 
-**レスポンス:**
+**Response:**
 ```json
 {
   "conversations": [...],
@@ -226,100 +221,110 @@ docker-compose up -d
 
 #### GET `/api/projects`
 
-利用可能なプロジェクト一覧を取得
+Get list of available projects
 
 #### GET `/api/conversations/stats`
 
-統計情報を取得
+Get statistics
 
 #### WebSocket `/ws/updates`
 
-リアルタイム更新の受信
+Receive real-time updates
 
-## トラブルシューティング
+## Troubleshooting
 
-### よくある問題
+### Common Issues
 
-#### 1. ポートが使用中
+#### 1. Port Already in Use
 
 ```bash
-# ポートを変更
+# Change port
 echo "VIEWER_PORT=19080" >> .env
 docker-compose down
 docker-compose up -d
 ```
 
-#### 2. Claude Projectsが見つからない
+#### 2. Claude Projects Not Found
 
 ```bash
-# パスを確認
+# Check path
 ls -la ~/.claude/projects
 
-# カスタムパスを設定
+# Set custom path
 echo "CLAUDE_PROJECTS_PATH=/path/to/claude/projects" >> .env
 ```
 
-#### 3. データが表示されない
+#### 3. Data Not Displayed
 
 ```bash
-# ログを確認
+# Check logs
 docker-compose logs backend
 
-# コンテナの状態確認
+# Check container status
 docker-compose ps
 ```
 
-#### 4. WebSocket接続エラー
+#### 4. WebSocket Connection Error
 
 ```bash
-# Nginxの設定確認
+# Check Nginx configuration
 docker-compose logs nginx
 
-# バックエンドの状態確認
+# Check backend status
 docker-compose logs backend
 ```
 
-### ログの確認
+### Checking Logs
 
 ```bash
-# 全サービスのログ
+# All service logs
 docker-compose logs -f
 
-# 特定サービスのログ
+# Specific service logs
 docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f nginx
 ```
 
-## 開発
+## Development
 
-### 開発環境のセットアップ
+### Development Environment Setup
 
 ```bash
-# バックエンド開発
+# Backend development
 cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 
-# フロントエンド開発
+# Frontend development
 cd frontend
 npm install
 npm run dev
 ```
 
-### 貢献方法
+### Contributing
 
-1. Forkして開発用ブランチを作成
-2. 変更を実装
-3. テストを実行
-4. Pull Requestを作成
+1. Fork and create a development branch
+2. Implement your changes
+3. Run tests
+4. Create a Pull Request
 
-## ライセンス
+## License
 
 MIT License
 
-## 作者
+## Author
 
 Masanao Ohba
+
+## Support
+
+If you encounter any issues or have questions:
+- Create an issue on [GitHub Issues](https://github.com/masanao-ohba/cchistory/issues)
+- Check the [project documentation](https://github.com/masanao-ohba/cchistory)
+
+## Acknowledgments
+
+This project utilizes the conversation history generated by [Claude CLI](https://claude.ai) to provide an enhanced viewing and searching experience.
