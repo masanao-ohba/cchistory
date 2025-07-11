@@ -50,8 +50,8 @@
       <ConversationList
         :conversations="conversations"
         :loading="loading"
-        :has-more="searchKeyword ? false : hasMore"
-        :total-count="searchKeyword ? conversations.length : totalCount"
+        :has-more="hasMore"
+        :total-count="totalCount"
         @load-more="loadMore"
       />
     </main>
@@ -144,7 +144,7 @@ watch(searchState, async (newState) => {
 
     // バックエンドで統合検索を実行
     const result = await store.getConversations(filters)
-    
+
     // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
     if (!newState.keyword) {
       result.conversations = result.conversations.map(conv => {
@@ -152,7 +152,7 @@ watch(searchState, async (newState) => {
         return cleanConv
       })
     }
-    
+
     conversations.value = result.conversations
     originalConversations.value = newState.keyword ? [] : result.conversations
     totalCount.value = result.total
@@ -234,7 +234,7 @@ const handleFilter = async (filters) => {
 }
 
 const loadMore = async () => {
-  if (loading.value || !hasMore.value || searchState.keyword) return
+  if (loading.value || !hasMore.value) return
 
   loading.value = true
   try {
@@ -242,16 +242,25 @@ const loadMore = async () => {
       startDate: searchState.startDate,
       endDate: searchState.endDate,
       projects: searchState.projects.length ? searchState.projects : null,
-      offset: originalConversations.value.length,
+      keyword: searchState.keyword || null,
+      showRelatedThreads: searchState.showRelatedThreads,
+      offset: conversations.value.length,
       limit: 100
     }
 
     const result = await store.getConversations(filters)
-    originalConversations.value.push(...result.conversations)
-    totalCount.value = result.total
-    hasMore.value = originalConversations.value.length < result.total
 
-    conversations.value = [...originalConversations.value]
+    if (searchState.keyword) {
+      // キーワード検索時は conversations に直接追加
+      conversations.value.push(...result.conversations)
+    } else {
+      // 通常時は originalConversations を使用
+      originalConversations.value.push(...result.conversations)
+      conversations.value = [...originalConversations.value]
+    }
+
+    totalCount.value = result.total
+    hasMore.value = conversations.value.length < result.total
   } catch (error) {
     console.error('Load more error:', error)
   } finally {
