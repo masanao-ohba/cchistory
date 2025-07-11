@@ -5,6 +5,7 @@ import pytz
 import logging
 
 from services.jsonl_parser import JSONLParser
+from services.message_grouper import find_matching_user_threads
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -107,24 +108,15 @@ async def get_conversations(
             search_match_count = sum(1 for conv in all_conversations if keyword_lower in conv["content"].lower())
 
             if show_related_threads:
-                # 関連スレッド全体を表示：キーワードにマッチするメッセージが含まれるセッションの全メッセージを取得
-                matching_session_ids = set()
-                for conv in all_conversations:
-                    if keyword_lower in conv["content"].lower():
-                        matching_session_ids.add(conv["session_id"])
-
-                # マッチしたセッションの全メッセージを取得
-                thread_conversations = [
-                    conv for conv in all_conversations
-                    if conv["session_id"] in matching_session_ids
-                ]
+                # 関連スレッド全体を表示：ユーザー発言からアシスタント応答群までを単位として表示
+                matching_messages = find_matching_user_threads(all_conversations, keyword_lower)
 
                 # キーワードマッチフラグとハイライト用のキーワードを追加
-                for conv in thread_conversations:
+                for conv in matching_messages:
                     conv["is_search_match"] = keyword_lower in conv["content"].lower()
                     conv["search_keyword"] = keyword
 
-                all_conversations = thread_conversations
+                all_conversations = matching_messages
             else:
                 # キーワードにマッチするメッセージのみを表示
                 keyword_conversations = [

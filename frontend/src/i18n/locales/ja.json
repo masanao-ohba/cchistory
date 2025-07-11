@@ -19,7 +19,7 @@
     "button": "検索",
     "foundMessages": "「{keyword}」で {count} 件のメッセージが見つかりました",
     "noMessagesFound": "「{keyword}」に一致するメッセージは見つかりませんでした",
-    "showRelatedThreads": "関連スレッド全てを表示する"
+    "showRelatedThreads": "関連する発言とその応答を表示"
   },
   "dateFilter": {
     "title": "日付フィルター",

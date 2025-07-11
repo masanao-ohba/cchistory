@@ -19,7 +19,7 @@
     "button": "Search",
     "foundMessages": "Found {count} messages for '{keyword}'",
     "noMessagesFound": "No messages found matching '{keyword}'",
-    "showRelatedThreads": "Show all related threads"
+    "showRelatedThreads": "Show related messages and responses"
   },
   "dateFilter": {
     "title": "Date Filter",
