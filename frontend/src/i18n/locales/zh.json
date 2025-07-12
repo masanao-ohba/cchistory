@@ -3,6 +3,8 @@
     "title": "对话历史",
     "showing": "显示 {count} 个对话",
     "showingFiltered": "显示 {total} 个对话中的 {count} 个",
+    "showingThreads": "显示 {threads} 条（{messages} 消息）",
+    "showingThreadsFiltered": "显示 {totalThreads} 条中的 {threads} 条（{messages} 消息）",
     "loading": "正在加载数据...",
     "noConversations": "未找到对话",
     "noConversationsHint": "请尝试更改过滤条件。",
@@ -12,6 +14,7 @@
     "collapse": "收起",
     "loadMore": "加载更多",
     "loadMoreRange": "({start}〜{end}项)",
+    "loadMoreThreadRange": "({start}〜{end}条)",
     "newConversationsLoaded": "已加载 {count} 条新对话"
   },
   "search": {
@@ -46,10 +49,9 @@
   },
   "statistics": {
     "title": "统计",
-    "totalConversations": "总对话数",
-    "filteredResults": "过滤结果",
-    "uniqueSessions": "会话数",
-    "totalProjects": "总项目数",
+    "totalThreads": "对话",
+    "totalMessages": "消息",
+    "totalProjects": "项目",
     "dailyConversations": "日常对话（过去30天）",
     "items": "个"
   },

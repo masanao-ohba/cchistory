@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="min-h-screen bg-gray-50">
+  <div id="app" class="min-h-screen bg-gray-100">
     <!-- ヘッダー（スクロール時に隠れる） -->
     <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500"
             :class="{ 'transform -translate-y-full opacity-0': isScrolled }">
@@ -23,7 +23,7 @@
           :loading="loading"
           :compact="isScrolled"
         />
-        <div class="pb-3 pt-2">
+        <div class="py-2">
           <SearchBox
             ref="searchBoxRef"
             @search="handleSearch"
@@ -36,37 +36,30 @@
     <!-- 統計情報（スクロール時に隠れる） -->
     <div class="transition-all duration-500"
          :class="{ 'transform -translate-y-full opacity-0 pointer-events-none': isScrolled }">
-      <div class="max-w-7xl mx-auto px-4 pt-4 pb-4">
+      <div class="max-w-7xl mx-auto px-4 pt-4 pb-2">
         <Statistics
           :stats="stats"
-          :filtered-count="searchKeyword ? conversations.length : (totalCount || conversations.length)"
         />
       </div>
     </div>
 
     <!-- メインコンテンツ -->
-    <main class="max-w-7xl mx-auto px-4 pb-8 pt-4">
+    <main class="max-w-7xl mx-auto px-4 pb-8 pt-2">
       <!-- 会話リスト -->
       <ConversationList
         :conversations="conversations"
         :loading="loading"
         :has-more="hasMore"
-        :total-count="totalCount"
+        :total-threads="totalThreads"
+        :total-messages="totalMessages"
+        :actual-threads="actualThreads"
+        :actual-messages="actualMessages"
         @load-more="loadMore"
       />
     </main>
 
     <!-- トップへ戻るボタン -->
-    <button
-      v-show="isScrolled"
-      @click="scrollToTop"
-      class="fixed bottom-4 left-4 bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-40"
-      :title="$t('app.backToTop')"
-    >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
-      </svg>
-    </button>
+    <BackToTopButton v-show="isScrolled" @click="scrollToTop" />
 
     <!-- WebSocket接続状態 -->
     <div
@@ -91,6 +84,7 @@ import Statistics from './components/Statistics.vue'
 import ConversationList from './components/ConversationList.vue'
 import SearchBox from './components/SearchBox.vue'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
+import BackToTopButton from './components/BackToTopButton.vue'
 import { useConversationStore } from './stores/conversations'
 
 const store = useConversationStore()
@@ -102,7 +96,10 @@ const loading = ref(false)
 const hasMore = ref(true)
 const wsConnected = ref(false)
 const isScrolled = ref(false)
-const totalCount = ref(0)
+const totalThreads = ref(0)
+const totalMessages = ref(0)
+const actualThreads = ref(0)
+const actualMessages = ref(0)
 
 // 検索関連
 const searchKeyword = ref('')
@@ -115,7 +112,9 @@ const searchState = reactive({
   endDate: null,
   projects: [],
   keyword: '',
-  showRelatedThreads: true
+  showRelatedThreads: true,
+  sortOrder: 'desc',
+  threadMode: 'grouped'
 })
 
 // 初期化フラグ
@@ -125,6 +124,78 @@ let isInitialized = false
 
 // WebSocket接続
 let ws = null
+
+// WebSocketにフィルタリング条件を送信
+const sendFiltersToWebSocket = () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const filters = {
+      projects: searchState.projects,
+      startDate: searchState.startDate,
+      endDate: searchState.endDate,
+      keyword: searchState.keyword
+    }
+    
+    const message = {
+      type: 'update_filters',
+      filters: filters
+    }
+    
+    ws.send(JSON.stringify(message))
+  }
+}
+
+// ファイル変更時の処理
+const handleFileChange = async () => {
+  if (!isInitialized) {
+    return
+  }
+  
+  setTimeout(async () => {
+      try {
+        const filters = {
+          startDate: searchState.startDate,
+          endDate: searchState.endDate,
+          projects: searchState.projects.length ? searchState.projects : null,
+          keyword: searchState.keyword || null,
+          showRelatedThreads: searchState.showRelatedThreads,
+          sortOrder: searchState.sortOrder,
+          threadMode: searchState.threadMode,
+          offset: 0,
+          limit: conversations.value.length || 50 // 現在表示中の件数分を取得
+        }
+
+        const result = await store.getConversations(filters, true) // 強制更新
+        
+        // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
+        if (!searchState.keyword) {
+          result.conversations = result.conversations.map(conv => {
+            const { search_keyword, ...cleanConv } = conv
+            return cleanConv
+          })
+        }
+
+        conversations.value = result.conversations
+        totalThreads.value = result.total_threads || 0
+        totalMessages.value = result.total_messages || 0
+        actualThreads.value = result.actual_threads || 0
+        actualMessages.value = result.actual_messages || 0
+        hasMore.value = result.total_threads > result.actual_threads
+
+        // 統計情報も同期更新
+        await updateStats(result)
+
+        // 検索結果の統計を更新
+        if (searchState.keyword && searchBoxRef.value) {
+          searchBoxRef.value.setSearchResults({
+            total: result.search_match_count,
+            keyword: searchState.keyword
+          })
+        }
+      } catch (error) {
+        console.error('Error auto-refreshing conversations:', error)
+      }
+    }, 1000)
+}
 
 // 検索ステートの変更を監視して自動検索
 watch(searchState, async (newState) => {
@@ -138,8 +209,10 @@ watch(searchState, async (newState) => {
       projects: newState.projects.length ? newState.projects : null,
       keyword: newState.keyword || null,
       showRelatedThreads: newState.showRelatedThreads,
+      sortOrder: newState.sortOrder,
+      threadMode: newState.threadMode,
       offset: 0,
-      limit: 100
+      limit: 50
     }
 
     // バックエンドで統合検索を実行
@@ -155,8 +228,14 @@ watch(searchState, async (newState) => {
 
     conversations.value = result.conversations
     originalConversations.value = newState.keyword ? [] : result.conversations
-    totalCount.value = result.total
-    hasMore.value = result.total > result.conversations.length
+    totalThreads.value = result.total_threads || 0
+    totalMessages.value = result.total_messages || 0
+    actualThreads.value = result.actual_threads || 0
+    actualMessages.value = result.actual_messages || 0
+    hasMore.value = result.total_threads > result.actual_threads
+
+    // 統計情報を同期更新
+    await updateStats(result, newState)
 
     // 検索結果の統計を更新
     if (newState.keyword && searchBoxRef.value) {
@@ -172,6 +251,9 @@ watch(searchState, async (newState) => {
   } finally {
     loading.value = false
   }
+  
+  // WebSocketにフィルタリング条件を送信
+  sendFiltersToWebSocket()
 }, { deep: true })
 
 // スクロール検出（シンプルな固定閾値）
@@ -203,6 +285,8 @@ const connectWebSocket = () => {
   ws.onopen = () => {
     wsConnected.value = true
     console.log('WebSocket connected')
+    // 接続後にフィルタリング条件を送信
+    sendFiltersToWebSocket()
   }
 
   ws.onclose = () => {
@@ -215,8 +299,8 @@ const connectWebSocket = () => {
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
     if (data.type === 'file_change') {
-      console.log('File change detected, refreshing data...')
-      loadConversations(true) // 強制更新
+      // フィルタリング条件に応じた自動更新を実行
+      handleFileChange()
     }
   }
 
@@ -231,6 +315,8 @@ const handleFilter = async (filters) => {
   searchState.startDate = filters.startDate || null
   searchState.endDate = filters.endDate || null
   searchState.projects = filters.projects || []
+  searchState.sortOrder = filters.sortOrder || 'desc'
+  searchState.threadMode = filters.threadMode || 'grouped'
 }
 
 const loadMore = async () => {
@@ -238,14 +324,17 @@ const loadMore = async () => {
 
   loading.value = true
   try {
+    const currentCount = conversations.value.length
     const filters = {
       startDate: searchState.startDate,
       endDate: searchState.endDate,
       projects: searchState.projects.length ? searchState.projects : null,
       keyword: searchState.keyword || null,
       showRelatedThreads: searchState.showRelatedThreads,
-      offset: conversations.value.length,
-      limit: 100
+      sortOrder: searchState.sortOrder,
+      threadMode: searchState.threadMode,
+      offset: actualThreads.value, // 実際に表示されているスレッド数を使用
+      limit: 50
     }
 
     const result = await store.getConversations(filters)
@@ -259,8 +348,18 @@ const loadMore = async () => {
       conversations.value = [...originalConversations.value]
     }
 
-    totalCount.value = result.total
-    hasMore.value = conversations.value.length < result.total
+    // 累積値を正しく計算
+    const newActualThreads = actualThreads.value + (result.actual_threads || 0)
+    const newActualMessages = actualMessages.value + (result.actual_messages || 0)
+    
+    totalThreads.value = result.total_threads || 0
+    totalMessages.value = result.total_messages || 0
+    actualThreads.value = newActualThreads
+    actualMessages.value = newActualMessages
+    hasMore.value = result.total_threads > newActualThreads
+
+    // 統計情報は変更しない（Load More時は累積表示のため）
+    // updateStats(result) は削除
   } catch (error) {
     console.error('Load more error:', error)
   } finally {
@@ -274,8 +373,14 @@ const loadConversations = async (force = false) => {
     const result = await store.getConversations({}, force)
     conversations.value = result.conversations
     originalConversations.value = [...result.conversations]
-    totalCount.value = result.total
-    hasMore.value = result.total > result.conversations.length
+    totalThreads.value = result.total_threads || 0
+    totalMessages.value = result.total_messages || 0
+    actualThreads.value = result.actual_threads || 0
+    actualMessages.value = result.actual_messages || 0
+    hasMore.value = result.total_threads > result.actual_threads
+
+    // 統計情報も同期更新
+    await updateStats(result)
   } catch (error) {
     console.error('Load conversations error:', error)
   } finally {
@@ -307,6 +412,34 @@ const handleClearSearch = () => {
   searchState.keyword = ''
 }
 
+// フィルターが適用されているかを判定
+const hasActiveFilter = (state) => {
+  return !!(
+    state.keyword ||
+    state.startDate ||
+    state.endDate ||
+    (state.projects && state.projects.length > 0)
+  )
+}
+
+// 統計情報を更新する共通関数
+const updateStats = async (result, state = null) => {
+  const currentState = state || searchState
+  
+  if (hasActiveFilter(currentState)) {
+    // フィルター適用時はフィルター結果の統計を使用
+    stats.value = {
+      total_threads: result.stats.total_threads || 0,
+      total_messages: result.stats.total_messages || 0,
+      projects: result.stats.projects || 0,
+      daily_thread_counts: result.stats.daily_thread_counts || {}
+    }
+  } else {
+    // フィルターがクリアされた場合は全体統計を再読み込み
+    await loadStats()
+  }
+}
+
 // クリーンアップ用の変数
 let globalScrollHandler = null
 
@@ -332,9 +465,6 @@ onMounted(async () => {
 onUnmounted(() => {
   if (globalScrollHandler) {
     window.removeEventListener('scroll', globalScrollHandler)
-  }
-  if (scrollTimeout) {
-    clearTimeout(scrollTimeout)
   }
   if (ws) {
     ws.close()

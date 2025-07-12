@@ -1,4 +1,5 @@
 import logging
+import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -315,7 +316,7 @@ async def read_root():
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では適切に設定
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -333,13 +334,26 @@ async def websocket_endpoint(websocket: WebSocket):
             # クライアントからのメッセージを待機
             data = await websocket.receive_text()
             logger.debug(f"Received message: {data}")
+
+            try:
+                message = json.loads(data)
+                if message.get("type") == "update_filters":
+                    # フィルタリング条件を更新
+                    filters = message.get("filters", {})
+                    manager.update_filters(websocket, filters)
+                    logger.info(f"Updated filters for WebSocket connection: {filters}")
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON received: {data}")
+            except Exception as e:
+                logger.error(f"Error processing WebSocket message: {e}")
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.info("WebSocket client disconnected")
 
 # ヘルスチェック
 @app.get("/api/health")
-@app.head("/api/health") 
+@app.head("/api/health")
 async def health_check():
     return {"status": "healthy", "version": "1.0.0"}
 

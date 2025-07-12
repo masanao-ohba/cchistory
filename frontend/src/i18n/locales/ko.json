@@ -3,6 +3,8 @@
     "title": "대화 기록",
     "showing": "{count}개의 대화 표시 중",
     "showingFiltered": "{total}개 중 {count}개 대화 표시 중",
+    "showingThreads": "{threads}개 ({messages} 메시지) 표시 중",
+    "showingThreadsFiltered": "{totalThreads}개 중 {threads}개 ({messages} 메시지) 표시 중",
     "loading": "데이터 로딩 중...",
     "noConversations": "대화를 찾을 수 없습니다",
     "noConversationsHint": "필터 조건을 변경해 보세요.",
@@ -12,6 +14,7 @@
     "collapse": "접기",
     "loadMore": "더 로드",
     "loadMoreRange": "({start}〜{end}개 항목)",
+    "loadMoreThreadRange": "({start}〜{end}개)",
     "newConversationsLoaded": "{count}개의 새로운 대화를 로드했습니다"
   },
   "search": {
@@ -46,10 +49,9 @@
   },
   "statistics": {
     "title": "통계",
-    "totalConversations": "총 대화 수",
-    "filteredResults": "필터 결과",
-    "uniqueSessions": "세션 수",
-    "totalProjects": "총 프로젝트 수",
+    "totalThreads": "대화",
+    "totalMessages": "메시지",
+    "totalProjects": "프로젝트",
     "dailyConversations": "일별 대화 수 (최근 30일)",
     "items": "개"
   },

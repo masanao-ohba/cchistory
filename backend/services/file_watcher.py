@@ -4,36 +4,66 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from typing import Optional
+import threading
 
 logger = logging.getLogger(__name__)
 
 class FileChangeHandler(FileSystemEventHandler):
-    def __init__(self, connection_manager):
+    def __init__(self, connection_manager, loop):
         self.connection_manager = connection_manager
+        self.loop = loop
         super().__init__()
 
     def on_modified(self, event):
         if event.is_directory:
             return
+        if not event.src_path.endswith('.jsonl'):
+            return
 
-        if event.src_path.endswith('.jsonl'):
-            logger.info(f"JSONL file modified: {event.src_path}")
-            asyncio.create_task(self._notify_clients(event.src_path, 'modified'))
+        logger.info(f"JSONL file modified: {event.src_path}")
+        self._schedule_notification(event.src_path, 'modified')
 
     def on_created(self, event):
         if event.is_directory:
             return
+        if not event.src_path.endswith('.jsonl'):
+            return
 
-        if event.src_path.endswith('.jsonl'):
-            logger.info(f"JSONL file created: {event.src_path}")
-            asyncio.create_task(self._notify_clients(event.src_path, 'created'))
+        logger.info(f"JSONL file created: {event.src_path}")
+        self._schedule_notification(event.src_path, 'created')
+
+    def _schedule_notification(self, file_path: str, event_type: str):
+        """非同期コンテキストでnotificationをスケジュール"""
+        if not self.loop or self.loop.is_closed():
+            return
+
+        asyncio.run_coroutine_threadsafe(
+            self._notify_clients(file_path, event_type),
+            self.loop
+        )
 
     async def _notify_clients(self, file_path: str, event_type: str):
         """クライアントに変更を通知"""
+        # ファイルパスからプロジェクトIDを抽出
+        from config import Config
+
+        project_id = None
+        file_path_obj = Path(file_path)
+
+        # プロジェクトディレクトリを特定
+        for project_dir in Config.get_project_dirs():
+            try:
+                file_path_obj.relative_to(project_dir)
+                project_id = project_dir.name
+                break
+            except ValueError:
+                continue
+
         message = {
             "type": "file_change",
             "event": event_type,
             "file_path": file_path,
+            "project_id": project_id,
             "timestamp": asyncio.get_event_loop().time()
         }
         await self.connection_manager.broadcast(message)
@@ -50,7 +80,9 @@ class FileWatcher:
             logger.warning(f"Watch path does not exist: {self.watch_path}")
             return
 
-        self.handler = FileChangeHandler(connection_manager)
+        # 現在のイベントループを取得
+        loop = asyncio.get_event_loop()
+        self.handler = FileChangeHandler(connection_manager, loop)
         self.observer = Observer()
 
         # 再帰的に監視
