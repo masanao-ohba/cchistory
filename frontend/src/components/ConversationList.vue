@@ -110,36 +110,61 @@ const props = defineProps({
 
 // Markdownパーサーの初期化
 const md = new MarkdownIt({
-  html: false,
-  xhtmlOut: false,
+  html: true,
+  xhtmlOut: true,
   breaks: true,
   linkify: true,
-  typographer: true
+  typographer: true,
+  highlight: function (str, lang) {
+    return `<pre class="language-${lang}"><code>${md.utils.escapeHtml(str)}</code></pre>`
+  }
 })
 
 // コードブロックのカスタムレンダラー
-const originalCodeBlockRender = md.renderer.rules.code_block || md.renderer.rules.fence
-md.renderer.rules.code_block = md.renderer.rules.fence = function(tokens, idx, options, env, self) {
+const defaultFenceRenderer = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
+  return self.renderToken(tokens, idx, options)
+}
+
+md.renderer.rules.fence = function(tokens, idx, options, env, self) {
   const token = tokens[idx]
-  const code = token.content.trim()
+  const code = token.content
   const lang = token.info ? token.info.trim() : ''
   const id = `code-block-${Math.random().toString(36).substr(2, 9)}`
 
-  return `<div class="code-block-container">
-    <div class="code-block-header">
-      <span class="code-language">${lang || 'text'}</span>
-      <button class="copy-button" data-code-id="${id}" title="コピー">
-        <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  return `<div class="code-block-container relative mb-4 rounded-lg overflow-hidden border border-gray-300">
+    <div class="code-block-header flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
+      <span class="code-language text-sm font-medium text-gray-600">${lang || 'text'}</span>
+      <button class="copy-button flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200" data-code-id="${id}" title="コピー">
+        <svg class="copy-icon text-gray-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
-        <svg class="check-icon icon-hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="check-icon hidden text-gray-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20,6 9,17 4,12"></polyline>
         </svg>
       </button>
     </div>
-    <pre class="code-block-content"><code id="${id}" class="language-${lang}">${md.utils.escapeHtml(code)}</code></pre>
+    <pre class="code-block-content m-0 bg-gray-100"><code id="${id}" class="block p-4 bg-transparent text-sm font-mono leading-relaxed language-${lang}">${md.utils.escapeHtml(code)}</code></pre>
   </div>`
+}
+
+md.renderer.rules.code_block = md.renderer.rules.fence
+
+// テーブルのカスタムレンダラー
+const defaultTableRenderer = md.renderer.rules.table_open || function(tokens, idx, options, env, self) {
+  return '<table>'
+}
+
+md.renderer.rules.table_open = function(tokens, idx, options, env, self) {
+  return '<table class="w-full border-collapse border border-gray-300 mb-3">'
+}
+
+md.renderer.rules.th_open = function(tokens, idx, options, env, self) {
+  return '<th class="border border-gray-300 px-3 py-2 text-left bg-gray-50 font-semibold">'
+}
+
+md.renderer.rules.td_open = function(tokens, idx, options, env, self) {
+  return '<td class="border border-gray-300 px-3 py-2 text-left">'
 }
 
 // 展開状態管理
@@ -161,12 +186,12 @@ const copyToClipboard = async (codeId) => {
       const copyIcon = button.querySelector('.copy-icon')
       const checkIcon = button.querySelector('.check-icon')
 
-      copyIcon.classList.add('icon-hidden')
-      checkIcon.classList.remove('icon-hidden')
+      copyIcon.classList.add('hidden')
+      checkIcon.classList.remove('hidden')
 
       setTimeout(() => {
-        copyIcon.classList.remove('icon-hidden')
-        checkIcon.classList.add('icon-hidden')
+        copyIcon.classList.remove('hidden')
+        checkIcon.classList.add('hidden')
       }, 2000)
     }
   } catch (err) {
@@ -254,127 +279,122 @@ const handleCodeCopy = (event) => {
 }
 </script>
 
-<style scoped>
-
-/* Markdownコンテンツのスタイリング */
-.markdown-content :deep(h1),
-.markdown-content :deep(h2),
-.markdown-content :deep(h3),
-.markdown-content :deep(h4),
-.markdown-content :deep(h5),
-.markdown-content :deep(h6) {
+<style>
+/* Markdownコンテンツのスタイリング - グローバルスタイル */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
   @apply font-bold text-gray-900 mb-2 mt-4;
 }
 
-.markdown-content :deep(h1) { @apply text-xl; }
-.markdown-content :deep(h2) { @apply text-lg; }
-.markdown-content :deep(h3) { @apply text-base; }
+.markdown-content h1 { @apply text-xl; }
+.markdown-content h2 { @apply text-lg; }
+.markdown-content h3 { @apply text-base; }
 
-.markdown-content :deep(p) {
+.markdown-content p {
   @apply mb-3 last:mb-0 leading-relaxed;
 }
 
-.markdown-content :deep(ul),
-.markdown-content :deep(ol) {
+.markdown-content ul,
+.markdown-content ol {
   @apply mb-3 pl-6;
 }
 
-.markdown-content :deep(li) {
+.markdown-content li {
   @apply mb-1;
 }
 
-.markdown-content :deep(ul li) {
+.markdown-content ul > li {
   @apply list-disc;
 }
 
-.markdown-content :deep(ol li) {
+.markdown-content ol > li {
   @apply list-decimal;
 }
 
-.markdown-content :deep(blockquote) {
+.markdown-content blockquote {
   @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-3;
 }
 
-.markdown-content :deep(code) {
+.markdown-content :not(pre) > code {
   @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800;
 }
 
-.markdown-content :deep(pre) {
-  @apply bg-gray-100 p-3 rounded-md overflow-x-auto mb-3 border;
+.markdown-content pre {
+  @apply bg-gray-100 p-3 rounded-md overflow-x-auto mb-3 border border-gray-200;
 }
 
-.markdown-content :deep(pre code) {
+.markdown-content pre code {
   @apply bg-transparent p-0 text-sm;
 }
 
-.markdown-content :deep(a) {
+.markdown-content a {
   @apply text-blue-600 hover:text-blue-800 underline;
 }
 
-.markdown-content :deep(strong) {
+.markdown-content strong {
   @apply font-bold;
 }
 
-.markdown-content :deep(em) {
+.markdown-content em {
   @apply italic;
 }
 
-.markdown-content :deep(hr) {
+.markdown-content hr {
   @apply border-gray-300 my-4;
 }
 
-.markdown-content :deep(table) {
+.markdown-content table {
   @apply w-full border-collapse border border-gray-300 mb-3;
 }
 
-.markdown-content :deep(th),
-.markdown-content :deep(td) {
+.markdown-content th,
+.markdown-content td {
   @apply border border-gray-300 px-3 py-2 text-left;
 }
 
-.markdown-content :deep(th) {
+.markdown-content th {
   @apply bg-gray-50 font-semibold;
 }
 
 /* 検索ハイライト */
-.markdown-content :deep(mark) {
+.markdown-content mark {
   @apply bg-yellow-200 px-1 py-0.5 rounded-sm font-medium;
 }
 
 /* コードブロックのスタイリング */
-.markdown-content :deep(.code-block-container) {
+.markdown-content .code-block-container {
   @apply relative mb-4 rounded-lg overflow-hidden border border-gray-300;
 }
 
-.markdown-content :deep(.code-block-header) {
+.markdown-content .code-block-header {
   @apply flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200;
 }
 
-.markdown-content :deep(.code-language) {
+.markdown-content .code-language {
   @apply text-sm font-medium text-gray-600;
 }
 
-.markdown-content :deep(.copy-button) {
-  @apply flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200;
+.markdown-content .copy-button {
+  @apply flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200 cursor-pointer;
 }
 
-.markdown-content :deep(.copy-button svg) {
+.markdown-content .copy-button svg {
   @apply text-gray-600;
 }
 
-.markdown-content :deep(.copy-button:hover svg) {
+.markdown-content .copy-button:hover svg {
   @apply text-gray-800;
 }
 
-.markdown-content :deep(.code-block-content) {
+.markdown-content .code-block-content {
   @apply m-0 bg-gray-100;
 }
 
-.markdown-content :deep(.code-block-content code) {
-  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed;
-}
-
-.markdown-content :deep(.icon-hidden) {
-  display: none;
+.markdown-content .code-block-content code {
+  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre;
 }
 </style>
