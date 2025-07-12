@@ -3,6 +3,8 @@
     "title": "Conversation History",
     "showing": "Showing {count} conversations",
     "showingFiltered": "Showing {count} of {total} conversations",
+    "showingThreads": "Showing {threads} items ({messages} messages)",
+    "showingThreadsFiltered": "Showing {threads} of {totalThreads} items ({messages} messages)",
     "loading": "Loading data...",
     "noConversations": "No conversations found",
     "noConversationsHint": "Try changing your filter criteria.",
@@ -12,6 +14,7 @@
     "collapse": "Collapse",
     "loadMore": "Load More",
     "loadMoreRange": "({start}〜{end} items)",
+    "loadMoreThreadRange": "({start}〜{end} items)",
     "newConversationsLoaded": "Loaded {count} new conversations"
   },
   "search": {
@@ -46,10 +49,9 @@
   },
   "statistics": {
     "title": "Statistics",
-    "totalConversations": "Total Conversations",
-    "filteredResults": "Filtered Results",
-    "uniqueSessions": "Unique Sessions",
-    "totalProjects": "Total Projects",
+    "totalThreads": "Conversations",
+    "totalMessages": "Messages",
+    "totalProjects": "Projects",
     "dailyConversations": "Daily Conversations (Last 30 Days)",
     "items": " items"
   },
@@ -59,6 +61,11 @@
     "english": "English",
     "chinese": "中文",
     "korean": "한국어"
+  },
+  "sortOrder": {
+    "label": "Sort Order",
+    "ascending": "Ascending (Oldest First)",
+    "descending": "Descending (Newest First)"
   },
   "app": {
     "subtitle": "Search and Filter Conversation History",

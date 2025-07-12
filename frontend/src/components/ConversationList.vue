@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+  <div class="bg-gray-100 rounded-lg overflow-hidden">
     <!-- ヘッダー -->
-    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-      <h2 class="text-xl font-semibold text-gray-900">{{ $t('conversations.title') }}</h2>
-      <p class="text-sm text-gray-500 mt-1">
-        {{ totalCount && totalCount > conversations.length ? $t('conversations.showingFiltered', { count: conversations.length.toLocaleString(), total: totalCount.toLocaleString() }) : $t('conversations.showing', { count: conversations.length.toLocaleString() }) }}
+    <div class="bg-slate-50 px-4 py-2 border-b border-gray-200/60 rounded-t-lg rounded-b-lg mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">{{ $t('conversations.title') }}</h2>
+      <p class="text-sm text-gray-600 mt-1">
+        {{ totalThreads && totalThreads > actualThreads ? $t('conversations.showingThreadsFiltered', { threads: actualThreads.toLocaleString(), messages: actualMessages.toLocaleString(), totalThreads: totalThreads.toLocaleString() }) : $t('conversations.showingThreads', { threads: actualThreads.toLocaleString(), messages: actualMessages.toLocaleString() }) }}
       </p>
     </div>
 
@@ -22,81 +22,30 @@
     </div>
 
     <!-- 会話リスト -->
-    <div v-else class="space-y-3">
+    <div v-else class="space-y-6">
       <div
-        v-for="(conversation, index) in conversations"
-        :key="`${conversation.session_id}-${index}`"
-        class="transition-all duration-200 hover:scale-[1.005]"
-        :class="[
-          'rounded-lg p-3 shadow-sm',
-          conversation.type === 'user'
-            ? 'bg-blue-50 ml-0 mr-12'
-            : 'bg-green-50 ml-12 mr-0'
-        ]"
+        v-for="(threadGroup, threadIndex) in groupedConversations"
+        :key="`thread-${threadIndex}`"
+        class="bg-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-200"
       >
-        <!-- メタ情報 -->
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center space-x-3">
-            <!-- アバター風アイコン -->
-            <div
-              :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold',
-                conversation.type === 'user'
-                  ? 'bg-blue-500'
-                  : 'bg-green-500'
-              ]"
-            >
-              {{ conversation.type === 'user' ? 'U' : 'A' }}
-            </div>
-
-            <!-- タイプラベル -->
-            <span
-              :class="[
-                'text-sm font-medium',
-                conversation.type === 'user'
-                  ? 'text-blue-700'
-                  : 'text-green-700'
-              ]"
-            >
-              {{ conversation.type === 'user' ? $t('conversations.user') : $t('conversations.assistant') }}
-            </span>
-          </div>
-
-          <!-- タイムスタンプ -->
-          <time class="text-xs text-gray-500">
-            {{ formatTimestamp(conversation.timestamp) }}
-          </time>
+        <div class="space-y-3">
+          <MessageItem
+            v-for="(conversation, index) in threadGroup"
+            :key="`${conversation.session_id}-${index}`"
+            :conversation="conversation"
+            :index="index"
+            :expanded-items="expandedItems"
+            :render-markdown="renderMarkdown"
+            :handle-code-copy="handleCodeCopy"
+            :should-show-toggle-button="shouldShowToggleButton"
+            @toggle-expand="toggleExpand"
+          />
         </div>
-
-        <!-- コンテンツ -->
-        <div
-          :class="[
-            'leading-relaxed break-words rounded-md p-3 bg-white text-gray-900 markdown-content',
-            { 'line-clamp-3': !expandedItems.has(index) }
-          ]"
-          v-html="renderMarkdown(conversation.content, conversation.search_keyword)"
-          @click="handleCodeCopy"
-        ></div>
-
-        <!-- 展開/折りたたみボタン -->
-        <button
-          v-if="shouldShowToggleButton(conversation.content)"
-          @click="toggleExpand(index)"
-          :class="[
-            'mt-2 text-sm font-medium hover:underline',
-            conversation.type === 'user'
-              ? 'text-blue-600 hover:text-blue-800'
-              : 'text-green-600 hover:text-green-800'
-          ]"
-        >
-          {{ expandedItems.has(index) ? $t('conversations.collapse') : $t('conversations.showMore') }}
-        </button>
-
       </div>
     </div>
 
     <!-- もっと読み込むボタン -->
-    <div v-if="hasMore" class="p-6 bg-gray-50 border-t border-gray-200">
+    <div v-if="hasMore" class="p-6 bg-transparent border-t border-gray-200/60 rounded-b-lg">
       <div v-if="lastLoadedCount > 0" class="mb-3 text-center text-sm text-green-600 font-medium animate-pulse">
         ✓ {{ $t('conversations.newConversationsLoaded', { count: lastLoadedCount }) }}
       </div>
@@ -123,6 +72,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MarkdownIt from 'markdown-it'
+import MessageItem from './MessageItem.vue'
 
 const { t: $t } = useI18n()
 
@@ -140,7 +90,19 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  totalCount: {
+  totalThreads: {
+    type: Number,
+    default: 0
+  },
+  totalMessages: {
+    type: Number,
+    default: 0
+  },
+  actualThreads: {
+    type: Number,
+    default: 0
+  },
+  actualMessages: {
     type: Number,
     default: 0
   }
@@ -213,15 +175,20 @@ const copyToClipboard = async (codeId) => {
 }
 
 // 計算プロパティ
+const groupedConversations = computed(() => {
+  // バックエンドから既にグループ化された配列が返される
+  return props.conversations
+})
+
 const loadMoreRangeText = computed(() => {
-  if (!props.totalCount || props.conversations.length === 0) return ''
+  if (!props.totalThreads || props.actualThreads === 0) return ''
 
-  const start = props.conversations.length + 1
-  const defaultBatchSize = 100 // デフォルトの読み込み件数
-  const remaining = props.totalCount - props.conversations.length
-  const end = props.conversations.length + Math.min(defaultBatchSize, remaining)
+  const start = props.actualThreads + 1
+  const defaultBatchSize = 50 // デフォルトの読み込み件数
+  const remaining = props.totalThreads - props.actualThreads
+  const end = props.actualThreads + Math.min(defaultBatchSize, remaining)
 
-  return $t('conversations.loadMoreRange', { start: start.toLocaleString(), end: end.toLocaleString() })
+  return $t('conversations.loadMoreThreadRange', { start: start.toLocaleString(), end: end.toLocaleString() })
 })
 
 // メソッド
@@ -244,12 +211,12 @@ const renderMarkdown = (content, searchKeyword = null) => {
 }
 
 const handleLoadMore = () => {
-  const prevCount = props.conversations.length
+  const prevCount = props.actualThreads
   emit('load-more')
 
   // 少し待ってから新しく読み込まれた件数を計算
   setTimeout(() => {
-    const newCount = props.conversations.length
+    const newCount = props.actualThreads
     lastLoadedCount.value = newCount - prevCount
 
     // 3秒後にメッセージを非表示
@@ -257,18 +224,6 @@ const handleLoadMore = () => {
       lastLoadedCount.value = 0
     }, 3000)
   }, 500)
-}
-const formatTimestamp = (timestamp) => {
-  const date = new Date(timestamp)
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: 'Asia/Tokyo'
-  }).format(date)
 }
 
 const toggleExpand = (index) => {
@@ -300,12 +255,6 @@ const handleCodeCopy = (event) => {
 </script>
 
 <style scoped>
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 /* Markdownコンテンツのスタイリング */
 .markdown-content :deep(h1),

@@ -3,6 +3,8 @@
     "title": "会話履歴",
     "showing": "{count}件の会話を表示中",
     "showingFiltered": "{total}件中 {count}件を表示中",
+    "showingThreads": "{threads}件（{messages}メッセージ）を表示中",
+    "showingThreadsFiltered": "{totalThreads}件中 {threads}件（{messages}メッセージ）を表示中",
     "loading": "データを読み込んでいます...",
     "noConversations": "会話が見つかりません",
     "noConversationsHint": "フィルター条件を変更してみてください。",
@@ -12,6 +14,7 @@
     "collapse": "折りたたむ",
     "loadMore": "もっと読み込む",
     "loadMoreRange": "({start}〜{end}件)",
+    "loadMoreThreadRange": "({start}〜{end}件)",
     "newConversationsLoaded": "{count}件の新しい会話を読み込みました"
   },
   "search": {
@@ -46,10 +49,9 @@
   },
   "statistics": {
     "title": "統計",
-    "totalConversations": "全会話数",
-    "filteredResults": "フィルター結果",
-    "uniqueSessions": "セッション数",
-    "totalProjects": "プロジェクト数",
+    "totalThreads": "会話",
+    "totalMessages": "メッセージ",
+    "totalProjects": "プロジェクト",
     "dailyConversations": "日別会話数（過去30日）",
     "items": "件"
   },
@@ -59,6 +61,11 @@
     "english": "English",
     "chinese": "中文",
     "korean": "한국어"
+  },
+  "sortOrder": {
+    "label": "表示順",
+    "ascending": "昇順（古い順）",
+    "descending": "降順（新しい順）"
   },
   "app": {
     "subtitle": "会話履歴の検索とフィルタリング",

@@ -1,35 +1,25 @@
 <template>
-  <div class="bg-white transition-all duration-300" :class="compact ? 'p-3' : 'p-6 rounded-lg'">
-    <div class="grid grid-cols-1 gap-4 items-end" :class="compact ? 'md:grid-cols-6' : 'md:grid-cols-5'">
+  <div class="bg-white transition-all duration-300" :class="compact ? 'p-3' : 'px-4 pt-4 pb-1 rounded-lg'">
+    <div class="grid grid-cols-1 gap-4 items-end" :class="compact ? 'md:grid-cols-7' : 'md:grid-cols-6'">
       <!-- 開始日 -->
-      <div>
-        <label v-if="!compact" for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
-          {{ $t('dateFilter.from') }}
-        </label>
-        <input
-          id="startDate"
-          v-model="filters.startDate"
-          type="date"
-          :placeholder="compact ? $t('dateFilter.from') : ''"
-          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-2'"
-          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
-      </div>
+      <FormField
+        id="startDate"
+        v-model="filters.startDate"
+        :label="$t('dateFilter.from')"
+        :compact="compact"
+        type="date"
+        :placeholder="compact ? $t('dateFilter.from') : ''"
+      />
 
       <!-- 終了日 -->
-      <div>
-        <label v-if="!compact" for="endDate" class="block text-sm font-medium text-gray-700 mb-2">
-          {{ $t('dateFilter.to') }}
-        </label>
-        <input
-          id="endDate"
-          v-model="filters.endDate"
-          type="date"
-          :placeholder="compact ? $t('dateFilter.to') : ''"
-          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-2'"
-          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
-      </div>
+      <FormField
+        id="endDate"
+        v-model="filters.endDate"
+        :label="$t('dateFilter.to')"
+        :compact="compact"
+        type="date"
+        :placeholder="compact ? $t('dateFilter.to') : ''"
+      />
 
       <!-- プロジェクト選択 -->
       <div :class="compact ? 'md:col-span-2' : ''">
@@ -39,7 +29,7 @@
         <div class="relative">
           <button
             @click="toggleDropdown"
-            :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-2'"
+            :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
             class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-left flex items-center justify-between"
           >
             <span class="truncate">
@@ -84,12 +74,26 @@
         </div>
       </div>
 
+      <!-- 表示順選択 -->
+      <FormField
+        id="sortOrder"
+        v-model="selectedSortOrder"
+        :label="$t('sortOrder.label')"
+        :compact="compact"
+        tag="select"
+        class="bg-white"
+      >
+        <option value="asc">{{ $t('sortOrder.ascending') }}</option>
+        <option value="desc">{{ $t('sortOrder.descending') }}</option>
+      </FormField>
+
+
       <!-- リセットボタンのみ -->
       <div class="flex gap-2">
         <button
           @click="clearFilter"
           :disabled="loading"
-          :class="compact ? 'px-3 py-1 text-sm' : 'px-6 py-2'"
+          :class="compact ? 'px-3 py-1 text-sm' : 'px-4 py-1.5'"
           class="bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {{ $t('dateFilter.reset') }}
@@ -134,6 +138,7 @@
 import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConversationStore } from '../stores/conversations'
+import FormField from './FormField.vue'
 
 const { t: $t } = useI18n()
 
@@ -160,6 +165,8 @@ const filters = ref({
 const selectedProjects = ref([])
 const projects = ref([])
 const isDropdownOpen = ref(false)
+const selectedSortOrder = ref('desc')
+const selectedThreadMode = ref('grouped')
 let isInitialized = false
 
 // クイックフィルター
@@ -226,6 +233,8 @@ const clearFilter = () => {
     endDate: '',
   }
   selectedProjects.value = []
+  selectedSortOrder.value = 'desc'
+  selectedThreadMode.value = 'grouped'
 }
 
 const applyQuickFilter = (quick) => {
@@ -257,11 +266,13 @@ onMounted(async () => {
 
     // 検索ステートの変更を自動検知して検索実行
     watchEffect(() => {
-      // 日付、プロジェクトのいずれかが変更されると自動実行
+      // 日付、プロジェクト、表示順、スレッドモードのいずれかが変更されると自動実行
       const filterData = {
         startDate: filters.value.startDate || null,
         endDate: filters.value.endDate || null,
         projects: selectedProjects.value.length ? selectedProjects.value : null,
+        sortOrder: selectedSortOrder.value,
+        threadMode: selectedThreadMode.value,
         offset: 0,
         limit: 100
       }

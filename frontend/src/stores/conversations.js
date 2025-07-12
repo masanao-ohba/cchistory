@@ -54,6 +54,12 @@ export const useConversationStore = defineStore('conversations', {
         if (filters.showRelatedThreads !== undefined) {
           params.append('show_related_threads', filters.showRelatedThreads)
         }
+        if (filters.sortOrder) {
+          params.append('sort_order', filters.sortOrder)
+        }
+        if (filters.threadMode && filters.threadMode === 'grouped') {
+          params.append('group_by_thread', 'true')
+        }
 
         // キャッシュ無効化のため
         if (force) {

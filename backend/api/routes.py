@@ -5,7 +5,7 @@ import pytz
 import logging
 
 from services.jsonl_parser import JSONLParser
-from services.message_grouper import find_matching_user_threads
+from services.message_grouper import find_matching_user_threads, group_conversations_by_thread, group_conversations_by_thread_array
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -13,8 +13,119 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 parser = JSONLParser()
 
-# タイムゾーン設定
 tz = pytz.timezone(Config.TIMEZONE)
+
+def _calculate_filtered_stats(thread_groups):
+    """フィルター適用後の統計情報を計算"""
+    filtered_projects = set()
+    daily_thread_counts = {}
+
+    for thread_group in thread_groups:
+        if not thread_group:
+            continue
+
+        # プロジェクト数の集計
+        for msg in thread_group:
+            if "project" in msg and msg["project"]:
+                filtered_projects.add(msg["project"]["id"])
+
+        # 日別スレッド数の集計（スレッドの最初のメッセージの日付を使用）
+        first_message = thread_group[0]
+        conv_date = datetime.fromisoformat(first_message["timestamp"].replace('Z', '+00:00'))
+        conv_date = conv_date.astimezone(tz).date()
+        date_str = conv_date.isoformat()
+        daily_thread_counts[date_str] = daily_thread_counts.get(date_str, 0) + 1
+
+    return {
+        "projects": len(filtered_projects),
+        "daily_thread_counts": daily_thread_counts
+    }
+
+def _apply_date_filter(conversations, start_date, end_date):
+    """日付フィルタリングを適用（会話の流れを保持）"""
+    # まず日付範囲内のメッセージを特定
+    date_filtered_indices = set()
+    for i, conv in enumerate(conversations):
+        conv_date = datetime.fromisoformat(conv["timestamp"].replace('Z', '+00:00'))
+        conv_date = conv_date.astimezone(tz).date()
+
+        if start_date and end_date and not (start_date <= conv_date <= end_date):
+            continue
+        if start_date and not end_date and conv_date < start_date:
+            continue
+        if end_date and not start_date and conv_date > end_date:
+            continue
+
+        date_filtered_indices.add(i)
+
+    # 各セッションの最初のメッセージがアシスタントの場合、ユーザーメッセージを追加
+    enhanced_indices = set(date_filtered_indices)
+    session_first_indices = {}
+
+    # 日付範囲内の各セッションの最初のインデックスを特定
+    for i in sorted(date_filtered_indices):
+        session_id = conversations[i]["session_id"]
+        if session_id not in session_first_indices:
+            session_first_indices[session_id] = i
+
+    for session_id, first_idx in session_first_indices.items():
+        if conversations[first_idx]["type"] != "assistant":
+            continue
+
+        # このセッションの開始（ユーザーメッセージ）を探す
+        for j in range(first_idx - 1, -1, -1):
+            if conversations[j]["session_id"] != session_id:
+                break
+
+            enhanced_indices.add(j)
+            if conversations[j]["type"] == "user":
+                break
+
+    # インデックス順に会話を構築
+    filtered_conversations = []
+    for i in sorted(enhanced_indices):
+        filtered_conversations.append(conversations[i])
+
+    return filtered_conversations
+
+def _apply_keyword_filter(conversations, keyword, show_related_threads):
+    """キーワード検索フィルタリングを適用"""
+    keyword_lower = keyword.lower()
+
+    # キーワードマッチするメッセージ数をカウント
+    search_match_count = sum(1 for conv in conversations if keyword_lower in conv["content"].lower())
+
+    if show_related_threads:
+        # 関連スレッド全体を表示
+        matching_messages = find_matching_user_threads(conversations, keyword_lower)
+
+        # キーワードマッチフラグとハイライト用のキーワードを追加
+        for conv in matching_messages:
+            conv["is_search_match"] = keyword_lower in conv["content"].lower()
+            conv["search_keyword"] = keyword
+
+        return matching_messages, search_match_count
+    else:
+        # キーワードにマッチするメッセージのみを表示
+        keyword_conversations = [
+            conv for conv in conversations
+            if keyword_lower in conv["content"].lower()
+        ]
+
+        # キーワードマッチフラグとハイライト用のキーワードを追加
+        for conv in keyword_conversations:
+            conv["is_search_match"] = True
+            conv["search_keyword"] = keyword
+
+        return keyword_conversations, search_match_count
+
+def _clean_search_fields(conversations):
+    """検索関連フィールドをクリーンアップ"""
+    for conv in conversations:
+        if "search_keyword" in conv:
+            del conv["search_keyword"]
+        if "is_search_match" in conv:
+            del conv["is_search_match"]
 
 @router.get("/projects")
 async def get_projects():
@@ -29,8 +140,9 @@ async def get_conversations(
     projects: List[str] = Query(default=[], alias="project[]", description="プロジェクトID"),
     keyword: Optional[str] = Query(None, description="検索キーワード"),
     show_related_threads: bool = Query(True, description="関連スレッド全体を表示"),
+    sort_order: str = Query("desc", description="表示順（asc=昇順、desc=降順）"),
     offset: int = Query(0, ge=0, description="オフセット"),
-    limit: int = Query(100, ge=1, le=1000, description="取得件数")
+    limit: int = Query(50, ge=1, le=1000, description="取得件数")
 ):
     """会話履歴を取得"""
     try:
@@ -47,113 +159,51 @@ async def get_conversations(
             conversations = await parser.parse_project(project_dir)
             all_conversations.extend(conversations)
 
-        # ソート（タイムスタンプ昇順）
-        all_conversations.sort(key=lambda x: x["timestamp"])
+        # ソート（表示順に応じて昇順または降順）
+        reverse_sort = (sort_order == "desc")
+        all_conversations.sort(key=lambda x: x["timestamp"], reverse=reverse_sort)
 
         # 日付フィルタリング（会話の流れを保持）
         if start_date or end_date:
-            # まず日付範囲内のメッセージを特定
-            date_filtered_indices = set()
-            for i, conv in enumerate(all_conversations):
-                conv_date = datetime.fromisoformat(conv["timestamp"].replace('Z', '+00:00'))
-                conv_date = conv_date.astimezone(tz).date()
-
-                in_date_range = True
-                if start_date and end_date:
-                    in_date_range = start_date <= conv_date <= end_date
-                elif start_date:
-                    in_date_range = conv_date >= start_date
-                elif end_date:
-                    in_date_range = conv_date <= end_date
-
-                if in_date_range:
-                    date_filtered_indices.add(i)
-
-            # 各セッションの最初のメッセージがアシスタントの場合、ユーザーメッセージを追加
-            enhanced_indices = set(date_filtered_indices)
-            session_first_indices = {}
-
-            # 日付範囲内の各セッションの最初のインデックスを特定
-            for i in sorted(date_filtered_indices):
-                session_id = all_conversations[i]["session_id"]
-                if session_id not in session_first_indices:
-                    session_first_indices[session_id] = i
-
-            # 各セッションの最初がアシスタントならユーザーメッセージまで遡る
-            for session_id, first_idx in session_first_indices.items():
-                if all_conversations[first_idx]["type"] == "assistant":
-                    # このセッションの開始（ユーザーメッセージ）を探す
-                    for j in range(first_idx - 1, -1, -1):
-                        if all_conversations[j]["session_id"] == session_id:
-                            enhanced_indices.add(j)
-                            if all_conversations[j]["type"] == "user":
-                                break
-                        else:
-                            # 異なるセッションに到達
-                            break
-
-            # インデックス順に会話を構築
-            filtered_conversations = []
-            for i in sorted(enhanced_indices):
-                filtered_conversations.append(all_conversations[i])
-
-            all_conversations = filtered_conversations
+            all_conversations = _apply_date_filter(all_conversations, start_date, end_date)
 
         # キーワード検索処理
         search_match_count = 0
         if keyword:
-            keyword_lower = keyword.lower()
-
-            # 最初にキーワードマッチするメッセージ数をカウント
-            search_match_count = sum(1 for conv in all_conversations if keyword_lower in conv["content"].lower())
-
-            if show_related_threads:
-                # 関連スレッド全体を表示：ユーザー発言からアシスタント応答群までを単位として表示
-                matching_messages = find_matching_user_threads(all_conversations, keyword_lower)
-
-                # キーワードマッチフラグとハイライト用のキーワードを追加
-                for conv in matching_messages:
-                    conv["is_search_match"] = keyword_lower in conv["content"].lower()
-                    conv["search_keyword"] = keyword
-
-                all_conversations = matching_messages
-            else:
-                # キーワードにマッチするメッセージのみを表示
-                keyword_conversations = [
-                    conv for conv in all_conversations
-                    if keyword_lower in conv["content"].lower()
-                ]
-
-                # キーワードマッチフラグとハイライト用のキーワードを追加
-                for conv in keyword_conversations:
-                    conv["is_search_match"] = True
-                    conv["search_keyword"] = keyword
-
-                all_conversations = keyword_conversations
+            all_conversations, search_match_count = _apply_keyword_filter(all_conversations, keyword, show_related_threads)
         else:
             # キーワードがない場合は、既存のsearch_keywordフィールドを除去
-            for conv in all_conversations:
-                if "search_keyword" in conv:
-                    del conv["search_keyword"]
-                if "is_search_match" in conv:
-                    del conv["is_search_match"]
+            _clean_search_fields(all_conversations)
 
-        # ページング
-        total = len(all_conversations)
-        conversations = all_conversations[offset:offset + limit]
+        # スレッド単位でのグループ化処理（ページング前に実行）
+        all_thread_groups = group_conversations_by_thread_array(all_conversations, sort_order)
+        total_threads = len(all_thread_groups)
+        total_messages = sum(len(group) for group in all_thread_groups)
 
-        # 統計情報
-        unique_sessions = set(c["session_id"] for c in all_conversations)
+        # スレッド単位でページング
+        thread_groups = all_thread_groups[offset:offset + limit]
+        actual_threads = len(thread_groups)
+        actual_messages = sum(len(group) for group in thread_groups)
+
+        conversations = thread_groups
+
+        # フィルター適用後の統計情報を計算
+        filtered_stats = _calculate_filtered_stats(all_thread_groups)
 
         return {
             "conversations": conversations,
-            "total": total,
+            "total_threads": total_threads,
+            "total_messages": total_messages,
+            "actual_threads": actual_threads,
+            "actual_messages": actual_messages,
             "offset": offset,
             "limit": limit,
             "search_match_count": search_match_count,
             "stats": {
-                "total_conversations": total,
-                "unique_sessions": len(unique_sessions)
+                "total_threads": total_threads,
+                "total_messages": total_messages,
+                "projects": filtered_stats["projects"],
+                "daily_thread_counts": filtered_stats["daily_thread_counts"]
             }
         }
     except Exception as e:
@@ -172,20 +222,26 @@ async def get_stats():
             conversations = await parser.parse_project(project_dir)
             all_conversations.extend(conversations)
 
-        unique_sessions = set(c["session_id"] for c in all_conversations)
+        # スレッドグループ化して統計を計算
+        grouped_conversations = group_conversations_by_thread_array(all_conversations, "desc")
+        total_threads = len(grouped_conversations)
+        total_messages = len(all_conversations)
 
-        # 日別の会話数を集計
-        daily_counts = {}
-        for conv in all_conversations:
-            conv_date = datetime.fromisoformat(conv["timestamp"].replace('Z', '+00:00'))
-            conv_date = conv_date.astimezone(tz).date()
-            date_str = conv_date.isoformat()
-            daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
+        # 日別の会話数を集計（スレッド数ベース）
+        daily_thread_counts = {}
+        for thread_group in grouped_conversations:
+            if thread_group:
+                # スレッドの最初のメッセージの日付を使用
+                first_message = thread_group[0]
+                conv_date = datetime.fromisoformat(first_message["timestamp"].replace('Z', '+00:00'))
+                conv_date = conv_date.astimezone(tz).date()
+                date_str = conv_date.isoformat()
+                daily_thread_counts[date_str] = daily_thread_counts.get(date_str, 0) + 1
 
         return {
-            "total_conversations": len(all_conversations),
-            "unique_sessions": len(unique_sessions),
-            "daily_counts": daily_counts,
+            "total_threads": total_threads,
+            "total_messages": total_messages,
+            "daily_thread_counts": daily_thread_counts,
             "projects": len(Config.get_project_dirs())
         }
     except Exception as e:
