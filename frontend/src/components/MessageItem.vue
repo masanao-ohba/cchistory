@@ -5,7 +5,7 @@
       <div class="flex items-center space-x-3">
         <!-- アバター風アイコン -->
         <div :class="avatarClasses">
-          {{ conversation.type === 'user' ? 'U' : 'A' }}
+          <component :is="getMessageIcon(conversation.type)" />
         </div>
 
         <!-- タイプラベル -->
@@ -33,6 +33,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { getMessageIcon } from '../utils/icons'
 
 const { t: $t } = useI18n()
 
@@ -50,7 +51,7 @@ const emit = defineEmits(['toggle-expand'])
 const isUser = computed(() => props.conversation.type === 'user')
 
 const messageContainerClasses = computed(() => [
-  'transition-all duration-200 hover:scale-[1.002] rounded-lg p-3 shadow-sm',
+  'transition-all duration-200 hover:scale-[1.002] rounded-lg p-3 shadow-md',
   isUser.value
     ? 'bg-gradient-to-br from-blue-100 to-blue-200 ml-0 mr-8'
     : 'bg-gradient-to-br from-green-100 to-green-200 ml-8 mr-0'
@@ -67,7 +68,9 @@ const typeLabelClasses = computed(() => [
 ])
 
 const contentClasses = computed(() => [
-  'leading-relaxed break-words rounded-md p-3 text-gray-900 markdown-content shadow-sm border',
+  'prose prose-sm max-w-none break-words rounded-md p-3 text-gray-900 shadow-sm border',
+  'prose-headings:text-gray-900 prose-p:text-gray-800 prose-code:bg-gray-100 prose-pre:bg-gray-100',
+  'prose-table:border-gray-300 prose-th:border-gray-300 prose-td:border-gray-300',
   isUser.value ? 'bg-blue-50 border-blue-300' : 'bg-green-50 border-green-300',
   { 'line-clamp-3': !props.expandedItems.has(props.index) }
 ])

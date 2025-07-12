@@ -6,44 +6,4 @@
   html {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
-
-  /* Preserve default styles for markdown content */
-  .markdown-content h1,
-  .markdown-content h2,
-  .markdown-content h3,
-  .markdown-content h4,
-  .markdown-content h5,
-  .markdown-content h6 {
-    margin-top: 0;
-    margin-bottom: 0;
-  }
-
-  .markdown-content ul,
-  .markdown-content ol {
-    list-style: revert;
-    margin: revert;
-    padding: revert;
-  }
-
-  .markdown-content table {
-    display: table;
-    border-collapse: collapse;
-  }
-
-  .markdown-content thead {
-    display: table-header-group;
-  }
-
-  .markdown-content tbody {
-    display: table-row-group;
-  }
-
-  .markdown-content tr {
-    display: table-row;
-  }
-
-  .markdown-content th,
-  .markdown-content td {
-    display: table-cell;
-  }
 }

@@ -75,17 +75,20 @@
       </div>
 
       <!-- 表示順選択 -->
-      <FormField
-        id="sortOrder"
-        v-model="selectedSortOrder"
-        :label="$t('sortOrder.label')"
-        :compact="compact"
-        tag="select"
-        class="bg-white"
-      >
-        <option value="asc">{{ $t('sortOrder.ascending') }}</option>
-        <option value="desc">{{ $t('sortOrder.descending') }}</option>
-      </FormField>
+      <div>
+        <label v-if="!compact" for="sortOrder" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ $t('sortOrder.label') }}
+        </label>
+        <select
+          id="sortOrder"
+          v-model="selectedSortOrder"
+          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
+          class="w-full bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        >
+          <option value="asc">{{ $t('sortOrder.ascending') }}</option>
+          <option value="desc">{{ $t('sortOrder.descending') }}</option>
+        </select>
+      </div>
 
 
       <!-- リセットボタンのみ -->

@@ -280,121 +280,41 @@ const handleCodeCopy = (event) => {
 </script>
 
 <style>
-/* Markdownコンテンツのスタイリング - グローバルスタイル */
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
-  @apply font-bold text-gray-900 mb-2 mt-4;
-}
-
-.markdown-content h1 { @apply text-xl; }
-.markdown-content h2 { @apply text-lg; }
-.markdown-content h3 { @apply text-base; }
-
-.markdown-content p {
-  @apply mb-3 last:mb-0 leading-relaxed;
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  @apply mb-3 pl-6;
-}
-
-.markdown-content li {
-  @apply mb-1;
-}
-
-.markdown-content ul > li {
-  @apply list-disc;
-}
-
-.markdown-content ol > li {
-  @apply list-decimal;
-}
-
-.markdown-content blockquote {
-  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-3;
-}
-
-.markdown-content :not(pre) > code {
-  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800;
-}
-
-.markdown-content pre {
-  @apply bg-gray-100 p-3 rounded-md overflow-x-auto mb-3 border border-gray-200;
-}
-
-.markdown-content pre code {
-  @apply bg-transparent p-0 text-sm;
-}
-
-.markdown-content a {
-  @apply text-blue-600 hover:text-blue-800 underline;
-}
-
-.markdown-content strong {
-  @apply font-bold;
-}
-
-.markdown-content em {
-  @apply italic;
-}
-
-.markdown-content hr {
-  @apply border-gray-300 my-4;
-}
-
-.markdown-content table {
-  @apply w-full border-collapse border border-gray-300 mb-3;
-}
-
-.markdown-content th,
-.markdown-content td {
-  @apply border border-gray-300 px-3 py-2 text-left;
-}
-
-.markdown-content th {
-  @apply bg-gray-50 font-semibold;
-}
-
 /* 検索ハイライト */
-.markdown-content mark {
+.prose mark {
   @apply bg-yellow-200 px-1 py-0.5 rounded-sm font-medium;
 }
 
-/* コードブロックのスタイリング */
-.markdown-content .code-block-container {
+/* カスタムコードブロックのスタイリング（コピー機能付き） */
+.prose .code-block-container {
   @apply relative mb-4 rounded-lg overflow-hidden border border-gray-300;
 }
 
-.markdown-content .code-block-header {
+.prose .code-block-header {
   @apply flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200;
 }
 
-.markdown-content .code-language {
+.prose .code-language {
   @apply text-sm font-medium text-gray-600;
 }
 
-.markdown-content .copy-button {
+.prose .copy-button {
   @apply flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200 cursor-pointer;
 }
 
-.markdown-content .copy-button svg {
+.prose .copy-button svg {
   @apply text-gray-600;
 }
 
-.markdown-content .copy-button:hover svg {
+.prose .copy-button:hover svg {
   @apply text-gray-800;
 }
 
-.markdown-content .code-block-content {
+.prose .code-block-content {
   @apply m-0 bg-gray-100;
 }
 
-.markdown-content .code-block-content code {
+.prose .code-block-content code {
   @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre;
 }
 </style>
