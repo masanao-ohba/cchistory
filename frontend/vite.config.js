@@ -13,20 +13,32 @@ export default defineConfig({
   },
 
   server: {
-    host: true,
+    host: '0.0.0.0',
     port: 3000,
     strictPort: false,
-    allowedHosts: 'all',
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      '0.0.0.0',
+      '.ngrok.io',
+      '.ngrok-free.app',
+      '.ngrok.app'
+    ],
     hmr: {
       port: 3000,
-      host: 'localhost'
+      host: '0.0.0.0'
     },
     cors: true,
     watch: {
       usePolling: true,
       interval: 100
     },
-    proxy: {}
+    proxy: {},
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*'
+    }
   },
 
   build: {
