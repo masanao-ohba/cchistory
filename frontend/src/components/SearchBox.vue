@@ -99,8 +99,19 @@ const setSearchResults = (results) => {
   searchResults.value = results
 }
 
+// 外部から検索状態を設定する
+const setSearchState = (keyword, showRelated) => {
+  if (keyword !== undefined) {
+    searchKeyword.value = keyword
+  }
+  if (showRelated !== undefined) {
+    showRelatedThreads.value = showRelated
+  }
+}
+
 // 親コンポーネントから呼び出せるようにする
 defineExpose({
-  setSearchResults
+  setSearchResults,
+  setSearchState
 })
 </script>

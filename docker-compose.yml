@@ -26,19 +26,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      target: development  # 開発ステージを使用
     container_name: cchistory-frontend
+    environment:
+      - VITE_DEBUG=${DEBUG:-true}
+      - NODE_ENV=${NODE_ENV:-development}
     volumes:
-      - ./frontend:/app  # ホットリロード用
-      - /app/node_modules  # node_modulesは除外
-      - vite-cache:/tmp/vite-cache  # Viteキャッシュ用ボリューム
+      - ./frontend:/app
+      - /app/node_modules
     networks:
       - cchistory-network
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]  # 開発サーバー起動
 
   nginx:
     image: nginx:alpine
@@ -60,5 +60,3 @@ networks:
   cchistory-network:
     driver: bridge
 
-volumes:
-  vite-cache:

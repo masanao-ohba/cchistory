@@ -2,24 +2,32 @@
   <div class="bg-white transition-all duration-300" :class="compact ? 'p-3' : 'px-4 pt-4 pb-1 rounded-lg'">
     <div class="grid grid-cols-1 gap-4 items-end" :class="compact ? 'md:grid-cols-7' : 'md:grid-cols-6'">
       <!-- 開始日 -->
-      <FormField
-        id="startDate"
-        v-model="filters.startDate"
-        :label="$t('dateFilter.from')"
-        :compact="compact"
-        type="date"
-        :placeholder="compact ? $t('dateFilter.from') : ''"
-      />
+      <div>
+        <label v-if="!compact" for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ $t('dateFilter.from') }}
+        </label>
+        <input
+          id="startDate"
+          v-model="searchFilters.startDate"
+          type="date"
+          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
+          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        />
+      </div>
 
       <!-- 終了日 -->
-      <FormField
-        id="endDate"
-        v-model="filters.endDate"
-        :label="$t('dateFilter.to')"
-        :compact="compact"
-        type="date"
-        :placeholder="compact ? $t('dateFilter.to') : ''"
-      />
+      <div>
+        <label v-if="!compact" for="endDate" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ $t('dateFilter.to') }}
+        </label>
+        <input
+          id="endDate"
+          v-model="searchFilters.endDate"
+          type="date"
+          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
+          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        />
+      </div>
 
       <!-- プロジェクト選択 -->
       <div :class="compact ? 'md:col-span-2' : ''">
@@ -49,7 +57,7 @@
               <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
-                  :checked="selectedProjects.length === 0"
+                  :checked="searchFilters.projects.length === 0"
                   @change="toggleAllProjects"
                   class="mr-2 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
                 />
@@ -64,7 +72,7 @@
                 <input
                   type="checkbox"
                   :value="project.id"
-                  v-model="selectedProjects"
+                  v-model="searchFilters.projects"
                   class="mr-2 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
                 />
                 <span class="text-sm" :title="project.path">{{ project.display_name }}</span>
@@ -81,7 +89,7 @@
         </label>
         <select
           id="sortOrder"
-          v-model="selectedSortOrder"
+          v-model="searchFilters.sortOrder"
           :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
           class="w-full bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         >
@@ -90,11 +98,10 @@
         </select>
       </div>
 
-
-      <!-- リセットボタンのみ -->
+      <!-- リセットボタン -->
       <div class="flex gap-2">
         <button
-          @click="clearFilter"
+          @click="clearAllFilters"
           :disabled="loading"
           :class="compact ? 'px-3 py-1 text-sm' : 'px-4 py-1.5'"
           class="bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -117,7 +124,7 @@
     </div>
 
     <!-- 選択されたプロジェクト表示 -->
-    <div v-if="selectedProjects.length > 0 && !compact" class="mt-4 flex flex-wrap gap-2">
+    <div v-if="searchFilters.projects.length > 0 && !compact" class="mt-4 flex flex-wrap gap-2">
       <span
         v-for="project in selectedProjectsDetails"
         :key="project.id"
@@ -138,10 +145,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConversationStore } from '../stores/conversations'
-import FormField from './FormField.vue'
+import { useSearchFilters } from '../composables/useSearchFilters'
 
 const { t: $t } = useI18n()
 
@@ -159,18 +166,18 @@ const props = defineProps({
 
 const store = useConversationStore()
 
-// リアクティブデータ
-const filters = ref({
-  startDate: '',
-  endDate: '',
-})
-
-const selectedProjects = ref([])
-const projects = ref([])
-const isDropdownOpen = ref(false)
-const selectedSortOrder = ref('desc')
-const selectedThreadMode = ref('grouped')
-let isInitialized = false
+// 統一的な検索フィルター管理
+const {
+  searchFilters,
+  projects,
+  isDropdownOpen,
+  setFilterState,
+  clearAllFilters,
+  applyQuickFilter,
+  toggleAllProjects,
+  removeProject,
+  markAsInitialized
+} = useSearchFilters(emit)
 
 // クイックフィルター
 const quickFilters = ref([
@@ -198,51 +205,23 @@ const quickFilters = ref([
 
 // 計算プロパティ
 const selectedProjectsText = computed(() => {
-  if (selectedProjects.value.length === 0) {
+  if (searchFilters.projects.length === 0) {
     return $t('projectFilter.allProjects')
   }
-  if (selectedProjects.value.length === 1) {
-    const project = projects.value.find(p => p.id === selectedProjects.value[0])
+  if (searchFilters.projects.length === 1) {
+    const project = projects.value.find(p => p.id === searchFilters.projects[0])
     return project ? project.display_name : 'Unknown'
   }
-  return $t('projectFilter.projectsSelected', { count: selectedProjects.value.length })
+  return $t('projectFilter.projectsSelected', { count: searchFilters.projects.length })
 })
 
 const selectedProjectsDetails = computed(() => {
-  return projects.value.filter(p => selectedProjects.value.includes(p.id))
+  return projects.value.filter(p => searchFilters.projects.includes(p.id))
 })
 
 // メソッド
 const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
-}
-
-const toggleAllProjects = () => {
-  if (selectedProjects.value.length === 0) {
-    selectedProjects.value = projects.value.map(p => p.id)
-  } else {
-    selectedProjects.value = []
-  }
-}
-
-const removeProject = (projectId) => {
-  selectedProjects.value = selectedProjects.value.filter(id => id !== projectId)
-}
-
-
-const clearFilter = () => {
-  filters.value = {
-    startDate: '',
-    endDate: '',
-  }
-  selectedProjects.value = []
-  selectedSortOrder.value = 'desc'
-  selectedThreadMode.value = 'grouped'
-}
-
-const applyQuickFilter = (quick) => {
-  filters.value.startDate = quick.startDate
-  filters.value.endDate = quick.endDate
 }
 
 const closeDropdown = (event) => {
@@ -263,29 +242,16 @@ onMounted(async () => {
   // クリックイベントリスナーを追加
   document.addEventListener('click', closeDropdown)
 
-  // 初期化完了後にwatchEffectを設定
-  setTimeout(() => {
-    isInitialized = true
-
-    // 検索ステートの変更を自動検知して検索実行
-    watchEffect(() => {
-      // 日付、プロジェクト、表示順、スレッドモードのいずれかが変更されると自動実行
-      const filterData = {
-        startDate: filters.value.startDate || null,
-        endDate: filters.value.endDate || null,
-        projects: selectedProjects.value.length ? selectedProjects.value : null,
-        sortOrder: selectedSortOrder.value,
-        threadMode: selectedThreadMode.value,
-        offset: 0,
-        limit: 100
-      }
-
-      emit('filter', filterData)
-    })
-  }, 100)
+  // 初期化完了をマーク
+  markAsInitialized()
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdown)
+})
+
+// 親コンポーネントから呼び出せるようにする
+defineExpose({
+  setFilterState
 })
 </script>
