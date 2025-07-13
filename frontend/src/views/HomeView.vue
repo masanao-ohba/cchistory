@@ -98,6 +98,8 @@ const route = useRoute()
 
 // URLパラメータ更新フラグ（無限ループ防止）
 let isUpdatingFromUrl = false
+// 更新中フラグ（無限ループ防止）
+let isUpdating = false
 // リアクティブデータ
 const conversations = ref([])
 const stats = ref({})
@@ -122,7 +124,7 @@ let isInitialized = false
 
 const loadStateFromUrl = () => {
   isUpdatingFromUrl = true
-  
+
   try {
     const urlState = loadFromUrl(route.query)
     Object.assign(searchState, urlState)
@@ -134,7 +136,7 @@ const loadStateFromUrl = () => {
 
 const updateUrlFromState = () => {
   if (isUpdatingFromUrl) return
-  
+
   const query = createQueryFromState(searchState)
   router.replace({ query }).catch(() => {})
 }
@@ -151,12 +153,12 @@ const sendFiltersToWebSocket = () => {
       endDate: searchState.endDate,
       keyword: searchState.keyword
     }
-    
+
     const message = {
       type: 'update_filters',
       filters: filters
     }
-    
+
     ws.send(JSON.stringify(message))
   }
 }
@@ -166,7 +168,7 @@ const handleFileChange = async () => {
   if (!isInitialized) {
     return
   }
-  
+
   setTimeout(async () => {
       try {
         const filters = {
@@ -182,7 +184,7 @@ const handleFileChange = async () => {
         }
 
         const result = await store.getConversations(filters, true) // 強制更新
-        
+
         // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
         if (!searchState.keyword) {
           result.conversations = result.conversations.map(conv => {
@@ -215,14 +217,20 @@ const handleFileChange = async () => {
 }
 
 // 検索ステートの変更を監視して自動検索実行
-watch(searchState, async (newState) => {
-  if (!isInitialized) return
-  
-  // URLパラメータを更新
-  updateUrlFromState()
-  
-  loading.value = true
+watch(searchState, async (newState, oldState) => {
+  if (!isInitialized || isUpdating) {
+    return
+  }
+
+  // 更新中フラグをセット
+  isUpdating = true
+
   try {
+    // URLパラメータを更新
+    updateUrlFromState()
+
+    loading.value = true
+
     const filters = {
       startDate: newState.startDate,
       endDate: newState.endDate,
@@ -270,8 +278,10 @@ watch(searchState, async (newState) => {
     console.error('Search error:', error)
   } finally {
     loading.value = false
+    // 更新中フラグをリセット
+    isUpdating = false
   }
-  
+
   // WebSocketにフィルタリング条件を送信
   sendFiltersToWebSocket()
 }, { deep: true })
@@ -376,7 +386,7 @@ const loadMore = async () => {
     // 累積値を正しく計算
     const newActualThreads = actualThreads.value + (result.actual_threads || 0)
     const newActualMessages = actualMessages.value + (result.actual_messages || 0)
-    
+
     totalThreads.value = result.total_threads || 0
     totalMessages.value = result.total_messages || 0
     actualThreads.value = newActualThreads
@@ -395,7 +405,20 @@ const loadMore = async () => {
 const loadConversations = async (force = false) => {
   loading.value = true
   try {
-    const result = await store.getConversations({}, force)
+    // 現在のsearchStateに基づいてフィルターを構築
+    const filters = {
+      startDate: searchState.startDate,
+      endDate: searchState.endDate,
+      projects: searchState.projects.length ? searchState.projects : null,
+      keyword: searchState.keyword || null,
+      showRelatedThreads: searchState.showRelatedThreads,
+      sortOrder: searchState.sortOrder,
+      threadMode: searchState.threadMode,
+      offset: 0,
+      limit: 50
+    }
+
+    const result = await store.getConversations(filters, force)
     conversations.value = result.conversations
     originalConversations.value = [...result.conversations]
     totalThreads.value = result.total_threads || 0
@@ -450,7 +473,7 @@ const hasActiveFilter = (state) => {
 // 統計情報を更新する共通関数
 const updateStats = async (result, state = null) => {
   const currentState = state || searchState
-  
+
   if (hasActiveFilter(currentState)) {
     // フィルター適用時はフィルター結果の統計を使用
     stats.value = {
@@ -471,26 +494,27 @@ let globalScrollHandler = null
 // ライフサイクル
 onMounted(async () => {
   isScrolled.value = window.scrollY > 100
-  isInitialized = true
 
+  // URLからの状態復元を先に実行（watchが無効な状態で）
   loadStateFromUrl()
-  
+
   nextTick(() => {
     syncComponentStates(searchState, { searchBoxRef, filterBarRef })
   })
 
-  // URLパラメータがない場合のみ初期データを読み込み
-  if (!route.query || Object.keys(route.query).length === 0) {
-    await Promise.all([
-      loadConversations(),
-      loadStats()
-    ])
-  }
+  // URLパラメータの有無に関わらず、現在のsearchStateで初期データを読み込み
+  await Promise.all([
+    loadConversations(),
+    loadStats()
+  ])
 
   connectWebSocket()
 
   globalScrollHandler = handleScroll
   window.addEventListener('scroll', globalScrollHandler, { passive: true })
+
+  // 初期化完了後にwatchを有効化（無限ループ防止）
+  isInitialized = true
 })
 
 onUnmounted(() => {
