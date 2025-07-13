@@ -10,8 +10,8 @@
           id="startDate"
           v-model="searchFilters.startDate"
           type="date"
-          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
-          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          :class="compact ? 'px-2 py-1 text-sm h-8' : 'px-3 py-2 h-10'"
+          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
         />
       </div>
 
@@ -24,8 +24,8 @@
           id="endDate"
           v-model="searchFilters.endDate"
           type="date"
-          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
-          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          :class="compact ? 'px-2 py-1 text-sm h-8' : 'px-3 py-2 h-10'"
+          class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
         />
       </div>
 
@@ -37,7 +37,7 @@
         <div class="relative">
           <button
             @click="toggleDropdown"
-            :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
+            :class="compact ? 'px-2 py-1 text-sm h-8' : 'px-3 py-2 h-10'"
             class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-left flex items-center justify-between"
           >
             <span class="truncate">
@@ -90,8 +90,8 @@
         <select
           id="sortOrder"
           v-model="searchFilters.sortOrder"
-          :class="compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5'"
-          class="w-full bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          :class="compact ? 'px-2 py-1 text-sm h-8' : 'px-3 py-2 h-10'"
+          class="w-full bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
         >
           <option value="asc">{{ $t('sortOrder.ascending') }}</option>
           <option value="desc">{{ $t('sortOrder.descending') }}</option>
@@ -103,8 +103,8 @@
         <button
           @click="clearAllFilters"
           :disabled="loading"
-          :class="compact ? 'px-3 py-1 text-sm' : 'px-4 py-1.5'"
-          class="bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          :class="compact ? 'px-3 py-1 text-sm h-8' : 'px-4 py-2 h-10'"
+          class="bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
         >
           {{ $t('dateFilter.reset') }}
         </button>
