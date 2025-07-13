@@ -7,7 +7,7 @@
         :value="formatNumber(card.value)"
         :label="$t(card.labelKey)"
         :color="card.color"
-        :icon="card.icon"
+        :type="card.type"
       />
     </div>
 
