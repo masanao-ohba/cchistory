@@ -136,6 +136,7 @@ class JSONLParser:
             timestamp = data.get('timestamp', '')
             session_id = data.get('sessionId', '')
             message_type = data.get('type', '')
+            uuid = data.get('uuid', '')
 
             # プロジェクト情報を準備
             project_info = None
@@ -179,6 +180,9 @@ class JSONLParser:
                     'filename': filename
                 }
                 
+                if uuid:
+                    result['uuid'] = uuid
+                
                 if project_info:
                     result['project'] = project_info
                 
@@ -207,6 +211,9 @@ class JSONLParser:
                         'session_id': session_id,
                         'filename': filename
                     }
+                    
+                    if uuid:
+                        result['uuid'] = uuid
                     
                     if project_info:
                         result['project'] = project_info

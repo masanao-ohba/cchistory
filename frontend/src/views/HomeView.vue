@@ -55,12 +55,15 @@
         :total-messages="totalMessages"
         :actual-threads="actualThreads"
         :actual-messages="actualMessages"
+        :new-message-manager="newMessageDisplayManager"
         @load-more="loadMore"
+        @show-new-messages="handleShowNewMessages"
       />
     </main>
 
     <!-- トップへ戻るボタン -->
     <BackToTopButton v-show="isScrolled" @click="scrollToTop" />
+
 
     <!-- WebSocket接続状態 -->
     <div
@@ -91,10 +94,14 @@ import { useConversationStore } from '../stores/conversations'
 import { createInitialSearchState } from '../types/search.js'
 import { loadStateFromUrl as loadFromUrl, createQueryFromState } from '../utils/urlSync.js'
 import { syncComponentStates } from '../utils/componentSync.js'
+import { useNewMessageDisplayManager } from '../composables/useNewMessageDisplayManager.js'
 
 const store = useConversationStore()
 const router = useRouter()
 const route = useRoute()
+
+// 新着メッセージ管理機能
+const newMessageDisplayManager = useNewMessageDisplayManager()
 
 // URLパラメータ更新フラグ（無限ループ防止）
 let isUpdatingFromUrl = false
@@ -113,8 +120,6 @@ const actualThreads = ref(0)
 const actualMessages = ref(0)
 
 // 検索関連
-const searchKeyword = ref('')
-const originalConversations = ref([])
 const searchBoxRef = ref(null)
 const filterBarRef = ref(null)
 const searchState = reactive(createInitialSearchState())
@@ -188,10 +193,16 @@ const handleFileChange = async () => {
         // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
         if (!searchState.keyword) {
           result.conversations = result.conversations.map(conv => {
+            // convが配列の場合はそのまま返す
+            if (Array.isArray(conv)) {
+              return conv
+            }
+            // オブジェクトの場合のみsearch_keywordを除去
             const { search_keyword, ...cleanConv } = conv
             return cleanConv
           })
         }
+
 
         conversations.value = result.conversations
         totalThreads.value = result.total_threads || 0
@@ -199,6 +210,9 @@ const handleFileChange = async () => {
         actualThreads.value = result.actual_threads || 0
         actualMessages.value = result.actual_messages || 0
         hasMore.value = result.total_threads > result.actual_threads
+
+        // WebSocket更新時: 新着メッセージを処理
+        newMessageDisplayManager.addNewMessages(result.conversations)
 
         // 統計情報も同期更新
         await updateStats(result)
@@ -249,13 +263,17 @@ watch(searchState, async (newState, oldState) => {
     // キーワードがクリアされた場合、search_keywordフィールドを明示的に除去
     if (!newState.keyword) {
       result.conversations = result.conversations.map(conv => {
+        // convが配列の場合はそのまま返す
+        if (Array.isArray(conv)) {
+          return conv
+        }
+        // オブジェクトの場合のみsearch_keywordを除去
         const { search_keyword, ...cleanConv } = conv
         return cleanConv
       })
     }
 
     conversations.value = result.conversations
-    originalConversations.value = newState.keyword ? [] : result.conversations
     totalThreads.value = result.total_threads || 0
     totalMessages.value = result.total_messages || 0
     actualThreads.value = result.actual_threads || 0
@@ -319,15 +337,11 @@ const connectWebSocket = () => {
 
   ws.onopen = () => {
     wsConnected.value = true
-    console.log('WebSocket connected')
-    // 接続後にフィルタリング条件を送信
     sendFiltersToWebSocket()
   }
 
   ws.onclose = () => {
     wsConnected.value = false
-    console.log('WebSocket disconnected')
-    // 5秒後に再接続を試行
     setTimeout(connectWebSocket, 5000)
   }
 
@@ -374,14 +388,7 @@ const loadMore = async () => {
 
     const result = await store.getConversations(filters)
 
-    if (searchState.keyword) {
-      // キーワード検索時は conversations に直接追加
-      conversations.value.push(...result.conversations)
-    } else {
-      // 通常時は originalConversations を使用
-      originalConversations.value.push(...result.conversations)
-      conversations.value = [...originalConversations.value]
-    }
+    conversations.value.push(...result.conversations)
 
     // 累積値を正しく計算
     const newActualThreads = actualThreads.value + (result.actual_threads || 0)
@@ -419,13 +426,16 @@ const loadConversations = async (force = false) => {
     }
 
     const result = await store.getConversations(filters, force)
+    
     conversations.value = result.conversations
-    originalConversations.value = [...result.conversations]
     totalThreads.value = result.total_threads || 0
     totalMessages.value = result.total_messages || 0
     actualThreads.value = result.actual_threads || 0
     actualMessages.value = result.actual_messages || 0
     hasMore.value = result.total_threads > result.actual_threads
+
+    // 新着メッセージ管理の初期状態を設定
+    newMessageDisplayManager.setInitialMessages(result.conversations)
 
     // 統計情報も同期更新
     await updateStats(result)
@@ -459,6 +469,12 @@ const handleSearch = (searchData) => {
 const handleClearSearch = () => {
   searchState.keyword = ''
 }
+
+// 新着メッセージ表示のイベントハンドラー
+const handleShowNewMessages = ({ group, groupIndex }) => {
+  newMessageDisplayManager.showNewMessages(group, groupIndex)
+}
+
 
 // フィルターが適用されているかを判定
 const hasActiveFilter = (state) => {

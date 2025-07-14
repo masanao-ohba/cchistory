@@ -128,7 +128,9 @@ def group_conversations_by_thread_array(conversations: List[Dict[str, Any]], sor
     all_thread_groups.sort(key=lambda x: x["timestamp"], reverse=reverse_sort)
 
     # グループ配列として返す（フラット化しない）
-    return [thread_group["messages"] for thread_group in all_thread_groups]
+    result = [thread_group["messages"] for thread_group in all_thread_groups]
+
+    return result
 
 
 def group_conversations_by_thread(conversations: List[Dict[str, Any]], sort_order: str = "asc") -> List[Dict[str, Any]]:

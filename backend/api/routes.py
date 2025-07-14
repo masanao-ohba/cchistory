@@ -142,7 +142,8 @@ async def get_conversations(
     show_related_threads: bool = Query(True, description="関連スレッド全体を表示"),
     sort_order: str = Query("desc", description="表示順（asc=昇順、desc=降順）"),
     offset: int = Query(0, ge=0, description="オフセット"),
-    limit: int = Query(50, ge=1, le=1000, description="取得件数")
+    limit: int = Query(50, ge=1, le=1000, description="取得件数"),
+    _t: Optional[str] = Query(None, description="Cache busting timestamp")
 ):
     """会話履歴を取得"""
     try:
