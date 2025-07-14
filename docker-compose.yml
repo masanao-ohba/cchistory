@@ -27,6 +27,8 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: cchistory-frontend
+    ports:
+      - "3000:3000"  # ViteのHMR用ポート公開
     environment:
       - VITE_DEBUG=${DEBUG:-true}
       - NODE_ENV=${NODE_ENV:-development}

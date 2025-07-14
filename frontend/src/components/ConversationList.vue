@@ -33,7 +33,7 @@
             v-for="(conversation, index) in threadGroup"
             :key="`${conversation.session_id}-${index}`"
             :conversation="conversation"
-            :index="index"
+            :index="Number(index)"
             :expanded-items="expandedItems"
             :render-markdown="renderMarkdown"
             :handle-code-copy="handleCodeCopy"
