@@ -166,108 +166,6 @@ export function useNewMessageDisplayManager() {
     }
   }
 
-  // === デバッグ機能 ===
-
-  /**
-   * 特定グループの状態取得（デバッグ用）
-   * groupIdまたはgroupを渡すことができる
-   */
-  const getGroupState = (groupOrId) => {
-    let groupId
-
-    if (typeof groupOrId === 'string') {
-      // 文字列の場合はgroupId
-      groupId = groupOrId
-    } else if (Array.isArray(groupOrId)) {
-      // 配列の場合はgroup
-      groupId = getGroupId(groupOrId)
-    } else {
-      return null
-    }
-
-    const state = groupStates.get(groupId)
-    return state ? {
-      groupId,
-      read: state.read.length,
-      unread: state.unread.length,
-      readMessages: state.read.map(msg => ({ uuid: msg.uuid, type: msg.type, content: msg.content?.substring(0, 30) + '...' })),
-      unreadMessages: state.unread.map(msg => ({ uuid: msg.uuid, type: msg.type, content: msg.content?.substring(0, 30) + '...' }))
-    } : null
-  }
-
-  /**
-   * 全グループの状態取得（デバッグ用）
-   */
-  const getAllStates = () => {
-    const result = {}
-    for (const [groupId, state] of groupStates) {
-      result[groupId] = {
-        read: state.read.length,
-        unread: state.unread.length
-      }
-    }
-    return result
-  }
-
-  /**
-   * 新着メッセージシミュレーション（デバッグ用）
-   * groupOrId: group配列またはgroupId文字列
-   */
-  const simulateNewMessage = (groupOrId, messageContent = 'シミュレートされた新着メッセージ') => {
-    let groupId
-
-    if (typeof groupOrId === 'string') {
-      // 文字列の場合はgroupId
-      groupId = groupOrId
-    } else if (Array.isArray(groupOrId)) {
-      // 配列の場合はgroup
-      groupId = getGroupId(groupOrId)
-    } else {
-      return false
-    }
-
-    const state = groupStates.get(groupId)
-    if (!state) return false
-
-    // 新しいUUIDでダミーメッセージを作成
-    const dummyMessage = {
-      uuid: `debug-${Date.now()}-${Math.random()}`,
-      type: 'assistant',
-      content: messageContent,
-      timestamp: new Date().toISOString(),
-      session_id: 'debug-session',
-      filename: 'debug.jsonl'
-    }
-
-    state.unread.push(dummyMessage)
-    console.log(`[DEBUG] シミュレートされた新着メッセージをグループ ${groupId} に追加:`, dummyMessage)
-    return true
-  }
-
-  /**
-   * 状態リセット（デバッグ用）
-   */
-  const resetState = () => {
-    groupStates.clear()
-    console.log('[DEBUG] 全グループ状態をリセットしました')
-  }
-
-  // グローバルデバッグコマンドを登録
-  if (typeof window !== 'undefined') {
-    window.debugNewMessages = {
-      getGroupState,
-      getAllStates,
-      simulateNewMessage,
-      resetState,
-      showState: () => {
-        console.log('=== 新着メッセージ管理状態 ===')
-        console.log(getAllStates())
-        for (const [groupIndex] of groupStates) {
-          console.log(`グループ ${groupIndex}:`, getGroupState(groupIndex))
-        }
-      }
-    }
-  }
 
   return {
     setInitialMessages,
@@ -275,12 +173,6 @@ export function useNewMessageDisplayManager() {
     getDisplayMessages,
     getUnreadCount,
     hasUnreadMessages,
-    showNewMessages,
-
-    // デバッグ機能
-    getGroupState,
-    getAllStates,
-    simulateNewMessage,
-    resetState
+    showNewMessages
   }
 }
