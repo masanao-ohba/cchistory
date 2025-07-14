@@ -7,6 +7,7 @@ const api = axios.create({
   timeout: 30000
 })
 
+
 export const useConversationStore = defineStore('conversations', {
   state: () => ({
     currentFilters: {},
@@ -67,6 +68,7 @@ export const useConversationStore = defineStore('conversations', {
         }
 
         const response = await api.get(`/conversations?${params}`)
+
         return response.data
       } catch (error) {
         console.error('Error fetching conversations:', error)

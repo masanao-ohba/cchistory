@@ -30,7 +30,7 @@
       >
         <div class="space-y-3">
           <MessageItem
-            v-for="(conversation, index) in threadGroup"
+            v-for="(conversation, index) in getDisplayMessages(threadGroup, threadIndex)"
             :key="`${conversation.session_id}-${index}`"
             :conversation="conversation"
             :index="Number(index)"
@@ -40,6 +40,16 @@
             :should-show-toggle-button="shouldShowToggleButton"
             @toggle-expand="toggleExpand"
           />
+        </div>
+
+        <!-- 新着メッセージ表示ボタン -->
+        <div v-if="shouldShowNewMessageButton(threadGroup, threadIndex)" class="mt-4 text-center">
+          <button
+            @click="showNewMessages(threadGroup, threadIndex)"
+            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+          >
+            新着メッセージ表示 ({{ getUnreadMessageCount(threadGroup, threadIndex) }}件)
+          </button>
         </div>
       </div>
     </div>
@@ -76,7 +86,7 @@ import MessageItem from './MessageItem.vue'
 
 const { t: $t } = useI18n()
 
-const emit = defineEmits(['load-more'])
+const emit = defineEmits(['load-more', 'show-new-messages'])
 const props = defineProps({
   conversations: {
     type: Array,
@@ -105,6 +115,10 @@ const props = defineProps({
   actualMessages: {
     type: Number,
     default: 0
+  },
+  newMessageManager: {
+    type: Object,
+    default: null
   }
 })
 
@@ -276,6 +290,34 @@ const handleCodeCopy = (event) => {
       copyToClipboard(codeId)
     }
   }
+}
+
+// 新着メッセージ表示のヘルパー関数
+const getDisplayMessages = (group, groupIndex) => {
+  if (!props.newMessageManager || !Array.isArray(group)) {
+    return Array.isArray(group) ? group : []
+  }
+
+  // 新しいAPIを使用して隠されたアシスタント応答を除外したメッセージを取得
+  return props.newMessageManager.getDisplayMessages(group, groupIndex)
+}
+
+const shouldShowNewMessageButton = (group, groupIndex) => {
+  if (!props.newMessageManager || !Array.isArray(group)) {
+    return false
+  }
+  return props.newMessageManager.hasUnreadMessages(group, groupIndex)
+}
+
+const getUnreadMessageCount = (group, groupIndex) => {
+  if (!props.newMessageManager || !Array.isArray(group)) {
+    return 0
+  }
+  return props.newMessageManager.getUnreadCount(group, groupIndex)
+}
+
+const showNewMessages = (group, groupIndex) => {
+  emit('show-new-messages', { group, groupIndex })
 }
 </script>
 
