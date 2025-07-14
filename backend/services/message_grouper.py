@@ -114,10 +114,10 @@ def group_conversations_by_thread_array(conversations: List[Dict[str, Any]], sor
         session_conversations.sort(key=lambda x: x["timestamp"])
         thread_groups = group_messages_by_user_thread(session_conversations)
 
-        # 各スレッドグループに代表タイムスタンプを設定
+        # 各スレッドグループに代表タイムスタンプを設定（最後のメッセージの時刻）
         for group in thread_groups:
             if group:
-                group_timestamp = group[0]["timestamp"]
+                group_timestamp = group[-1]["timestamp"]
                 all_thread_groups.append({
                     "timestamp": group_timestamp,
                     "messages": group
@@ -168,10 +168,10 @@ def group_conversations_by_thread(conversations: List[Dict[str, Any]], sort_orde
         session_conversations.sort(key=lambda x: x["timestamp"])
         thread_groups = group_messages_by_user_thread(session_conversations)
 
-        # 各スレッドグループに代表タイムスタンプを設定（最初のメッセージの時刻）
+        # 各スレッドグループに代表タイムスタンプを設定（最後のメッセージの時刻）
         for group in thread_groups:
             if group:
-                group_timestamp = group[0]["timestamp"]
+                group_timestamp = group[-1]["timestamp"]
                 all_thread_groups.append({
                     "timestamp": group_timestamp,
                     "messages": group
