@@ -24,10 +24,7 @@ export default defineConfig({
       '.ngrok-free.app',
       '.ngrok.app'
     ],
-    hmr: {
-      port: 3000,
-      host: '0.0.0.0'
-    },
+    hmr: true,
     cors: true,
     watch: {
       usePolling: true,
