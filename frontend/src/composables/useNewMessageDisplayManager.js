@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 
 /**
  * 新着メッセージ表示管理機能
- * 
+ *
  * read/unread による明確な状態管理
  * - read: 表示済みメッセージ（初期表示またはボタンクリックで表示済み）
  * - unread: 未表示の新着メッセージ（WebSocket更新で追加）
@@ -17,13 +17,13 @@ export function useNewMessageDisplayManager() {
    */
   const getGroupId = (group) => {
     if (!Array.isArray(group) || group.length === 0) return null
-    
+
     // グループの最初のメッセージはユーザーメッセージであるべき
     const firstMessage = group[0]
     if (firstMessage && firstMessage.type === 'user' && firstMessage.uuid) {
       return firstMessage.uuid
     }
-    
+
     // 万が一最初がユーザーメッセージでない場合は、最初のユーザーメッセージを探す
     const firstUserMessage = group.find(msg => msg.type === 'user' && msg.uuid)
     return firstUserMessage ? firstUserMessage.uuid : null
@@ -36,7 +36,7 @@ export function useNewMessageDisplayManager() {
   const setInitialMessages = (conversations) => {
     // 既存状態をクリア
     groupStates.clear()
-    
+
     conversations.forEach((group, groupIndex) => {
       if (Array.isArray(group) && group.length > 0) {
         const groupId = getGroupId(group)
@@ -57,10 +57,10 @@ export function useNewMessageDisplayManager() {
   const addNewMessages = (conversations) => {
     conversations.forEach((group, groupIndex) => {
       if (!Array.isArray(group) || group.length === 0) return
-      
+
       const groupId = getGroupId(group)
       if (!groupId) return
-      
+
       const currentState = groupStates.get(groupId)
       if (!currentState) {
         // グループが存在しない場合は新規作成（新しいグループ）
@@ -70,23 +70,29 @@ export function useNewMessageDisplayManager() {
         })
         return
       }
-      
-      // 既存 read メッセージのUUIDセット作成
+
+      // 既存 read および unread メッセージのUUIDセット作成
       const readUuids = new Set(
         currentState.read
           .map(msg => msg.uuid)
           .filter(uuid => uuid) // UUID が存在するもののみ
       )
-      
-      // 新規メッセージ（read にないメッセージ）を unread に追加
+
+      const unreadUuids = new Set(
+        currentState.unread
+          .map(msg => msg.uuid)
+          .filter(uuid => uuid) // UUID が存在するもののみ
+      )
+
+      // 新規メッセージ（read にも unread にもないメッセージ）を unread に追加
       const newMessages = group.filter(msg => {
         // UUID がない場合は新規として扱わない（安全のため）
         if (!msg.uuid) return false
-        
-        // read に存在しないメッセージが新規
-        return !readUuids.has(msg.uuid)
+
+        // read にも unread にも存在しないメッセージが新規
+        return !readUuids.has(msg.uuid) && !unreadUuids.has(msg.uuid)
       })
-      
+
       if (newMessages.length > 0) {
         currentState.unread.push(...newMessages)
       }
@@ -99,10 +105,10 @@ export function useNewMessageDisplayManager() {
    */
   const getDisplayMessages = (group, groupIndex) => {
     if (!Array.isArray(group)) return []
-    
+
     const groupId = getGroupId(group)
     if (!groupId) return group // グループIDが取得できない場合は元のグループを返す
-    
+
     const state = groupStates.get(groupId)
     return state ? state.read : group
   }
@@ -112,10 +118,10 @@ export function useNewMessageDisplayManager() {
    */
   const getUnreadCount = (group, groupIndex) => {
     if (!Array.isArray(group)) return 0
-    
+
     const groupId = getGroupId(group)
     if (!groupId) return 0
-    
+
     const state = groupStates.get(groupId)
     return state ? state.unread.length : 0
   }
@@ -133,15 +139,28 @@ export function useNewMessageDisplayManager() {
    */
   const showNewMessages = (group, groupIndex) => {
     if (!Array.isArray(group)) return
-    
+
     const groupId = getGroupId(group)
     if (!groupId) return
-    
+
     const state = groupStates.get(groupId)
     if (state && state.unread.length > 0) {
-      // unread を read に移動
-      state.read.push(...state.unread)
-      
+      // UUIDの重複チェックを行ってから read に移動
+      const readUuids = new Set(
+        state.read
+          .map(msg => msg.uuid)
+          .filter(uuid => uuid)
+      )
+
+      // read に存在しない unread メッセージのみを追加
+      const uniqueUnreadMessages = state.unread.filter(msg =>
+        msg.uuid && !readUuids.has(msg.uuid)
+      )
+
+      if (uniqueUnreadMessages.length > 0) {
+        state.read.push(...uniqueUnreadMessages)
+      }
+
       // unread をクリア
       state.unread = []
     }
@@ -155,7 +174,7 @@ export function useNewMessageDisplayManager() {
    */
   const getGroupState = (groupOrId) => {
     let groupId
-    
+
     if (typeof groupOrId === 'string') {
       // 文字列の場合はgroupId
       groupId = groupOrId
@@ -165,7 +184,7 @@ export function useNewMessageDisplayManager() {
     } else {
       return null
     }
-    
+
     const state = groupStates.get(groupId)
     return state ? {
       groupId,
@@ -196,7 +215,7 @@ export function useNewMessageDisplayManager() {
    */
   const simulateNewMessage = (groupOrId, messageContent = 'シミュレートされた新着メッセージ') => {
     let groupId
-    
+
     if (typeof groupOrId === 'string') {
       // 文字列の場合はgroupId
       groupId = groupOrId
@@ -206,10 +225,10 @@ export function useNewMessageDisplayManager() {
     } else {
       return false
     }
-    
+
     const state = groupStates.get(groupId)
     if (!state) return false
-    
+
     // 新しいUUIDでダミーメッセージを作成
     const dummyMessage = {
       uuid: `debug-${Date.now()}-${Math.random()}`,
@@ -219,7 +238,7 @@ export function useNewMessageDisplayManager() {
       session_id: 'debug-session',
       filename: 'debug.jsonl'
     }
-    
+
     state.unread.push(dummyMessage)
     console.log(`[DEBUG] シミュレートされた新着メッセージをグループ ${groupId} に追加:`, dummyMessage)
     return true
@@ -257,7 +276,7 @@ export function useNewMessageDisplayManager() {
     getUnreadCount,
     hasUnreadMessages,
     showNewMessages,
-    
+
     // デバッグ機能
     getGroupState,
     getAllStates,
