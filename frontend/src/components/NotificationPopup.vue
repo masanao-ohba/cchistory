@@ -5,7 +5,7 @@
     <!-- ヘッダー -->
     <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <h3 class="font-semibold text-gray-900">通知</h3>
+        <h3 class="font-semibold text-gray-900">{{ $t('notifications.title') }}</h3>
         <span
           v-if="unreadCount > 0"
           class="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
@@ -20,16 +20,16 @@
           v-if="unreadCount > 0"
           @click="$emit('mark-all-read')"
           class="text-xs text-purple-600 hover:text-purple-800 font-medium"
-          title="全て既読にする"
+          :title="$t('notifications.markAllReadTitle')"
         >
-          全て既読
+          {{ $t('notifications.markAllRead') }}
         </button>
 
         <!-- 閉じるボタン -->
         <button
           @click="$emit('close')"
           class="text-gray-400 hover:text-gray-600 p-1"
-          title="閉じる"
+          :title="$t('notifications.closeTitle')"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPaths.close" />
@@ -46,7 +46,7 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" :d="iconPaths.spinner"></path>
         </svg>
-        読み込み中...
+        {{ $t('notifications.loading') }}
       </div>
 
       <!-- エラー状態 -->
@@ -62,7 +62,7 @@
         <svg class="w-8 h-8 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPaths.bell" />
         </svg>
-        <p class="text-sm">通知はありません</p>
+        <p class="text-sm">{{ $t('notifications.noNotifications') }}</p>
       </div>
 
       <!-- 通知アイテム -->
@@ -80,12 +80,12 @@
     <!-- フッター -->
     <div v-if="notifications.length > 0" class="bg-gray-50 px-4 py-3 border-t border-gray-200">
       <div class="flex items-center justify-between text-sm text-gray-600">
-        <span>{{ notifications.length }}件の通知</span>
+        <span>{{ $t('notifications.count', { count: notifications.length }) }}</span>
         <button
           @click="viewAllNotifications"
           class="text-purple-600 hover:text-purple-800 font-medium"
         >
-          すべて表示
+          {{ $t('notifications.viewAll') }}
         </button>
       </div>
     </div>

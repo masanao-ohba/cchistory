@@ -80,19 +80,19 @@ export const notificationConfig = {
     permission_request: {
       icon: iconPaths.shield,
       emoji: '🔐',
-      label: '権限要求',
+      labelKey: 'notifications.types.permission_request',
       color: 'yellow'
     },
     tool_use: {
       icon: iconPaths.cog,
       emoji: '🔧',
-      label: 'ツール使用',
+      labelKey: 'notifications.types.tool_use',
       color: 'blue'
     },
     notification: {
       icon: iconPaths.bell,
       emoji: '💬',
-      label: '通知',
+      labelKey: 'notifications.types.notification',
       color: 'green'
     }
   },

@@ -72,5 +72,31 @@
     "backToTop": "トップへ戻る",
     "realTimeUpdate": "リアルタイム更新中",
     "offline": "オフライン"
+  },
+  "notifications": {
+    "title": "通知",
+    "aria": "通知",
+    "markAllRead": "全て既読",
+    "markAllReadTitle": "全て既読にする",
+    "close": "閉じる",
+    "closeTitle": "閉じる",
+    "loading": "読み込み中...",
+    "noNotifications": "通知はありません",
+    "count": "{count}件の通知",
+    "viewAll": "すべて表示",
+    "totalNotifications": "総通知数",
+    "realtimeActive": "リアルタイム通知有効",
+    "unread": "未読",
+    "markRead": "既読",
+    "markReadTitle": "既読にする",
+    "markUnreadTitle": "未読にする",
+    "delete": "削除",
+    "deleteTitle": "削除",
+    "types": {
+      "permission_request": "権限要求",
+      "tool_use": "ツール使用",
+      "notification": "通知",
+      "unknown": "不明"
+    }
   }
 }

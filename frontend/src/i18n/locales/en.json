@@ -72,5 +72,31 @@
     "backToTop": "Back to Top",
     "realTimeUpdate": "Real-time Update",
     "offline": "Offline"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "aria": "Notifications",
+    "markAllRead": "Mark All Read",
+    "markAllReadTitle": "Mark all notifications as read",
+    "close": "Close",
+    "closeTitle": "Close",
+    "loading": "Loading...",
+    "noNotifications": "No notifications",
+    "count": "{count} notifications",
+    "viewAll": "View All",
+    "totalNotifications": "Total notifications",
+    "realtimeActive": "Real-time notifications active",
+    "unread": "Unread",
+    "markRead": "Mark Read",
+    "markReadTitle": "Mark as read",
+    "markUnreadTitle": "Mark as unread",
+    "delete": "Delete",
+    "deleteTitle": "Delete",
+    "types": {
+      "permission_request": "Permission Request",
+      "tool_use": "Tool Use",
+      "notification": "Notification",
+      "unknown": "Unknown"
+    }
   }
 }
