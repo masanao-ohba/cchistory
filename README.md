@@ -67,32 +67,36 @@ This application can receive real-time notifications from Claude Code hooks, all
 
 ### Setup Hooks
 
-1. **Install hooks for a project** (run from the project you want to monitor):
+1. **Install hooks for a project** (run from cchistory directory):
    ```bash
-   # Navigate to the project directory you want to monitor
-   cd /path/to/your/claude/project
+   # Navigate to the cchistory directory
+   cd /path/to/cchistory
    
-   # Run the hooks installer
-   /path/to/cchistory/scripts/install-hooks.sh
+   # Run the hooks installer with target project path
+   ./scripts/install-hooks.sh --target-project-path /path/to/your/claude/project
    ```
 
-2. **Interactive setup** - The script will prompt you for:
-   - Path to this notification receiver project
-   - Automatically configure webhook URL using your `.env` settings
+2. **Automatic setup** - The script will:
+   - Read port settings from this project's `.env` file
+   - Configure webhook URL automatically
+   - Install hooks to the target project's `.claude/settings.local.json`
 
 3. **Restart Claude Code** to apply the changes
 
 ### Advanced Hook Configuration
 
 ```bash
-# Specify notification receiver path
-./scripts/install-hooks.sh --notification-receiver-path ~/cchistory
+# Basic usage
+./scripts/install-hooks.sh --target-project-path ~/myproject
+
+# Specify custom notification receiver path
+./scripts/install-hooks.sh --target-project-path ~/myproject --notification-receiver-path ~/cchistory
 
 # Use custom port
-./scripts/install-hooks.sh --port 8080
+./scripts/install-hooks.sh --target-project-path ~/myproject --port 8080
 
 # Preview changes without applying
-./scripts/install-hooks.sh --dry-run
+./scripts/install-hooks.sh --target-project-path ~/myproject --dry-run
 
 # Get help
 ./scripts/install-hooks.sh --help

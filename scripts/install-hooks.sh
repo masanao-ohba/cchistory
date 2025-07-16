@@ -102,6 +102,7 @@ get_notification_receiver_path() {
 PORT_FROM_ENV=""
 WEBHOOK_URL=""
 NOTIFICATION_RECEIVER_PATH=""
+TARGET_PROJECT_PATH=""
 DRY_RUN=false
 HELP=false
 
@@ -117,6 +118,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --notification-receiver-path)
             NOTIFICATION_RECEIVER_PATH="$2"
+            shift 2
+            ;;
+        --target-project-path)
+            TARGET_PROJECT_PATH="$2"
             shift 2
             ;;
         --dry-run)
@@ -137,28 +142,31 @@ done
 if [ "$HELP" = true ]; then
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "This script configures the CURRENT project to send Claude Code notifications."
-    echo "Run this script from the project directory you want to monitor."
+    echo "This script configures a project to send Claude Code notifications."
+    echo "Run this script from cchistory directory."
     echo ""
     echo "Options:"
     echo "  --webhook-url URL                   Webhook URL for notifications"
     echo "                                     (default: read from notification receiver .env file)"
     echo "  --port PORT                        Override port number"
     echo "  --notification-receiver-path PATH  Path to notification receiver project directory"
-    echo "                                     (will prompt if not provided)"
+    echo "                                     (default: current directory)"
+    echo "  --target-project-path PATH         Path to project directory to monitor"
+    echo "                                     (default: current directory)"
     echo "  --dry-run                          Show what would be changed without making changes"
     echo "  --help, -h                         Show this help message"
     echo ""
     echo "Examples:"
-    echo "  cd /path/to/your/monitored/project"
-    echo "  $0                                               # Interactive: will prompt for notification receiver path"
-    echo "  $0 --notification-receiver-path ~/notification   # Specify notification receiver path"
-    echo "  $0 --port 8080                                   # Use custom port"
-    echo "  $0 --dry-run                                     # Preview changes"
+    echo "  # Monitor a specific project from cchistory directory"
+    echo "  $0 --target-project-path ~/myproject"
+    echo "  # Specify custom notification receiver and port"
+    echo "  $0 --target-project-path ~/myproject --notification-receiver-path ~/cchistory --port 8080"
+    echo "  # Preview changes"
+    echo "  $0 --target-project-path ~/myproject --dry-run"
     echo ""
     echo "Note: This script will:"
-    echo "1. Add hooks configuration to THIS project's .claude/settings.local.json"
-    echo "2. Read port settings from your notification receiver project's .env file"
+    echo "1. Add hooks configuration to target project's .claude/settings.local.json"
+    echo "2. Read port settings from notification receiver project's .env file"
     echo "3. Configure webhook to send notifications to your notification receiver"
     exit 0
 fi
@@ -197,7 +205,7 @@ check_jq_early() {
         fi
 
         print_info "Option 2: Manual configuration"
-        print_info "Add the following to your .claude/settings.local.json:"
+        print_info "Add the following to your target project's .claude/settings.local.json:"
         echo ""
         cat << EOF
 {
@@ -226,7 +234,8 @@ check_jq_early
 
 # Claude settings.local.json のパスを見つける
 find_claude_settings() {
-    local current_path="$(pwd)"
+    local target_path="$1"
+    local current_path="$target_path"
 
     while [[ "$current_path" != "/" ]]; do
         if [[ -f "$current_path/.claude/settings.local.json" ]]; then
@@ -236,8 +245,8 @@ find_claude_settings() {
         current_path="$(dirname "$current_path")"
     done
 
-    mkdir -p "$(pwd)/.claude"
-    echo "$(pwd)/.claude/settings.local.json"
+    mkdir -p "$target_path/.claude"
+    echo "$target_path/.claude/settings.local.json"
 }
 
 # 設定ファイルのバックアップ
@@ -292,11 +301,27 @@ EOF
 
 # メイン処理
 main() {
-    print_info "Monitoring project directory: $(pwd)"
+    # 監視対象プロジェクトのパスを決定
+    if [[ -z "$TARGET_PROJECT_PATH" ]]; then
+        TARGET_PROJECT_PATH="$(pwd)"
+    else
+        # 指定されたパスの妥当性チェック
+        TARGET_PROJECT_PATH="${TARGET_PROJECT_PATH/#\~/$HOME}"
+        if [[ ! "$TARGET_PROJECT_PATH" = /* ]]; then
+            TARGET_PROJECT_PATH="$(pwd)/$TARGET_PROJECT_PATH"
+        fi
+        if [[ ! -d "$TARGET_PROJECT_PATH" ]]; then
+            print_error "Target project directory does not exist: $TARGET_PROJECT_PATH"
+            exit 1
+        fi
+    fi
+
+    print_info "Target project directory: $TARGET_PROJECT_PATH"
 
     # 通知受信プロジェクトのパスを取得
     if [[ -z "$NOTIFICATION_RECEIVER_PATH" ]]; then
-        NOTIFICATION_RECEIVER_PATH=$(get_notification_receiver_path)
+        # デフォルトでは現在のディレクトリを通知受信プロジェクトとして使用
+        NOTIFICATION_RECEIVER_PATH="$(pwd)"
     else
         # 指定されたパスの妥当性チェック
         NOTIFICATION_RECEIVER_PATH="${NOTIFICATION_RECEIVER_PATH/#\~/$HOME}"
@@ -325,8 +350,8 @@ main() {
 
     print_info "Webhook URL: $WEBHOOK_URL"
 
-    # 現在のプロジェクトのsettings.local.jsonに設定を追加
-    SETTINGS_FILE=$(find_claude_settings)
+    # 監視対象プロジェクトのsettings.local.jsonに設定を追加
+    SETTINGS_FILE=$(find_claude_settings "$TARGET_PROJECT_PATH")
     print_info "Settings file: $SETTINGS_FILE"
 
     MERGED_CONFIG=$(merge_notification_hook "$SETTINGS_FILE" "$WEBHOOK_URL")
@@ -346,7 +371,7 @@ main() {
 
     print_success "Notification hooks installation completed!"
     print_info "Settings saved to: $SETTINGS_FILE"
-    print_info "This project will now send notifications to: $WEBHOOK_URL"
+    print_info "Project $TARGET_PROJECT_PATH will now send notifications to: $WEBHOOK_URL"
 
     echo ""
     echo "📝 Next steps:"
@@ -361,7 +386,7 @@ main() {
     echo '   "Bash(jq:*)",'
 
     echo ""
-    echo "🔧 To monitor other projects, run this script in each project directory you want to monitor."
+    echo "🔧 To monitor other projects, run this script with --target-project-path pointing to each project directory."
 }
 
 main

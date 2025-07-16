@@ -84,32 +84,36 @@ docker-compose logs -f
 
 ### Hooksの設定
 
-1. **プロジェクトにhooksをインストール**（監視したいプロジェクトで実行）：
+1. **プロジェクトにhooksをインストール**（cchistoryディレクトリから実行）：
    ```bash
-   # 監視したいプロジェクトディレクトリに移動
-   cd /path/to/your/claude/project
+   # cchistoryディレクトリに移動
+   cd /path/to/cchistory
    
-   # hooks インストーラを実行
-   /path/to/cchistory/scripts/install-hooks.sh
+   # 対象プロジェクトのパスを指定してhooks インストーラを実行
+   ./scripts/install-hooks.sh --target-project-path /path/to/your/claude/project
    ```
 
-2. **対話式セットアップ** - スクリプトが以下を要求します：
-   - この通知受信プロジェクトへのパス
-   - `.env`設定を使用したWebhook URLの自動設定
+2. **自動セットアップ** - スクリプトが以下を実行します：
+   - このプロジェクトの`.env`ファイルからポート設定を読み取り
+   - Webhook URLを自動設定
+   - 対象プロジェクトの`.claude/settings.local.json`にhooksをインストール
 
 3. **Claude Codeを再起動**して変更を適用
 
 ### 高度なHook設定
 
 ```bash
-# 通知受信プロジェクトのパスを指定
-./scripts/install-hooks.sh --notification-receiver-path ~/cchistory
+# 基本的な使用方法
+./scripts/install-hooks.sh --target-project-path ~/myproject
+
+# カスタム通知受信プロジェクトのパスを指定
+./scripts/install-hooks.sh --target-project-path ~/myproject --notification-receiver-path ~/cchistory
 
 # カスタムポートを使用
-./scripts/install-hooks.sh --port 8080
+./scripts/install-hooks.sh --target-project-path ~/myproject --port 8080
 
 # 変更を適用せずにプレビュー
-./scripts/install-hooks.sh --dry-run
+./scripts/install-hooks.sh --target-project-path ~/myproject --dry-run
 
 # ヘルプを表示
 ./scripts/install-hooks.sh --help
