@@ -5,7 +5,7 @@
       @click="togglePopup"
       class="relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 rounded-lg hover:bg-gray-100 cursor-pointer"
       :class="{ 'text-purple-600 bg-purple-50': showPopup }"
-      aria-label="通知"
+      :aria-label="$t('notifications.aria')"
     >
       <!-- ベルアイコン -->
       <svg
@@ -42,7 +42,7 @@
           'px-1': totalNotifications <= 9,
           'px-1.5': totalNotifications > 9
         }"
-        title="総通知数"
+        :title="$t('notifications.totalNotifications')"
       >
         {{ totalNotifications > 99 ? '99+' : totalNotifications }}
       </span>
@@ -51,7 +51,7 @@
       <span
         v-if="isConnected && totalNotifications > 0 && unreadCount === 0"
         class="absolute -top-1 -left-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"
-        title="リアルタイム通知有効"
+        :title="$t('notifications.realtimeActive')"
       ></span>
     </button>
 

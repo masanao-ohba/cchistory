@@ -67,5 +67,31 @@
     "backToTop": "返回顶部",
     "realTimeUpdate": "实时更新",
     "offline": "离线"
+  },
+  "notifications": {
+    "title": "通知",
+    "aria": "通知",
+    "markAllRead": "全部标记为已读",
+    "markAllReadTitle": "全部标记为已读",
+    "close": "关闭",
+    "closeTitle": "关闭",
+    "loading": "加载中...",
+    "noNotifications": "没有通知",
+    "count": "{count}条通知",
+    "viewAll": "查看全部",
+    "totalNotifications": "总通知数",
+    "realtimeActive": "实时通知激活",
+    "unread": "未读",
+    "markRead": "标记为已读",
+    "markReadTitle": "标记为已读",
+    "markUnreadTitle": "标记为未读",
+    "delete": "删除",
+    "deleteTitle": "删除",
+    "types": {
+      "permission_request": "权限请求",
+      "tool_use": "工具使用",
+      "notification": "通知",
+      "unknown": "未知"
+    }
   }
 }
