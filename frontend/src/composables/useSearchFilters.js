@@ -10,8 +10,7 @@ export function useSearchFilters(emit) {
     startDate: '',
     endDate: '',
     projects: [],
-    sortOrder: 'desc',
-    threadMode: 'grouped'
+    sortOrder: 'desc'
   }
 
   // リアクティブな検索フィルター
@@ -39,7 +38,6 @@ export function useSearchFilters(emit) {
         endDate: newFilters.endDate || null,
         projects: newFilters.projects.length ? newFilters.projects : null,
         sortOrder: newFilters.sortOrder,
-        threadMode: newFilters.threadMode,
         offset: 0,
         limit: 100
       }
@@ -68,9 +66,6 @@ export function useSearchFilters(emit) {
       }
       if (state.sortOrder !== undefined) {
         searchFilters.sortOrder = state.sortOrder || 'desc'
-      }
-      if (state.threadMode !== undefined) {
-        searchFilters.threadMode = state.threadMode || 'grouped'
       }
     } finally {
       isInitialized.value = wasInitialized

@@ -16,6 +16,7 @@ Claude CLIの会話履歴を閲覧・検索するためのモダンなWebアプ�
 - 🔍 **柔軟な検索** - 日付・プロジェクト別フィルタリング
 - ⚡ **リアルタイム更新** - WebSocketによる自動更新
 - 🎯 **マルチプロジェクト対応** - 複数のClaude Projectsを統合表示
+- 🔔 **Claude Code Hooks連携** - Claude Code hooksからのリアルタイム通知
 - 🔧 **設定可能** - 環境変数による柔軟な設定
 
 ## 画面概要
@@ -77,6 +78,57 @@ docker-compose logs -f
 
 ブラウザで http://localhost:18080 にアクセス
 
+## Claude Code Hooks連携
+
+このアプリケーションは、Claude Code hooksからのリアルタイム通知を受信し、複数のプロジェクトのClaude CLI活動を監視できます。
+
+### Hooksの設定
+
+1. **プロジェクトにhooksをインストール**（監視したいプロジェクトで実行）：
+   ```bash
+   # 監視したいプロジェクトディレクトリに移動
+   cd /path/to/your/claude/project
+   
+   # hooks インストーラを実行
+   /path/to/cchistory/scripts/install-hooks.sh
+   ```
+
+2. **対話式セットアップ** - スクリプトが以下を要求します：
+   - この通知受信プロジェクトへのパス
+   - `.env`設定を使用したWebhook URLの自動設定
+
+3. **Claude Codeを再起動**して変更を適用
+
+### 高度なHook設定
+
+```bash
+# 通知受信プロジェクトのパスを指定
+./scripts/install-hooks.sh --notification-receiver-path ~/cchistory
+
+# カスタムポートを使用
+./scripts/install-hooks.sh --port 8080
+
+# 変更を適用せずにプレビュー
+./scripts/install-hooks.sh --dry-run
+
+# ヘルプを表示
+./scripts/install-hooks.sh --help
+```
+
+### サポートされる通知タイプ
+
+- **権限要求** - Claude Codeが権限を要求するとき
+- **ツール使用** - Claude Codeがファイル操作などのツールを使用するとき
+- **一般通知** - その他のClaude Code活動
+
+### 通知の表示
+
+- 右上の通知ベルアイコンをクリック
+- リアルタイム通知がすぐに表示される
+- 通知を既読/未読にマーク
+- 個別通知を削除
+- 全通知を既読にマーク
+
 ## 開発
 
 ```bash
@@ -137,6 +189,7 @@ docker-compose up -d
 2. **日付フィルター**: 開始日・終了日を指定して期間検索
 3. **プロジェクトフィルター**: 特定のプロジェクトのみ表示
 4. **クイックフィルター**: 今日、昨日、過去7日、過去30日の便利ボタン
+5. **通知機能**: ベルアイコンからClaude Code hooksのリアルタイム通知を確認
 
 ### リアルタイム更新
 
@@ -232,9 +285,17 @@ docker-compose up -d
 
 統計情報を取得
 
+#### POST `/api/notifications/hook`
+
+Claude Code hooksからの通知を受信（webhook エンドポイント）
+
+#### GET `/api/notifications`
+
+通知履歴を取得
+
 #### WebSocket `/ws/updates`
 
-リアルタイム更新の受信
+会話と通知のリアルタイム更新を受信
 
 ## トラブルシューティング
 
@@ -277,6 +338,21 @@ docker-compose logs nginx
 
 # バックエンドの状態確認
 docker-compose logs backend
+```
+
+#### 5. Claude Code Hooksが動作しない
+
+```bash
+# hooksが正しくインストールされているか確認
+cat .claude/settings.local.json
+
+# webhook URLにアクセス可能か確認
+curl -X POST http://localhost:18080/api/notifications/hook \
+  -H "Content-Type: application/json" \
+  -d '{"type":"test","project_id":"test","notification":"test","timestamp":"2024-01-01T00:00:00Z"}'
+
+# 通知ログを確認
+docker-compose logs -f backend | grep notification
 ```
 
 ### ログの確認

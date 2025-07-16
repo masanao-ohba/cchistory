@@ -7,11 +7,15 @@ import logging
 from services.jsonl_parser import JSONLParser
 from services.message_grouper import find_matching_user_threads, group_conversations_by_thread, group_conversations_by_thread_array
 from config import Config
+from .notifications import router as notifications_router
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 parser = JSONLParser()
+
+# 通知APIルーターを含める
+router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 
 tz = pytz.timezone(Config.TIMEZONE)
 

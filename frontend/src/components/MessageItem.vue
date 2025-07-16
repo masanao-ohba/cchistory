@@ -21,7 +21,7 @@
     </div>
 
     <!-- コンテンツ -->
-    <div :class="contentClasses" v-html="renderMarkdown(conversation.content, conversation.search_keyword)" @click="handleCodeCopy"></div>
+    <div :class="contentClasses" v-html="renderMarkdown(conversation.content, conversation.is_search_match ? conversation.search_keyword : null)" @click="handleCodeCopy"></div>
 
     <!-- 展開/折りたたみボタン -->
     <button v-if="shouldShowToggleButton(conversation.content)" @click="toggleExpand(index)" :class="toggleButtonClasses">

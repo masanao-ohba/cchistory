@@ -70,3 +70,6 @@ frontend/dist/
 backend/.pytest_cache/
 .pytest_cache/
 CLAUDE.md
+
+# Work directory for temporary files and development
+.work/
