@@ -72,7 +72,7 @@ class JSONLParser:
             self._cache[cache_key] = conversations
             self._cache_timestamps[cache_key] = file_mtime
 
-            logger.debug(f"Parsed {len(conversations)} conversations from {file_path}")
+            # 会話データパース完了
 
         except Exception as e:
             logger.error(f"Error reading file {file_path}: {e}")

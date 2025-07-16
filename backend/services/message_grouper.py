@@ -54,33 +54,30 @@ def group_messages_by_user_thread(conversations: List[Dict[str, Any]]) -> List[L
 
 def find_matching_user_threads(conversations: List[Dict[str, Any]], keyword: str) -> List[Dict[str, Any]]:
     """
-    キーワードにマッチするユーザー発言スレッドを検索
+    キーワードにマッチするユーザー発言スレッド（グループ）を検索
+
+    セッション概念を使わず、純粋にグループベースで検索を行う
 
     Args:
         conversations: 会話メッセージのリスト
         keyword: 検索キーワード（小文字）
 
     Returns:
-        マッチしたスレッドに含まれる全メッセージのフラット化されたリスト
+        マッチしたグループに含まれる全メッセージのフラット化されたリスト
     """
-    # セッション別にグループ化
-    session_groups = {}
-    for conv in conversations:
-        session_id = conv["session_id"]
-        if session_id not in session_groups:
-            session_groups[session_id] = []
-        session_groups[session_id].append(conv)
+    # 全会話を時系列でソート
+    sorted_conversations = sorted(conversations, key=lambda x: x["timestamp"])
+
+    # セッション概念を使わず、直接グループ化
+    all_groups = group_messages_by_user_thread(sorted_conversations)
 
     matching_messages = []
 
-    for session_id, session_conversations in session_groups.items():
-        # セッション内でユーザー発言単位のグループに分ける
-        user_thread_groups = group_messages_by_user_thread(session_conversations)
-
-        # キーワードにマッチするグループを特定
-        for group in user_thread_groups:
-            if any(keyword in conv["content"].lower() for conv in group):
-                matching_messages.extend(group)
+    # グループ単位でキーワード検索
+    for group in all_groups:
+        # グループ内のいずれかのメッセージにキーワードがあるかチェック
+        if any(keyword in conv["content"].lower() for conv in group):
+            matching_messages.extend(group)
 
     return matching_messages
 

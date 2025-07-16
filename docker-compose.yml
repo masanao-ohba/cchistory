@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: cchistory-backend
     environment:
       - CLAUDE_PROJECTS_PATH=/data/projects
       - CLAUDE_PROJECTS=${CLAUDE_PROJECTS}
@@ -11,7 +10,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro
-      - ./backend:/app:ro
+      - ./backend:/app:ro  # 開発時はソースコードをマウント（ホットリロード用）
+      - cchistory-storage:/app/storage:rw  # 通知データ等の永続化用
     networks:
       - cchistory-network
     restart: unless-stopped
@@ -26,7 +26,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: cchistory-frontend
     ports:
       - "3000:3000"  # ViteのHMR用ポート公開
     environment:
@@ -44,7 +43,6 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: cchistory-nginx
     ports:
       - "${VIEWER_PORT:-18080}:80"
     volumes:
@@ -61,4 +59,7 @@ services:
 networks:
   cchistory-network:
     driver: bridge
+
+volumes:
+  cchistory-storage:
 

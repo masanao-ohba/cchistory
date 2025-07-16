@@ -14,6 +14,7 @@ A modern web application for viewing and searching Claude CLI conversation histo
 - 🔍 **Flexible Search** - Filter by date, project, and keywords
 - ⚡ **Real-time Updates** - Automatic updates via WebSocket
 - 🎯 **Multi-project Support** - Integrated display of multiple Claude projects
+- 🔔 **Claude Code Hooks Integration** - Real-time notifications from Claude Code hooks
 - 🔧 **Configurable** - Flexible configuration through environment variables
 
 ## Screenshots
@@ -59,6 +60,57 @@ docker-compose logs -f
 ### 4. Access
 
 Open your browser and navigate to http://localhost:18080
+
+## Claude Code Hooks Integration
+
+This application can receive real-time notifications from Claude Code hooks, allowing you to monitor Claude CLI activity across multiple projects.
+
+### Setup Hooks
+
+1. **Install hooks for a project** (run from the project you want to monitor):
+   ```bash
+   # Navigate to the project directory you want to monitor
+   cd /path/to/your/claude/project
+   
+   # Run the hooks installer
+   /path/to/cchistory/scripts/install-hooks.sh
+   ```
+
+2. **Interactive setup** - The script will prompt you for:
+   - Path to this notification receiver project
+   - Automatically configure webhook URL using your `.env` settings
+
+3. **Restart Claude Code** to apply the changes
+
+### Advanced Hook Configuration
+
+```bash
+# Specify notification receiver path
+./scripts/install-hooks.sh --notification-receiver-path ~/cchistory
+
+# Use custom port
+./scripts/install-hooks.sh --port 8080
+
+# Preview changes without applying
+./scripts/install-hooks.sh --dry-run
+
+# Get help
+./scripts/install-hooks.sh --help
+```
+
+### Supported Notification Types
+
+- **Permission Requests** - When Claude Code requests permissions
+- **Tool Usage** - When Claude Code uses tools like file operations
+- **General Notifications** - Other Claude Code activity
+
+### Viewing Notifications
+
+- Click the notification bell icon in the top-right corner
+- Real-time notifications appear immediately
+- Mark notifications as read/unread
+- Delete individual notifications
+- Mark all notifications as read
 
 ## Development
 
@@ -131,6 +183,7 @@ echo 'CLAUDE_PROJECTS=["project1", "project2"]' >> .env
 3. **Project Filter**: Display only specific projects
 4. **Keyword Search**: Search within conversation content
 5. **Quick Filters**: Convenient buttons for Today, Yesterday, Past 7 days, Past 30 days
+6. **Notifications**: Real-time Claude Code hooks notifications via bell icon
 
 ### Real-time Updates
 
@@ -227,9 +280,17 @@ Get list of available projects
 
 Get statistics
 
+#### POST `/api/notifications/hook`
+
+Receive Claude Code hooks notifications (webhook endpoint)
+
+#### GET `/api/notifications`
+
+Get notification history
+
 #### WebSocket `/ws/updates`
 
-Receive real-time updates
+Receive real-time updates for conversations and notifications
 
 ## Troubleshooting
 
@@ -272,6 +333,21 @@ docker-compose logs nginx
 
 # Check backend status
 docker-compose logs backend
+```
+
+#### 5. Claude Code Hooks Not Working
+
+```bash
+# Check if hooks are properly installed
+cat .claude/settings.local.json
+
+# Verify webhook URL is accessible
+curl -X POST http://localhost:18080/api/notifications/hook \
+  -H "Content-Type: application/json" \
+  -d '{"type":"test","project_id":"test","notification":"test","timestamp":"2024-01-01T00:00:00Z"}'
+
+# Check notification logs
+docker-compose logs -f backend | grep notification
 ```
 
 ### Checking Logs

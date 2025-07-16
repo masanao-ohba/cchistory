@@ -53,8 +53,8 @@ class Config:
             # 先頭のスラッシュを除去してからハイフンに変換
             if normalized_path.startswith('/'):
                 normalized_path = normalized_path[1:]
-            # スラッシュをハイフンに変換
-            claude_format = '-' + normalized_path.replace('/', '-').replace('.', '-')
+            # スラッシュ、ドット、アンダースコアをハイフンに変換
+            claude_format = '-' + normalized_path.replace('/', '-').replace('.', '-').replace('_', '-')
             project_names.append(claude_format)
 
         return project_names
@@ -66,7 +66,7 @@ class Config:
         # 例: -Users-masanao-oba-workspace-reserve-auto-api -> /Users/masanao.oba/workspace/reserve-auto/api
         internal_name = project_dir.name
         if internal_name.startswith('-'):
-            # 先頭のハイフンを除去してスラッシュに変換
+            # 先頭のハイフンを除去してスラッシュに変換（アンダースコアとドットは元に戻さない）
             original_path = internal_name[1:].replace('-', '/')
 
             # パスの構成要素から意味のある部分を抽出

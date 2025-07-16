@@ -18,18 +18,28 @@
     <!-- 固定フィルター（スクロール時にコンパクト表示） -->
     <div class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4">
-        <FilterBar
-          ref="filterBarRef"
-          @filter="handleFilter"
-          :loading="loading"
-          :compact="isScrolled"
-        />
-        <div class="py-2">
-          <SearchBox
-            ref="searchBoxRef"
-            @search="handleSearch"
-            @clear="handleClearSearch"
-          />
+        <div class="flex items-start justify-between">
+          <!-- フィルター・検索エリア -->
+          <div class="flex-1 min-w-0">
+            <FilterBar
+              ref="filterBarRef"
+              @filter="handleFilter"
+              :loading="loading"
+              :compact="isScrolled"
+            />
+            <div class="py-2">
+              <SearchBox
+                ref="searchBoxRef"
+                @search="handleSearch"
+                @clear="handleClearSearch"
+              />
+            </div>
+          </div>
+
+          <!-- 通知ベルマーク -->
+          <div class="flex-shrink-0 ml-4 pt-2">
+            <NotificationBell />
+          </div>
         </div>
       </div>
     </div>
@@ -90,13 +100,16 @@ import ConversationList from '../components/ConversationList.vue'
 import SearchBox from '../components/SearchBox.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import BackToTopButton from '../components/BackToTopButton.vue'
+import NotificationBell from '../components/NotificationBell.vue'
 import { useConversationStore } from '../stores/conversations'
+import { useNotificationStore } from '../stores/notifications'
 import { createInitialSearchState } from '../types/search.js'
 import { loadStateFromUrl as loadFromUrl, createQueryFromState } from '../utils/urlSync.js'
 import { syncComponentStates } from '../utils/componentSync.js'
 import { useNewMessageDisplayManager } from '../composables/useNewMessageDisplayManager.js'
 
 const store = useConversationStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -426,7 +439,7 @@ const loadConversations = async (force = false) => {
     }
 
     const result = await store.getConversations(filters, force)
-    
+
     conversations.value = result.conversations
     totalThreads.value = result.total_threads || 0
     totalMessages.value = result.total_messages || 0

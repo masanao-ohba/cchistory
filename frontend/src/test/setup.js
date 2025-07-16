@@ -1,7 +1,6 @@
 import { vi } from 'vitest'
 
-// グローバル変数の設定
-global.__DEBUG__ = true
+// テスト環境の設定
 
 // i18nのモック
 vi.mock('vue-i18n', () => ({

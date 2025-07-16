@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 from fastapi import WebSocket
 import json
 import logging
+from models.notification import NotificationInDB, WebSocketMessage
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class ConnectionManager:
     def update_filters(self, websocket: WebSocket, filters: Dict[str, Any]):
         """クライアントのフィルタリング条件を更新"""
         self.connection_filters[websocket] = filters
-        logger.debug(f"Updated filters for connection: {filters}")
+        # フィルター設定を更新
 
     def _should_notify_connection(self, websocket: WebSocket, project_id: str) -> bool:
         """接続がこのプロジェクト変更の通知を受け取るべきかを判定"""
@@ -65,3 +66,45 @@ class ConnectionManager:
         # 切断されたコネクションを削除
         for conn in disconnected:
             self.disconnect(conn)
+
+    async def broadcast_notification(self, notification: NotificationInDB):
+        """新着通知をブロードキャスト"""
+        # datetimeオブジェクトを文字列に変換
+        notification_dict = notification.dict()
+        if 'timestamp' in notification_dict:
+            notification_dict['timestamp'] = notification_dict['timestamp'].isoformat()
+        if 'created_at' in notification_dict:
+            notification_dict['created_at'] = notification_dict['created_at'].isoformat()
+        if 'updated_at' in notification_dict:
+            notification_dict['updated_at'] = notification_dict['updated_at'].isoformat()
+
+        message_data = {
+            "type": "new_notification",
+            "data": notification_dict
+        }
+
+        await self.broadcast(message_data)
+        logger.info(f"Broadcasted new notification {notification.id} to {len(self.active_connections)} clients")
+
+    async def broadcast_notification_read(self, notification_id: str, project_id: str):
+        """通知既読更新をブロードキャスト"""
+        message_data = {
+            "type": "notification_read",
+            "data": {
+                "notification_id": notification_id,
+                "project_id": project_id
+            }
+        }
+
+        await self.broadcast(message_data)
+        logger.info(f"Broadcasted notification read update for {notification_id}")
+
+    async def broadcast_stats_update(self, stats_data: Dict[str, Any]):
+        """統計情報更新をブロードキャスト"""
+        message_data = {
+            "type": "stats_update",
+            "data": stats_data
+        }
+
+        await self.broadcast(message_data)
+        logger.info("Broadcasted stats update")

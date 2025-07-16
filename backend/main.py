@@ -9,6 +9,7 @@ from config import Config
 from api import router as api_router
 from services.file_watcher import FileWatcher
 from api.websocket import ConnectionManager
+from api.notifications import set_connection_manager
 
 # ロギング設定
 logging.basicConfig(
@@ -35,6 +36,10 @@ file_watcher = FileWatcher(Config.CLAUDE_PROJECTS_PATH)
 async def lifespan(app: FastAPI):
     # 起動時の処理
     logger.info("Starting Claude Conversations History Viewer")
+
+    # 通知APIにWebSocket Managerを注入
+    set_connection_manager(manager)
+
     await file_watcher.start(manager)
     yield
     # 終了時の処理
@@ -333,7 +338,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             # クライアントからのメッセージを待機
             data = await websocket.receive_text()
-            logger.debug(f"Received message: {data}")
+            # WebSocketメッセージを処理
 
             try:
                 message = json.loads(data)
