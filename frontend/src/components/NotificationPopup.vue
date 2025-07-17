@@ -39,7 +39,7 @@
     </div>
 
     <!-- 通知リスト -->
-    <div class="max-h-96 overflow-y-auto">
+    <div ref="scrollContainer" class="max-h-96 overflow-y-auto">
       <!-- ローディング状態 -->
       <div v-if="isLoading" class="p-4 text-center text-gray-500">
         <svg class="animate-spin h-5 w-5 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
@@ -93,12 +93,13 @@
 </template>
 
 <script setup>
-import { defineEmits } from 'vue'
+import { defineEmits, ref, watch, onMounted, onUnmounted } from 'vue'
 import { iconPaths } from '../assets/icons.js'
+import { useNotificationStore } from '../stores/notifications.js'
 import NotificationItem from './NotificationItem.vue'
 
 // Props
-defineProps({
+const props = defineProps({
   notifications: {
     type: Array,
     default: () => []
@@ -118,12 +119,124 @@ defineProps({
 })
 
 // Emits
-defineEmits([
+const emit = defineEmits([
   'notification-click',
   'mark-all-read',
   'delete-notification',
   'close'
 ])
+
+// Store
+const notificationStore = useNotificationStore()
+
+// Auto-read functionality
+const visibilityTimers = ref(new Map())
+const observer = ref(null)
+const scrollContainer = ref(null)
+
+// Intersection Observer の設定
+const setupIntersectionObserver = () => {
+  if (!scrollContainer.value) return
+
+  observer.value = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const notificationElement = entry.target
+        const notificationId = notificationElement.dataset.notificationId
+
+        if (!notificationId) return
+
+        const notification = props.notifications.find(n => n.id === notificationId)
+        if (!notification || notification.read) return
+
+        if (entry.isIntersecting) {
+          // 表示されている場合、5秒後に既読にするタイマーを設定
+          if (!visibilityTimers.value.has(notificationId)) {
+            console.log(`Auto-read timer started for notification: ${notificationId}`)
+            const timer = setTimeout(async () => {
+              try {
+                console.log(`Auto-marking notification as read: ${notificationId}`)
+
+                // 個別要素のフェード効果を適用
+                notificationElement.classList.add('auto-reading')
+
+                // フェード完了後に既読化を実行
+                setTimeout(async () => {
+                  await notificationStore.markAsRead(notificationId)
+                  // 既読化完了後にクラスを削除
+                  notificationElement.classList.remove('auto-reading')
+                }, 750)
+
+              } catch (err) {
+                console.error('Failed to auto-mark notification as read:', err)
+              }
+              visibilityTimers.value.delete(notificationId)
+            }, 5000)
+            visibilityTimers.value.set(notificationId, timer)
+          }
+        } else {
+          // 表示されていない場合、タイマーをクリア
+          const timer = visibilityTimers.value.get(notificationId)
+          if (timer) {
+            console.log(`Auto-read timer cleared for notification: ${notificationId}`)
+            clearTimeout(timer)
+            visibilityTimers.value.delete(notificationId)
+          }
+        }
+      })
+    },
+    {
+      root: scrollContainer.value, // スクロール可能なコンテナを基準に
+      threshold: 0.5, // 50%以上表示されたときに判定
+      rootMargin: '0px'
+    }
+  )
+}
+
+// 通知要素を監視対象に追加
+const observeNotifications = () => {
+  if (!observer.value) return
+
+  // 既存の監視を停止
+  observer.value.disconnect()
+
+  // DOM更新を待ってから通知要素を監視対象に追加
+  setTimeout(() => {
+    const notificationElements = scrollContainer.value?.querySelectorAll('[data-notification-id]')
+    if (notificationElements) {
+      notificationElements.forEach(element => {
+        const notificationId = element.dataset.notificationId
+        const notification = props.notifications.find(n => n.id === notificationId)
+        if (notification && !notification.read) {
+          observer.value.observe(element)
+        }
+      })
+    }
+  }, 100)
+}
+
+// 通知リストが変更されたときに監視対象を更新
+watch(() => props.notifications, observeNotifications, { immediate: true })
+
+// ライフサイクル
+onMounted(() => {
+  // DOM更新を待ってからObserverを設定
+  setTimeout(() => {
+    setupIntersectionObserver()
+    observeNotifications()
+  }, 100)
+})
+
+onUnmounted(() => {
+  // 全てのタイマーをクリア
+  visibilityTimers.value.forEach(timer => clearTimeout(timer))
+  visibilityTimers.value.clear()
+
+  // Observerを停止
+  if (observer.value) {
+    observer.value.disconnect()
+  }
+})
 
 // メソッド
 const viewAllNotifications = () => {
@@ -168,5 +281,31 @@ const viewAllNotifications = () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 自動既読化フェード効果 - 個別要素のみ */
+.auto-reading {
+  /* 背景色を白に変化 */
+  background-color: white !important;
+  border-color: #f3f4f6 !important;
+  transition: background-color 0.4s ease-in-out, border-color 0.4s ease-in-out;
+}
+
+.auto-reading .unread-indicator {
+  /* 青い丸印をフェードアウト */
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.auto-reading::before {
+  /* 青い縦罫線をフェードアウト */
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.auto-reading .mark-read-text {
+  /* Mark Read文言をフェードアウト */
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
 }
 </style>

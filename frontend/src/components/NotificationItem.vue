@@ -5,6 +5,7 @@
       'bg-blue-50 border-blue-100': !notification.read,
       'bg-white': notification.read
     }"
+    :data-notification-id="notification.id"
     @click="$emit('click', notification)"
   >
     <div class="p-4">
@@ -37,7 +38,7 @@
               <!-- 未読インジケーター -->
               <span
                 v-if="!notification.read"
-                class="w-2 h-2 bg-blue-500 rounded-full"
+                class="w-2 h-2 bg-blue-500 rounded-full unread-indicator"
                 :title="$t('notifications.unread')"
               ></span>
             </div>
@@ -76,11 +77,11 @@
               <!-- 既読/未読切り替え -->
               <button
                 @click.stop="toggleReadStatus"
-                class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                class="p-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded flex items-center space-x-1 touch-manipulation"
                 :title="notification.read ? $t('notifications.markUnreadTitle') : $t('notifications.markReadTitle')"
               >
                 <svg
-                  class="w-3 h-3"
+                  class="w-4 h-4"
                   :class="{ 'text-blue-500': !notification.read }"
                   fill="currentColor"
                   viewBox="0 0 20 20"
@@ -90,7 +91,7 @@
                   <path v-else d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"/>
                   <path v-if="!notification.read" d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
                 </svg>
-                <span>{{ notification.read ? $t('notifications.unread') : $t('notifications.markRead') }}</span>
+                <span :class="{ 'mark-read-text': !notification.read }">{{ notification.read ? $t('notifications.unread') : $t('notifications.markRead') }}</span>
               </button>
 
             </div>
@@ -98,10 +99,10 @@
             <!-- 削除ボタン -->
             <button
               @click.stop="$emit('delete', notification.id)"
-              class="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors touch-manipulation"
               :title="$t('notifications.deleteTitle')"
             >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPaths.trash" />
               </svg>
             </button>
@@ -225,9 +226,8 @@ const toggleReadStatus = async () => {
 }
 
 /* 通知アイテムのホバーエフェクト */
-.notification-item:hover {
-  transform: translateX(2px);
-  transition: transform 0.2s ease-in-out, background-color 0.15s ease-in-out;
+.notification-item {
+  transition: background-color 0.15s ease-in-out;
 }
 
 /* 未読通知の左端ボーダー */
