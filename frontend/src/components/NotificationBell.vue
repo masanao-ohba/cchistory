@@ -47,12 +47,6 @@
         {{ totalNotifications > 99 ? '99+' : totalNotifications }}
       </span>
 
-      <!-- 接続状態インジケーター（通知がある場合のみ表示） -->
-      <span
-        v-if="isConnected && totalNotifications > 0 && unreadCount === 0"
-        class="absolute -top-1 -left-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"
-        :title="$t('notifications.realtimeActive')"
-      ></span>
     </button>
 
     <!-- 通知ポップアップ -->
@@ -105,7 +99,6 @@ const {
 const store = useNotificationStore()
 
 // computed
-const isConnected = computed(() => store.isConnected)
 const totalNotifications = computed(() => store.totalCount)
 
 // メソッド
@@ -156,11 +149,6 @@ onUnmounted(() => {
   }
 }
 
-/* ベルアイコンのホバーエフェクト */
-button:hover svg {
-  transform: rotate(15deg);
-  transition: transform 0.2s ease-in-out;
-}
 
 /* 未読バッジのエフェクト */
 span[class*="bg-red-500"] {
