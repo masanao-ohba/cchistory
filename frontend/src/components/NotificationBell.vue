@@ -67,6 +67,7 @@
         @notification-click="onNotificationClick"
         @mark-all-read="markAllAsRead"
         @delete-notification="deleteNotification"
+        @delete-all="deleteAllNotifications"
         @close="closePopup"
         class="absolute right-0 top-full mt-2 z-50"
       />
@@ -93,7 +94,8 @@ const {
   closePopup,
   onNotificationClick,
   markAllAsRead,
-  deleteNotification
+  deleteNotification,
+  deleteAllNotifications
 } = useNotifications()
 
 const store = useNotificationStore()

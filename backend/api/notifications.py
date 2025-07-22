@@ -201,6 +201,32 @@ async def mark_all_notifications_read(
         logger.error(f"Failed to mark all notifications as read: {e}")
         raise HTTPException(status_code=500, detail="Failed to mark notifications as read")
 
+@router.delete("/bulk", response_model=dict)
+async def delete_all_notifications(
+    project_id: Optional[str] = Query(None, description="特定プロジェクトの通知のみ削除"),
+    auth: bool = Depends(verify_auth_token)
+):
+    """
+    全通知または指定プロジェクトの通知を一括削除
+    """
+    try:
+        deleted_count = await notification_manager.delete_all_notifications(project_id)
+
+        # WebSocket統計更新配信
+        if connection_manager and deleted_count > 0:
+            stats = await notification_manager.get_stats()
+            await connection_manager.broadcast_stats_update(stats.dict())
+
+        return {
+            "status": "success",
+            "deleted_count": deleted_count,
+            "message": f"{deleted_count} notifications deleted"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to delete all notifications: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete notifications")
+
 @router.delete("/{notification_id}", response_model=dict)
 async def delete_notification(
     notification_id: str,

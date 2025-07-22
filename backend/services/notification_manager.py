@@ -211,6 +211,28 @@ class NotificationManager:
 
             return False
 
+    async def delete_all_notifications(self, project_id: Optional[str] = None) -> int:
+        """全通知または指定プロジェクトの通知を一括削除"""
+        async with self._lock:
+            notifications = await self._load_notifications()
+            original_count = len(notifications)
+
+            if project_id:
+                # 特定プロジェクトの通知のみ削除
+                remaining_notifications = [n for n in notifications if n.project_id != project_id]
+                deleted_count = original_count - len(remaining_notifications)
+                logger.info(f"Deleted {deleted_count} notifications from project {project_id}")
+            else:
+                # 全通知削除
+                remaining_notifications = []
+                deleted_count = original_count
+                logger.info(f"Deleted all {deleted_count} notifications")
+
+            if deleted_count > 0:
+                await self._save_notifications(remaining_notifications)
+
+            return deleted_count
+
     async def get_stats(self) -> NotificationStatsResponse:
         """通知統計を取得"""
         async with self._lock:
