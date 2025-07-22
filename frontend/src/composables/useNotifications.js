@@ -24,11 +24,14 @@ export function useNotifications() {
   const openPopup = async () => {
     showPopup.value = true
 
-    // 最新の通知を取得
+    // 最新の通知を取得（エラーは無視）
     try {
       await store.fetchNotifications({ limit: 10 })
     } catch (err) {
-      console.error('Failed to fetch recent notifications:', err)
+      // 404エラーの場合は正常（通知がない）
+      if (!err.message.includes('404')) {
+        console.error('Failed to fetch recent notifications:', err)
+      }
     }
 
     // クリックで開いた場合は自動非表示タイマーをセットしない
@@ -131,6 +134,27 @@ export function useNotifications() {
   }
 
   /**
+   * 全通知を一括削除
+   */
+  const deleteAllNotifications = async (projectId = null) => {
+    try {
+      // 確認ダイアログを表示
+      const confirmMessage = projectId
+        ? 'このプロジェクトの全ての通知を削除しますか？'
+        : '全ての通知を削除しますか？この操作は取り消せません。'
+
+      if (!confirm(confirmMessage)) {
+        return
+      }
+
+      await store.deleteAllNotifications(projectId)
+    } catch (err) {
+      console.error('Failed to delete all notifications:', err)
+      error.value = err.message
+    }
+  }
+
+  /**
    * 通知時刻をフォーマット
    */
   const formatNotificationTime = (timestamp) => {
@@ -202,8 +226,10 @@ export function useNotifications() {
       // プロジェクト一覧を取得
       await store.fetchProjects()
 
-      // 初回の通知統計を取得
-      await store.fetchStats()
+      // 初回の通知統計を取得（エラーは無視）
+      await store.fetchStats().catch(() => {
+        // 通知統計の取得に失敗しても初期化は続行
+      })
 
     } catch (err) {
       console.error('Failed to initialize notifications:', err)
@@ -244,6 +270,7 @@ export function useNotifications() {
     onNotificationClick,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
 
     // Utilities
     formatNotificationTime,

@@ -25,6 +25,16 @@
           {{ $t('notifications.markAllRead') }}
         </button>
 
+        <!-- 全て削除ボタン -->
+        <button
+          v-if="notifications.length > 0"
+          @click="$emit('delete-all')"
+          class="text-xs text-red-600 hover:text-red-800 font-medium"
+          :title="$t('notifications.deleteAllTitle')"
+        >
+          {{ $t('notifications.deleteAll') }}
+        </button>
+
         <!-- 閉じるボタン -->
         <button
           @click="$emit('close')"
@@ -80,13 +90,23 @@
     <!-- フッター -->
     <div v-if="notifications.length > 0" class="bg-gray-50 px-4 py-3 border-t border-gray-200">
       <div class="flex items-center justify-between text-sm text-gray-600">
-        <span>{{ $t('notifications.count', { count: notifications.length }) }}</span>
-        <button
-          @click="viewAllNotifications"
-          class="text-purple-600 hover:text-purple-800 font-medium"
-        >
-          {{ $t('notifications.viewAll') }}
-        </button>
+        <span>{{ $t('notifications.count', { count: notifications.length, total: notificationStore.totalCount }) }}</span>
+        <div class="flex items-center space-x-2">
+          <!-- さらに読み込むボタン -->
+          <button
+            v-if="notificationStore.hasMoreNotifications && !isLoading"
+            @click="loadMoreNotifications"
+            class="text-purple-600 hover:text-purple-800 font-medium"
+          >
+            {{ $t('notifications.loadMore') }}
+          </button>
+          <button
+            @click="viewAllNotifications"
+            class="text-purple-600 hover:text-purple-800 font-medium"
+          >
+            {{ $t('notifications.viewAll') }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -123,6 +143,7 @@ const emit = defineEmits([
   'notification-click',
   'mark-all-read',
   'delete-notification',
+  'delete-all',
   'close'
 ])
 
@@ -241,6 +262,14 @@ onUnmounted(() => {
 // メソッド
 const viewAllNotifications = () => {
   // 将来的には通知専用ページに遷移する予定
+}
+
+const loadMoreNotifications = async () => {
+  try {
+    await notificationStore.loadMoreNotifications()
+  } catch (error) {
+    console.error('Failed to load more notifications:', error)
+  }
 }
 </script>
 
