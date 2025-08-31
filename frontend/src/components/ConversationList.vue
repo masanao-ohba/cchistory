@@ -357,6 +357,19 @@ const showNewMessages = (group, groupIndex) => {
 }
 
 .prose .code-block-content code {
-  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre;
+  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre overflow-x-auto;
+}
+
+/* 表とコードブロックの横スクロール対応 */
+.prose pre {
+  @apply overflow-x-auto;
+}
+
+.prose table {
+  @apply min-w-full overflow-x-auto;
+}
+
+.prose .code-block-container {
+  @apply overflow-x-auto;
 }
 </style>
