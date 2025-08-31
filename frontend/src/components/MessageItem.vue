@@ -68,7 +68,7 @@ const typeLabelClasses = computed(() => [
 ])
 
 const contentClasses = computed(() => [
-  'prose prose-sm max-w-none break-words rounded-md p-3 text-gray-900 shadow-sm border',
+  'prose prose-sm max-w-none break-words rounded-md p-3 text-gray-900 shadow-sm border overflow-x-auto',
   'prose-headings:text-gray-900 prose-p:text-gray-800 prose-code:bg-gray-100 prose-pre:bg-gray-100',
   'prose-table:border-gray-300 prose-th:border-gray-300 prose-td:border-gray-300',
   isUser.value ? 'bg-blue-50 border-blue-300' : 'bg-green-50 border-green-300',
