@@ -1,0 +1,21 @@
+services:
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: 
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    ports:
+      - "4040:4040"
+    volumes:
+      - ./ngrok.yaml:/etc/ngrok.yml:ro
+    networks:
+      - cchistory-network
+    environment:
+      - NGROK_CONFIG=/etc/ngrok.yml
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+      - NGROK_DOMAIN=${NGROK_DOMAIN}
+    depends_on:
+      - nginx
+    restart: unless-stopped
