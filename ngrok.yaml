@@ -1,0 +1,9 @@
+authtoken: ${NGROK_AUTHTOKEN}
+version: "2"
+web_addr: 0.0.0.0:4040
+tunnels:
+  cchistory:
+    proto: http
+    addr: nginx:80
+    host_header: rewrite
+    domain: ${NGROK_DOMAIN}

@@ -22,7 +22,9 @@ export default defineConfig({
       '0.0.0.0',
       '.ngrok.io',
       '.ngrok-free.app',
-      '.ngrok.app'
+      '.ngrok.app',
+      'nginx',
+      'frontend'
     ],
     hmr: true,
     cors: true,
