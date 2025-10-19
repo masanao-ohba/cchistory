@@ -143,6 +143,27 @@ Files are automatically reloaded when edited.
 | `CLAUDE_PROJECTS` | - | Specific project paths (comma-separated or JSON array) |
 | `TIMEZONE` | `Asia/Tokyo` | Display timezone |
 | `LOG_LEVEL` | `INFO` | Logging level |
+| `NGROK_AUTHTOKEN` | - | ngrok authentication token |
+| `NGROK_DOMAIN` | - | ngrok domain name |
+| `NGROK_OAUTH_ALLOW_EMAIL` | - | Allowed email address for OAuth (single value, can be used with domain) |
+| `NGROK_OAUTH_ALLOW_DOMAIN` | - | Allowed email domain for OAuth (single value, can be used with email) |
+
+### ngrok Public Access with OAuth
+
+You can expose this application to the internet using ngrok with Google OAuth authentication:
+
+1. **Get ngrok credentials**: Sign up at [ngrok.com](https://ngrok.com) and get your authtoken and domain
+2. **Configure `.env`**:
+   ```bash
+   NGROK_AUTHTOKEN=your_authtoken_here
+   NGROK_DOMAIN=your-domain.ngrok-free.app
+   NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
+   NGROK_OAUTH_ALLOW_DOMAIN=your-company.com
+   ```
+3. **Start with ngrok**: `docker-compose up -d`
+4. **Access**: Visit your ngrok domain (e.g., `https://your-domain.ngrok-free.app`)
+
+Users will be prompted to authenticate with Google, and only authorized emails/domains can access the application.
 
 ### Changing Port
 

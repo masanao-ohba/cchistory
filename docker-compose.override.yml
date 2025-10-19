@@ -4,6 +4,12 @@ services:
     command:
       - "http"
       - "--domain=${NGROK_DOMAIN}"
+      - "--oauth"
+      - "google"
+      - "--oauth-allow-email"
+      - "${NGROK_OAUTH_ALLOW_EMAIL:-}"
+      - "--oauth-allow-domain"
+      - "${NGROK_OAUTH_ALLOW_DOMAIN:-}"
       - "nginx:80"
     ports:
       - "4040:4040"

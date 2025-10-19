@@ -158,8 +158,30 @@ docker-compose -f docker-compose.yml logs -f
 |--------|-------------|------|
 | `VIEWER_PORT` | `18080` | アプリケーションのポート |
 | `CLAUDE_PROJECTS_PATH` | `~/.claude/projects` | Claude projectsのパス |
+| `CLAUDE_PROJECTS` | - | 特定プロジェクトのパス（カンマ区切りまたはJSON配列） |
 | `TIMEZONE` | `Asia/Tokyo` | タイムゾーン |
 | `LOG_LEVEL` | `INFO` | ログレベル |
+| `NGROK_AUTHTOKEN` | - | ngrok認証トークン |
+| `NGROK_DOMAIN` | - | ngrokドメイン名 |
+| `NGROK_OAUTH_ALLOW_EMAIL` | - | OAuth許可メールアドレス（単一の値、ドメインと併用可） |
+| `NGROK_OAUTH_ALLOW_DOMAIN` | - | OAuth許可メールドメイン（単一の値、メールと併用可） |
+
+### ngrokによる公開とOAuth認証
+
+ngrokを使用してアプリケーションをインターネットに公開し、Google OAuth認証で保護できます：
+
+1. **ngrok認証情報を取得**: [ngrok.com](https://ngrok.com)でサインアップし、authtokenとdomainを取得
+2. **`.env`を設定**:
+   ```bash
+   NGROK_AUTHTOKEN=your_authtoken_here
+   NGROK_DOMAIN=your-domain.ngrok-free.app
+   NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
+   NGROK_OAUTH_ALLOW_DOMAIN=your-company.com
+   ```
+3. **ngrokを含めて起動**: `docker-compose up -d`
+4. **アクセス**: ngrokドメインにアクセス（例: `https://your-domain.ngrok-free.app`）
+
+ユーザーはGoogleで認証するよう求められ、許可されたメールアドレス/ドメインのみアプリケーションにアクセスできます。
 
 ### ポートの変更
 
