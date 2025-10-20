@@ -239,8 +239,56 @@ const renderMarkdown = (content, searchKeyword = null) => {
 
   // 検索キーワードがある場合のみ、レンダリング後のHTMLにハイライトを適用
   if (searchKeyword && searchKeyword.trim()) {
-    const regex = new RegExp(`(${searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-    renderedContent = renderedContent.replace(regex, '<mark>$1</mark>')
+    // HTMLをDOMパーサーで解析してテキストノードのみにハイライトを適用
+    const parser = new DOMParser()
+    // divでラップしてパースすることで、bodyタグの自動挿入を回避
+    const doc = parser.parseFromString(`<div>${renderedContent}</div>`, 'text/html')
+    const container = doc.body.firstChild
+    const escapedKeyword = searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`(${escapedKeyword})`, 'gi')
+
+    // テキストノードを再帰的に処理
+    const highlightTextNodes = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent
+        if (regex.test(text)) {
+          const fragment = document.createDocumentFragment()
+          let lastIndex = 0
+          let match
+
+          // 正規表現をリセット
+          regex.lastIndex = 0
+
+          while ((match = regex.exec(text)) !== null) {
+            // マッチ前のテキスト
+            if (match.index > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)))
+            }
+
+            // ハイライト部分
+            const mark = document.createElement('mark')
+            mark.textContent = match[0]
+            fragment.appendChild(mark)
+
+            lastIndex = match.index + match[0].length
+          }
+
+          // 残りのテキスト
+          if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.substring(lastIndex)))
+          }
+
+          node.parentNode.replaceChild(fragment, node)
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+        // 子ノードを配列にコピー（ライブコレクションの変更による問題を回避）
+        const children = Array.from(node.childNodes)
+        children.forEach(highlightTextNodes)
+      }
+    }
+
+    highlightTextNodes(container)
+    renderedContent = container.innerHTML
   } else {
     // キーワードがない場合は既存の<mark>タグを除去
     renderedContent = renderedContent.replace(/<mark>(.*?)<\/mark>/gi, '$1')
@@ -324,7 +372,10 @@ const showNewMessages = (group, groupIndex) => {
 <style>
 /* 検索ハイライト */
 .prose mark {
-  @apply bg-yellow-200 px-1 py-0.5 rounded-sm font-medium;
+  @apply bg-yellow-200 px-1 py-0.5 rounded-sm;
+  font-weight: inherit;
+  font-style: inherit;
+  font-size: inherit;
 }
 
 /* カスタムコードブロックのスタイリング（コピー機能付き） */

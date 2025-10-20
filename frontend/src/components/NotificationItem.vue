@@ -69,6 +69,54 @@
                 {{ notification.tool_input }}
               </p>
             </div>
+
+            <!-- 詳細情報の表示（Claude Code hookからの追加データ） -->
+            <div v-if="hasDetails" class="mt-3">
+              <!-- 展開/折りたたみボタン -->
+              <button
+                @click.stop="toggleDetails"
+                class="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+              >
+                <svg
+                  class="w-4 h-4 transition-transform duration-200"
+                  :class="{ 'rotate-90': showDetails }"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ showDetails ? 'Hide Details' : 'Show Details' }}</span>
+              </button>
+
+              <!-- 詳細内容 -->
+              <div v-show="showDetails" class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <!-- オプション/選択肢がある場合 -->
+                <div v-if="detailOptions && detailOptions.length > 0" class="space-y-1">
+                  <p class="text-xs font-medium text-gray-600 mb-2">Available Options:</p>
+                  <div
+                    v-for="(option, index) in detailOptions"
+                    :key="index"
+                    class="flex items-start space-x-2"
+                  >
+                    <span class="text-xs font-mono text-blue-600">{{ index + 1 }}.</span>
+                    <span class="text-xs text-gray-700 flex-1">{{ option }}</span>
+                  </div>
+                </div>
+
+                <!-- その他の詳細情報 -->
+                <div v-if="otherDetails" class="mt-3 space-y-1">
+                  <p class="text-xs font-medium text-gray-600 mb-1">Additional Information:</p>
+                  <pre class="text-xs text-gray-600 font-mono bg-white p-2 rounded border border-gray-200 overflow-x-auto">{{ formattedOtherDetails }}</pre>
+                </div>
+
+                <!-- セッションIDがある場合 -->
+                <div v-if="props.notification.details?.session_id" class="mt-2 pt-2 border-t border-gray-200">
+                  <p class="text-xs text-gray-500">
+                    <span class="font-medium">Session:</span> {{ props.notification.details.session_id }}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- アクションボタン -->
@@ -114,7 +162,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotifications } from '../composables/useNotifications.js'
 import { useNotificationStore } from '../stores/notifications.js'
@@ -131,6 +179,9 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['click', 'delete'])
 
+// State
+const showDetails = ref(false)
+
 // Composables
 const {
   formatNotificationTime,
@@ -144,7 +195,78 @@ const getProjectDisplayName = (projectId) => {
   return notificationStore.getProjectDisplayName(projectId)
 }
 
+// Computed
+/**
+ * 詳細情報があるかチェック
+ */
+const hasDetails = computed(() => {
+  // デバッグ: 各通知の詳細を確認
+  const details = props.notification?.details
+  if (details) {
+    console.debug(`Notification ${props.notification.id} has details:`, details)
+  }
+  return details && Object.keys(details).length > 0
+})
+
+/**
+ * 詳細からオプション/選択肢を抽出
+ */
+const detailOptions = computed(() => {
+  const details = props.notification?.details
+  if (!details) return []
+
+  // options配列がある場合
+  if (Array.isArray(details.options)) {
+    return details.options
+  }
+
+  // choices配列がある場合
+  if (Array.isArray(details.choices)) {
+    return details.choices
+  }
+
+  // optionsが文字列の場合、改行で分割
+  if (typeof details.options === 'string') {
+    return details.options.split('\n').filter(opt => opt.trim())
+  }
+
+  return []
+})
+
+/**
+ * オプション以外の詳細情報
+ */
+const otherDetails = computed(() => {
+  const details = props.notification?.details
+  if (!details) return null
+
+  // 深いコピーを作成して元のデータを変更しない
+  const detailsCopy = JSON.parse(JSON.stringify(details))
+  // 表示不要なフィールドのみを除外（session_id, cwd, transcript_pathは表示する）
+  delete detailsCopy.options
+  delete detailsCopy.choices
+  delete detailsCopy.hook_event_name  // これも一般的なので除外
+
+  return Object.keys(detailsCopy).length > 0 ? detailsCopy : null
+})
+
+/**
+ * その他詳細情報のフォーマット済み表示
+ */
+const formattedOtherDetails = computed(() => {
+  const other = otherDetails.value
+  if (!other) return ''
+  return JSON.stringify(other, null, 2)
+})
+
 // メソッド
+
+/**
+ * 詳細表示の切り替え
+ */
+const toggleDetails = () => {
+  showDetails.value = !showDetails.value
+}
 
 /**
  * 通知タイプのアイコンを取得
@@ -160,7 +282,7 @@ const getTypeIcon = (type) => {
 const getTypeIconClass = (type) => {
   const config = notificationConfig.types[type]
   if (!config) return 'bg-gray-100 text-gray-600'
-  
+
   const colorConfig = notificationConfig.colors[config.color]
   return `${colorConfig.bg} ${colorConfig.icon}`
 }
@@ -171,7 +293,7 @@ const getTypeIconClass = (type) => {
 const getTypeBadgeClass = (type) => {
   const config = notificationConfig.types[type]
   if (!config) return 'bg-gray-100 text-gray-800'
-  
+
   const colorConfig = notificationConfig.colors[config.color]
   return `${colorConfig.bg} ${colorConfig.text}`
 }

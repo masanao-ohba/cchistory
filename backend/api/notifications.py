@@ -92,6 +92,10 @@ async def receive_notification(
 
         logger.info(f"Received notification from project {notification.project_id}: {notification.type}")
 
+        # 詳細データがある場合はログに記録（デバッグ用）
+        if notification.details:
+            logger.debug(f"Notification details: {notification.details}")
+
         # WebSocket通知配信
         if connection_manager:
             await connection_manager.broadcast_notification(created_notification)

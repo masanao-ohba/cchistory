@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Literal, List, Dict, Union
+from typing import Optional, Literal, List, Dict, Union, Any
 from datetime import datetime
 import uuid
 
@@ -12,6 +12,7 @@ class NotificationBase(BaseModel):
     notification: Optional[str] = None
     tool_name: Optional[str] = None
     tool_input: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None  # Claude Code hookからの詳細データ（選択肢、オプションなど）
 
 class NotificationCreate(NotificationBase):
     """通知作成用データモデル"""
