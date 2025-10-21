@@ -1,0 +1,119 @@
+{
+  "conversations": {
+    "title": "대화 기록",
+    "showing": "{count}개의 대화 표시 중",
+    "showingFiltered": "{total}개 중 {count}개 표시 중",
+    "showingThreads": "{threads}개 항목({messages}개 메시지) 표시 중",
+    "showingThreadsFiltered": "{totalThreads}개 항목 중 {threads}개({messages}개 메시지) 표시 중",
+    "loading": "데이터를 불러오는 중...",
+    "noConversations": "대화를 찾을 수 없습니다",
+    "noConversationsHint": "필터 조건을 변경해 보세요.",
+    "user": "사용자",
+    "assistant": "어시스턴트",
+    "showMore": "더 보기",
+    "collapse": "접기",
+    "loadMore": "더 불러오기",
+    "loadMoreRange": "({start}~{end}개 항목)",
+    "loadMoreThreadRange": "({start}~{end}개 항목)",
+    "newConversationsLoaded": "{count}개의 새 대화를 불러왔습니다"
+  },
+  "search": {
+    "placeholder": "키워드로 검색...",
+    "button": "검색",
+    "foundMessages": "'{keyword}'에 대해 {count}개의 메시지를 찾았습니다",
+    "noMessagesFound": "'{keyword}'와 일치하는 메시지를 찾을 수 없습니다",
+    "showRelatedThreads": "관련 메시지 및 응답 표시",
+    "clear": "지우기"
+  },
+  "dateFilter": {
+    "title": "날짜 필터",
+    "from": "시작일",
+    "to": "종료일",
+    "apply": "적용",
+    "reset": "초기화",
+    "search": "검색",
+    "searching": "검색 중...",
+    "today": "오늘",
+    "yesterday": "어제",
+    "last7Days": "최근 7일",
+    "last30Days": "최근 30일"
+  },
+  "projectFilter": {
+    "title": "프로젝트 필터",
+    "projects": "프로젝트",
+    "all": "전체",
+    "apply": "적용",
+    "reset": "초기화",
+    "applying": "적용 중...",
+    "allProjects": "모든 프로젝트",
+    "projectsSelected": "{count}개 프로젝트 선택됨"
+  },
+  "statistics": {
+    "title": "통계",
+    "totalThreads": "대화",
+    "totalMessages": "메시지",
+    "totalProjects": "프로젝트",
+    "dailyConversations": "일별 대화(최근 30일)",
+    "items": "개 항목",
+    "loading": "통계를 불러오는 중..."
+  },
+  "language": {
+    "switch": "언어 전환",
+    "japanese": "日本語",
+    "english": "English",
+    "chinese": "中文",
+    "korean": "한국어"
+  },
+  "sortOrder": {
+    "label": "정렬 순서",
+    "ascending": "오름차순(오래된 순)",
+    "descending": "내림차순(최신 순)"
+  },
+  "app": {
+    "title": "Claude 대화 기록 뷰어 (Next.js)",
+    "subtitle": "Claude CLI 대화 기록 보기",
+    "footer": "Next.js 마이그레이션 - Claude 대화 기록 뷰어",
+    "backToTop": "맨 위로",
+    "realTimeUpdate": "실시간 업데이트 활성화",
+    "offline": "오프라인"
+  },
+  "notifications": {
+    "title": "알림",
+    "aria": "알림",
+    "markAllRead": "모두 읽음",
+    "markAllReadTitle": "모두 읽음으로 표시",
+    "deleteAll": "모두 삭제",
+    "deleteAllTitle": "모든 알림 삭제",
+    "deleteAllConfirm": "모든 알림을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+    "close": "닫기",
+    "closeTitle": "닫기",
+    "loading": "로딩 중...",
+    "noNotifications": "알림이 없습니다",
+    "showing": "{count}개의 알림 표시 중",
+    "viewAll": "모두 보기",
+    "loadMore": "더 불러오기",
+    "totalNotifications": "총 알림 수",
+    "realtimeActive": "실시간 알림 활성화",
+    "unread": "읽지 않음",
+    "markRead": "읽음",
+    "markReadTitle": "읽음으로 표시",
+    "markUnreadTitle": "읽지 않음으로 표시",
+    "delete": "삭제",
+    "deleteTitle": "알림 삭제",
+    "showDetails": "세부정보 표시",
+    "hideDetails": "세부정보 숨기기",
+    "availableOptions": "사용 가능한 옵션:",
+    "additionalInfo": "추가 정보:",
+    "session": "세션",
+    "justNow": "방금",
+    "minutesAgo": "{minutes}분 전",
+    "hoursAgo": "{hours}시간 전",
+    "daysAgo": "{days}일 전",
+    "types": {
+      "permission_request": "권한 요청",
+      "tool_use": "도구 사용",
+      "notification": "알림",
+      "unknown": "알 수 없음"
+    }
+  }
+}

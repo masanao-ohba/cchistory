@@ -1,3 +1,5 @@
+# ngrok enabled for cchistory-next (production setup)
+# Migrated from original cchistory project
 services:
   ngrok:
     image: ngrok/ngrok:latest

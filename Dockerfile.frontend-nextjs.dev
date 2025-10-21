@@ -1,0 +1,14 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY frontend-nextjs/package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY frontend-nextjs .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

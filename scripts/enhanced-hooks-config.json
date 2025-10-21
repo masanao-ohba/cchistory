@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Claude Code Notification Hook - Enhanced Version\n# Captures detailed permission request information\n\n# Read the full JSON input from stdin\nFULL_JSON=$(cat)\n\n# Extract fields with fallback to empty string\nMESSAGE=$(echo \"$FULL_JSON\" | jq -r '.message // \"\"' 2>/dev/null)\nTOOL_NAME=$(echo \"$FULL_JSON\" | jq -r '.tool_name // \"\"' 2>/dev/null)\nTOOL_INPUT=$(echo \"$FULL_JSON\" | jq -r '.tool_input // \"\"' 2>/dev/null)\nSESSION_ID=$(echo \"$FULL_JSON\" | jq -r '.session_id // \"\"' 2>/dev/null)\n\n# Extract the entire JSON as details (preserving all fields)\nDETAILS=$(echo \"$FULL_JSON\" | jq -c '.' 2>/dev/null || echo '{}')\n\n# Send to notification endpoint\ncurl -X POST \"http://localhost:18080/api/notifications/hook\" \\\n  -H \"Content-Type: application/json\" \\\n  -d \"{\n    \\\"type\\\": \\\"permission_request\\\",\n    \\\"project_id\\\": \\\"$(basename $(pwd))\\\",\n    \\\"notification\\\": \\\"$MESSAGE\\\",\n    \\\"tool_name\\\": \\\"$TOOL_NAME\\\",\n    \\\"tool_input\\\": \\\"$TOOL_INPUT\\\",\n    \\\"details\\\": $DETAILS,\n    \\\"timestamp\\\": \\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\"\n  }\" \\\n  2>/dev/null"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Claude Code PreToolUse Hook - Captures tool permission details\n# This hook runs before tools are executed, capturing permission context\n\n# Read the full JSON input from stdin\nFULL_JSON=$(cat)\n\n# Extract tool information\nTOOL_NAME=$(echo \"$FULL_JSON\" | jq -r '.tool_name // \"\"' 2>/dev/null)\nTOOL_INPUT=$(echo \"$FULL_JSON\" | jq -r '.tool_input // \"\"' 2>/dev/null)\nSESSION_ID=$(echo \"$FULL_JSON\" | jq -r '.session_id // \"\"' 2>/dev/null)\n\n# Only send notification for tools that typically require permission\n# (Bash, Write, Edit, Delete, etc.)\nif echo \"$TOOL_NAME\" | grep -qE \"^(Bash|Write|Edit|Delete|MultiEdit|TodoWrite)$\"; then\n  # Extract the entire JSON as details\n  DETAILS=$(echo \"$FULL_JSON\" | jq -c '.' 2>/dev/null || echo '{}')\n  \n  # Create a more descriptive message\n  MESSAGE=\"Claude is requesting permission to use: $TOOL_NAME\"\n  \n  # Send to notification endpoint\n  curl -X POST \"http://localhost:18080/api/notifications/hook\" \\\n    -H \"Content-Type: application/json\" \\\n    -d \"{\n      \\\"type\\\": \\\"tool_use\\\",\n      \\\"project_id\\\": \\\"$(basename $(pwd))\\\",\n      \\\"notification\\\": \\\"$MESSAGE\\\",\n      \\\"tool_name\\\": \\\"$TOOL_NAME\\\",\n      \\\"tool_input\\\": \\\"$TOOL_INPUT\\\",\n      \\\"details\\\": $DETAILS,\n      \\\"timestamp\\\": \\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\"\n    }\" \\\n    2>/dev/null\nfi\n\n# Always exit with 0 to allow the tool to proceed\nexit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

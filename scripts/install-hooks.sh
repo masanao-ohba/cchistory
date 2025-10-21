@@ -104,6 +104,7 @@ WEBHOOK_URL=""
 NOTIFICATION_RECEIVER_PATH=""
 TARGET_PROJECT_PATH=""
 DRY_RUN=false
+UPDATE_EXISTING=false
 HELP=false
 
 while [[ $# -gt 0 ]]; do
@@ -126,6 +127,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dry-run)
             DRY_RUN=true
+            shift
+            ;;
+        --update|--force)
+            UPDATE_EXISTING=true
             shift
             ;;
         --help|-h)
@@ -153,12 +158,16 @@ if [ "$HELP" = true ]; then
     echo "                                     (default: current directory)"
     echo "  --target-project-path PATH         Path to project directory to monitor"
     echo "                                     (default: current directory)"
+    echo "  --update, --force                  Update existing notification hooks with enhanced version"
     echo "  --dry-run                          Show what would be changed without making changes"
     echo "  --help, -h                         Show this help message"
     echo ""
     echo "Examples:"
     echo "  # Monitor a specific project from cchistory directory"
     echo "  $0 --target-project-path ~/myproject"
+    echo ""
+    echo "  # Update existing hooks with enhanced version"
+    echo "  $0 --target-project-path ~/myproject --update"
     echo "  # Specify custom notification receiver and port"
     echo "  $0 --target-project-path ~/myproject --notification-receiver-path ~/cchistory --port 8080"
     echo "  # Preview changes"
@@ -216,7 +225,7 @@ check_jq_early() {
         "hooks": [
           {
             "type": "command",
-            "command": "MESSAGE=\$(jq -r '.message' 2>/dev/null); curl -X POST \"$webhook_url_for_manual\" -H \"Content-Type: application/json\" -d '{\\"type\\":\\"permission_request\\",\\"project_id\\":\\"'\"\$(basename \$(pwd))\"'\",\\"notification\\":\\"'\"\$MESSAGE\"'\",\\"timestamp\\":\\"'\"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\"'\\"}' 2>/dev/null"
+            "command": "FULL_JSON=\$(cat); MESSAGE=\$(echo \"\$FULL_JSON\" | jq -r '.message // \"\"' 2>/dev/null); TOOL_NAME=\$(echo \"\$FULL_JSON\" | jq -r '.tool_name // \"\"' 2>/dev/null); TOOL_INPUT=\$(echo \"\$FULL_JSON\" | jq -r '.tool_input // \"\"' 2>/dev/null); DETAILS=\$(echo \"\$FULL_JSON\" | jq -c '. | del(.message) | del(.tool_name) | del(.tool_input)' 2>/dev/null); curl -X POST \"$webhook_url_for_manual\" -H \"Content-Type: application/json\" -d '{\\"type\\":\\"permission_request\\",\\"project_id\\":\\"'\"\$(basename \$(pwd))\"'\",\\"notification\\":\\"'\"\$MESSAGE\"'\",\\"tool_name\\":\\"'\"\$TOOL_NAME\"'\",\\"tool_input\\":\\"'\"\$TOOL_INPUT\"'\",\\"details\\":'\"\\$DETAILS\"',\\"timestamp\\":\\"'\"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\"'\\"}' 2>/dev/null"
           }
         ]
       }
@@ -270,18 +279,42 @@ merge_notification_hook() {
 
     # 既存設定にnotification webhookが存在するかチェック
     if echo "$existing_settings" | jq -e '.hooks.Notification[]?.hooks[]?.command | contains("api/notifications/hook")' &> /dev/null; then
-        print_warning "Notification webhook hook already exists"
-        print_info "Skipping installation to avoid conflicts"
-        return 1
+        if [[ "$UPDATE_EXISTING" == true ]]; then
+            print_warning "Existing notification webhook hook found" >&2
+            print_info "Updating with enhanced version (--update flag specified)" >&2
+            # 既存のNotificationフックから、api/notifications/hookを含むコマンドを除外
+            # 他のhooks（sayコマンドなど）は保持
+            existing_settings=$(echo "$existing_settings" | jq '
+                if .hooks.Notification then
+                    .hooks.Notification |= map({
+                        matcher: .matcher,
+                        hooks: (.hooks | map(select(.command | contains("api/notifications/hook") | not)))
+                    }) | 
+                    .hooks.Notification |= map(select(.hooks | length > 0))
+                else . end
+            ')
+        else
+            print_warning "Notification webhook hook already exists" >&2
+            print_info "Use --update flag to replace with enhanced version" >&2
+            print_info "Example: $0 --target-project-path $TARGET_PROJECT_PATH --update" >&2
+            return 1
+        fi
     fi
 
     # Notificationフックの追加（URLを直接埋め込み）
+    # 完全なJSONデータをキャプチャして詳細情報を含める
     local hook_command
     read -r -d '' hook_command << 'EOF'
-MESSAGE=$(jq -r '.message' 2>/dev/null)
+FULL_JSON=$(cat)
+MESSAGE=$(echo "$FULL_JSON" | jq -r '.message // ""' 2>/dev/null)
+TOOL_NAME=$(echo "$FULL_JSON" | jq -r '.tool_name // ""' 2>/dev/null)
+TOOL_INPUT=$(echo "$FULL_JSON" | jq -r '.tool_input // ""' 2>/dev/null)
+OPTIONS=$(echo "$FULL_JSON" | jq -c '.options // []' 2>/dev/null)
+DETAILS=$(echo "$FULL_JSON" | jq -c '. | del(.message) | del(.tool_name) | del(.tool_input)' 2>/dev/null)
+
 curl -X POST "WEBHOOK_URL_PLACEHOLDER" \
   -H "Content-Type: application/json" \
-  -d "{\"type\":\"permission_request\",\"project_id\":\"$(basename $(pwd))\",\"notification\":\"$MESSAGE\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+  -d "{\"type\":\"permission_request\",\"project_id\":\"$(basename $(pwd))\",\"notification\":\"$MESSAGE\",\"tool_name\":\"$TOOL_NAME\",\"tool_input\":\"$TOOL_INPUT\",\"details\":$DETAILS,\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
   2>/dev/null
 EOF
 
@@ -355,13 +388,25 @@ main() {
     print_info "Settings file: $SETTINGS_FILE"
 
     MERGED_CONFIG=$(merge_notification_hook "$SETTINGS_FILE" "$WEBHOOK_URL")
+    MERGE_EXIT_CODE=$?
 
-    if [[ $? -ne 0 ]]; then
+    if [[ $MERGE_EXIT_CODE -ne 0 ]]; then
         exit 0
     fi
 
     if [[ "$DRY_RUN" == true ]]; then
         print_info "Dry run - Changes that would be made:"
+        # Debug output to check what's in MERGED_CONFIG
+        if [[ -z "$MERGED_CONFIG" ]]; then
+            print_error "MERGED_CONFIG is empty"
+            exit 1
+        fi
+        # Try to validate JSON before piping to jq
+        if ! echo "$MERGED_CONFIG" | jq empty 2>/dev/null; then
+            print_error "Invalid JSON in MERGED_CONFIG"
+            echo "Content (first 500 chars): ${MERGED_CONFIG:0:500}" >&2
+            exit 1
+        fi
         echo "$MERGED_CONFIG" | jq '.'
         return 0
     fi

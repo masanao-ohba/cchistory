@@ -1,0 +1,119 @@
+{
+  "conversations": {
+    "title": "对话历史",
+    "showing": "显示 {count} 个对话",
+    "showingFiltered": "显示 {total} 个中的 {count} 个对话",
+    "showingThreads": "显示 {threads} 项（{messages} 条消息）",
+    "showingThreadsFiltered": "显示 {totalThreads} 项中的 {threads} 项（{messages} 条消息）",
+    "loading": "正在加载数据...",
+    "noConversations": "未找到对话",
+    "noConversationsHint": "请尝试更改筛选条件。",
+    "user": "您",
+    "assistant": "助手",
+    "showMore": "显示更多",
+    "collapse": "折叠",
+    "loadMore": "加载更多",
+    "loadMoreRange": "（{start}～{end} 项）",
+    "loadMoreThreadRange": "（{start}～{end} 项）",
+    "newConversationsLoaded": "已加载 {count} 个新对话"
+  },
+  "search": {
+    "placeholder": "按关键字搜索...",
+    "button": "搜索",
+    "foundMessages": "找到 {count} 条包含「{keyword}」的消息",
+    "noMessagesFound": "未找到匹配「{keyword}」的消息",
+    "showRelatedThreads": "显示相关消息和回复",
+    "clear": "清除"
+  },
+  "dateFilter": {
+    "title": "日期筛选",
+    "from": "从",
+    "to": "到",
+    "apply": "应用",
+    "reset": "重置",
+    "search": "搜索",
+    "searching": "搜索中...",
+    "today": "今天",
+    "yesterday": "昨天",
+    "last7Days": "过去7天",
+    "last30Days": "过去30天"
+  },
+  "projectFilter": {
+    "title": "项目筛选",
+    "projects": "项目",
+    "all": "全部",
+    "apply": "应用",
+    "reset": "重置",
+    "applying": "应用中...",
+    "allProjects": "所有项目",
+    "projectsSelected": "已选择 {count} 个项目"
+  },
+  "statistics": {
+    "title": "统计",
+    "totalThreads": "对话",
+    "totalMessages": "消息",
+    "totalProjects": "项目",
+    "dailyConversations": "每日对话（最近30天）",
+    "items": " 项",
+    "loading": "正在加载统计信息..."
+  },
+  "language": {
+    "switch": "切换语言",
+    "japanese": "日本語",
+    "english": "English",
+    "chinese": "中文",
+    "korean": "한국어"
+  },
+  "sortOrder": {
+    "label": "排序",
+    "ascending": "升序（最旧优先）",
+    "descending": "降序（最新优先）"
+  },
+  "app": {
+    "title": "Claude对话历史查看器 (Next.js)",
+    "subtitle": "查看您的Claude CLI对话历史",
+    "footer": "Next.js迁移版 - Claude对话历史查看器",
+    "backToTop": "返回顶部",
+    "realTimeUpdate": "实时更新中",
+    "offline": "离线"
+  },
+  "notifications": {
+    "title": "通知",
+    "aria": "通知",
+    "markAllRead": "全部已读",
+    "markAllReadTitle": "将所有通知标记为已读",
+    "deleteAll": "全部删除",
+    "deleteAllTitle": "删除所有通知",
+    "deleteAllConfirm": "删除所有通知？此操作无法撤消。",
+    "close": "关闭",
+    "closeTitle": "关闭",
+    "loading": "加载中...",
+    "noNotifications": "没有通知",
+    "showing": "显示 {count} 条通知",
+    "viewAll": "查看全部",
+    "loadMore": "加载更多",
+    "totalNotifications": "总通知数",
+    "realtimeActive": "实时通知已激活",
+    "unread": "未读",
+    "markRead": "标记为已读",
+    "markReadTitle": "标记为已读",
+    "markUnreadTitle": "标记为未读",
+    "delete": "删除",
+    "deleteTitle": "删除通知",
+    "showDetails": "显示详情",
+    "hideDetails": "隐藏详情",
+    "availableOptions": "可用选项：",
+    "additionalInfo": "附加信息：",
+    "session": "会话",
+    "justNow": "刚刚",
+    "minutesAgo": "{minutes}分钟前",
+    "hoursAgo": "{hours}小时前",
+    "daysAgo": "{days}天前",
+    "types": {
+      "permission_request": "权限请求",
+      "tool_use": "工具使用",
+      "notification": "通知",
+      "unknown": "未知"
+    }
+  }
+}

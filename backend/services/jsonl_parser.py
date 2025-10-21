@@ -11,18 +11,47 @@ class JSONLParser:
     def __init__(self):
         self._cache = {}
         self._cache_timestamps = {}
+        self._project_cache = {}  # Project-level cache
+        self._project_cache_timestamps = {}
 
     async def parse_project(self, project_dir: Path) -> List[Dict[str, Any]]:
         """プロジェクトディレクトリ内の全JSONLファイルを解析"""
-        conversations = []
-
         if not project_dir.exists():
             logger.warning(f"Project directory does not exist: {project_dir}")
+            return []
+
+        project_key = str(project_dir)
+
+        # Get latest file modification time for cache validation
+        # First do a quick check without glob if cache exists
+        if project_key in self._project_cache:
+            # Quick validation using directory mtime as first check
+            dir_mtime = project_dir.stat().st_mtime
+            if (project_key in self._project_cache_timestamps and
+                self._project_cache_timestamps[project_key] >= dir_mtime):
+                # Cache appears valid - return cached data
+                return self._project_cache[project_key]
+
+        # Cache miss or possibly stale - scan files
+        conversations = []
+        jsonl_files = list(project_dir.glob("*.jsonl"))
+
+        # Only log when actually scanning (to reduce log spam)
+        if not jsonl_files:
             return conversations
 
-        # JSONLファイルを取得
-        jsonl_files = list(project_dir.glob("*.jsonl"))
-        logger.info(f"Found {len(jsonl_files)} JSONL files in {project_dir}")
+        # Get max mtime from all files for accurate cache validation
+        max_mtime = max((f.stat().st_mtime for f in jsonl_files), default=0)
+
+        # Check if we can still use cache based on file mtimes
+        if (project_key in self._project_cache and
+            project_key in self._project_cache_timestamps and
+            self._project_cache_timestamps[project_key] >= max_mtime):
+            # All files are older than cache - return cached data
+            return self._project_cache[project_key]
+
+        # Need to re-parse files
+        logger.info(f"Parsing {len(jsonl_files)} JSONL files in {project_dir}")
 
         # 各ファイルを並行処理で解析
         tasks = [self.parse_file(file_path, project_dir) for file_path in jsonl_files]
@@ -34,7 +63,19 @@ class JSONLParser:
             elif isinstance(result, list):
                 conversations.extend(result)
 
+        # Update project cache with max file mtime
+        self._project_cache[project_key] = conversations
+        self._project_cache_timestamps[project_key] = max_mtime
+
         return conversations
+
+    def invalidate_project_cache(self, project_dir: Path):
+        """Invalidate cache for a specific project"""
+        project_key = str(project_dir)
+        if project_key in self._project_cache:
+            del self._project_cache[project_key]
+        if project_key in self._project_cache_timestamps:
+            del self._project_cache_timestamps[project_key]
 
     async def parse_file(self, file_path: Path, project_dir: Path = None) -> List[Dict[str, Any]]:
         """単一のJSONLファイルを解析"""

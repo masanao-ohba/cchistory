@@ -1,0 +1,119 @@
+{
+  "conversations": {
+    "title": "Conversation History",
+    "showing": "Showing {count} conversations",
+    "showingFiltered": "Showing {count} of {total} conversations",
+    "showingThreads": "Showing {threads} items ({messages} messages)",
+    "showingThreadsFiltered": "Showing {threads} of {totalThreads} items ({messages} messages)",
+    "loading": "Loading data...",
+    "noConversations": "No conversations found",
+    "noConversationsHint": "Try changing your filter criteria.",
+    "user": "You",
+    "assistant": "Assistant",
+    "showMore": "Show More",
+    "collapse": "Collapse",
+    "loadMore": "Load More",
+    "loadMoreRange": "({start}〜{end} items)",
+    "loadMoreThreadRange": "({start}〜{end} items)",
+    "newConversationsLoaded": "Loaded {count} new conversations"
+  },
+  "search": {
+    "placeholder": "Search by keyword...",
+    "button": "Search",
+    "foundMessages": "Found {count} messages for '{keyword}'",
+    "noMessagesFound": "No messages found matching '{keyword}'",
+    "showRelatedThreads": "Show related messages and responses",
+    "clear": "Clear"
+  },
+  "dateFilter": {
+    "title": "Date Filter",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "reset": "Reset",
+    "search": "Search",
+    "searching": "Searching...",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days"
+  },
+  "projectFilter": {
+    "title": "Project Filter",
+    "projects": "Projects",
+    "all": "All",
+    "apply": "Apply",
+    "reset": "Reset",
+    "applying": "Applying...",
+    "allProjects": "All Projects",
+    "projectsSelected": "{count} projects selected"
+  },
+  "statistics": {
+    "title": "Statistics",
+    "totalThreads": "Conversations",
+    "totalMessages": "Messages",
+    "totalProjects": "Projects",
+    "dailyConversations": "Daily Conversations (Last 30 Days)",
+    "items": " items",
+    "loading": "Loading statistics..."
+  },
+  "language": {
+    "switch": "Switch Language",
+    "japanese": "日本語",
+    "english": "English",
+    "chinese": "中文",
+    "korean": "한국어"
+  },
+  "sortOrder": {
+    "label": "Sort Order",
+    "ascending": "Ascending (Oldest First)",
+    "descending": "Descending (Newest First)"
+  },
+  "app": {
+    "title": "Claude Conversations History Viewer (Next.js)",
+    "subtitle": "View your Claude CLI conversation history",
+    "footer": "Next.js Migration - Claude Conversations History Viewer",
+    "backToTop": "Back to Top",
+    "realTimeUpdate": "Real-time updates active",
+    "offline": "Offline"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "aria": "Notifications",
+    "markAllRead": "Mark all read",
+    "markAllReadTitle": "Mark all as read",
+    "deleteAll": "Delete all",
+    "deleteAllTitle": "Delete all notifications",
+    "deleteAllConfirm": "Delete all notifications? This action cannot be undone.",
+    "close": "Close",
+    "closeTitle": "Close",
+    "loading": "Loading...",
+    "noNotifications": "No notifications",
+    "showing": "Showing {count} notifications",
+    "viewAll": "View All",
+    "loadMore": "Load more",
+    "totalNotifications": "Total notifications",
+    "realtimeActive": "Real-time notifications active",
+    "unread": "Unread",
+    "markRead": "Mark read",
+    "markReadTitle": "Mark as read",
+    "markUnreadTitle": "Mark as unread",
+    "delete": "Delete",
+    "deleteTitle": "Delete notification",
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details",
+    "availableOptions": "Available Options:",
+    "additionalInfo": "Additional Information:",
+    "session": "Session",
+    "justNow": "Just now",
+    "minutesAgo": "{minutes}m ago",
+    "hoursAgo": "{hours}h ago",
+    "daysAgo": "{days}d ago",
+    "types": {
+      "permission_request": "Permission Request",
+      "tool_use": "Tool Use",
+      "notification": "Notification",
+      "unknown": "Unknown"
+    }
+  }
+}

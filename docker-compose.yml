@@ -11,7 +11,7 @@ services:
     volumes:
       - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro
       - ./backend:/app:ro  # 開発時はソースコードをマウント（ホットリロード用）
-      - cchistory-storage:/app/storage:rw  # 通知データ等の永続化用
+      - cchistory-next-storage:/app/storage:rw  # 通知データ等の永続化用
     networks:
       - cchistory-network
     restart: unless-stopped
@@ -22,18 +22,18 @@ services:
       retries: 3
       start_period: 30s
 
-  frontend:
+  frontend-nextjs:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: ${DOCKERFILE_FRONTEND:-Dockerfile.frontend-nextjs.dev}
     ports:
-      - "3000:3000"  # ViteのHMR用ポート公開
+      - "3001:3000"  # Next.js dev server (host:3001 -> container:3000)
     environment:
-      - VITE_DEBUG=${DEBUG:-true}
       - NODE_ENV=${NODE_ENV:-development}
     volumes:
-      - ./frontend:/app
+      - ./frontend-nextjs:/app
       - /app/node_modules
+      - /app/.next
     networks:
       - cchistory-network
     depends_on:
@@ -52,7 +52,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      frontend:
+      frontend-nextjs:
         condition: service_started
     restart: unless-stopped
 
@@ -61,5 +61,5 @@ networks:
     driver: bridge
 
 volumes:
-  cchistory-storage:
+  cchistory-next-storage:
 
