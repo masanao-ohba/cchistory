@@ -15,7 +15,10 @@
     "loadMore": "Load More",
     "loadMoreRange": "({start}〜{end} items)",
     "loadMoreThreadRange": "({start}〜{end} items)",
-    "newConversationsLoaded": "Loaded {count} new conversations"
+    "newConversationsLoaded": "Loaded {count} new conversations",
+    "respondingTo": "Responding to:",
+    "jumpToLatest": "Latest",
+    "backToQuestion": "Question"
   },
   "search": {
     "placeholder": "Search by keyword...",

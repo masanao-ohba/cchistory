@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import MessageItem from './MessageItem';
 import { renderMarkdown, copyToClipboard } from '@/lib/utils/markdown';
+import { ChatBubbleIcon, ArrowUpIcon, ArrowDownIcon, LoadingSpinnerIcon } from '@/components/icons';
 
 interface Message {
   type: 'user' | 'assistant';
@@ -31,9 +32,16 @@ interface ConversationListProps {
   actualThreads?: number;
   actualMessages?: number;
   newMessageManager?: NewMessageManager | null;
+  stickyTopOffset?: number;
   onLoadMore?: () => void;
   onShowNewMessages?: (params: { group: Message[]; groupIndex: number }) => void;
 }
+
+// Constants
+const CONTEXT_BAR_HEIGHT = 80;
+const CONTEXT_BAR_ROOT_MARGIN_OFFSET = 80;
+const LOAD_MORE_NOTIFICATION_DELAY = 500;
+const LOAD_MORE_NOTIFICATION_DURATION = 3000;
 
 export default function ConversationList({
   conversations = [],
@@ -44,12 +52,34 @@ export default function ConversationList({
   actualThreads = 0,
   actualMessages = 0,
   newMessageManager = null,
+  stickyTopOffset = 0,
   onLoadMore,
   onShowNewMessages,
 }: ConversationListProps) {
   const t = useTranslations('conversations');
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [lastLoadedCount, setLastLoadedCount] = useState(0);
+  const [tallGroups, setTallGroups] = useState<Set<number>>(new Set());
+  const groupRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const userMessageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const lastAssistantMessageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const [floatingUserMessage, setFloatingUserMessage] = useState<{
+    message: Message;
+    groupIndex: number;
+  } | null>(null);
+
+  // Helper function for smooth scrolling with offset
+  const scrollToElement = useCallback((
+    element: HTMLDivElement,
+    additionalOffset: number = 0
+  ) => {
+    const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+    const offsetPosition = elementPosition - stickyTopOffset - additionalOffset - 10;
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    });
+  }, [stickyTopOffset]);
 
   const toggleExpand = useCallback((index: number) => {
     setExpandedItems((prev) => {
@@ -74,7 +104,6 @@ export default function ConversationList({
   }, []);
 
   const shouldShowToggleButton = useCallback((content: string) => {
-    // Show button if more than 3 lines or content is too long
     const lines = content.split('\n');
     return lines.length > 3 || content.length > 200;
   }, []);
@@ -120,17 +149,116 @@ export default function ConversationList({
     const prevCount = actualThreads;
     onLoadMore?.();
 
-    // Wait a bit and calculate newly loaded count
     setTimeout(() => {
       const newCount = actualThreads;
       setLastLoadedCount(newCount - prevCount);
 
-      // Hide message after 3 seconds
       setTimeout(() => {
         setLastLoadedCount(0);
-      }, 3000);
-    }, 500);
+      }, LOAD_MORE_NOTIFICATION_DURATION);
+    }, LOAD_MORE_NOTIFICATION_DELAY);
   }, [actualThreads, onLoadMore]);
+
+  // Check which message groups are tall enough to need sticky user messages
+  useEffect(() => {
+    const checkGroupHeights = () => {
+      const viewportHeight = window.innerHeight;
+      const newTallGroups = new Set<number>();
+
+      groupRefs.current.forEach((element, index) => {
+        if (element && conversations[index]) {
+          const groupHeight = element.offsetHeight;
+          const group = conversations[index];
+          const displayMessages = !newMessageManager || !Array.isArray(group)
+            ? (Array.isArray(group) ? group : [])
+            : newMessageManager.getDisplayMessages(group, index);
+          const assistantMessageCount = displayMessages.filter(msg => msg.type === 'assistant').length;
+
+          const isTallByHeight = stickyTopOffset + groupHeight > viewportHeight;
+          const isTallByMessageCount = assistantMessageCount >= 4;
+
+          if (isTallByHeight || isTallByMessageCount) {
+            newTallGroups.add(index);
+          }
+        }
+      });
+
+      setTallGroups(newTallGroups);
+    };
+
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(() => {
+        checkGroupHeights();
+      });
+    }, 100);
+
+    window.addEventListener('resize', checkGroupHeights);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkGroupHeights);
+    };
+  }, [conversations, stickyTopOffset, expandedItems, newMessageManager]);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    const visibleGroupsRef = new Set<number>();
+
+    groupRefs.current.forEach((element, groupIndex) => {
+      const mgObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            visibleGroupsRef.add(groupIndex);
+          } else {
+            visibleGroupsRef.delete(groupIndex);
+            setFloatingUserMessage(prev =>
+              prev && prev.groupIndex === groupIndex ? null : prev
+            );
+          }
+        },
+        {
+          threshold: 0.1,
+        }
+      );
+
+      mgObserver.observe(element);
+      observers.push(mgObserver);
+    });
+
+    userMessageRefs.current.forEach((element, groupIndex) => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!conversations[groupIndex]) return;
+
+          const group = conversations[groupIndex];
+          const displayMessages = !newMessageManager || !Array.isArray(group)
+            ? (Array.isArray(group) ? group : [])
+            : newMessageManager.getDisplayMessages(group, groupIndex);
+          const userMessage = displayMessages.find(msg => msg.type === 'user');
+
+          if (!entry.isIntersecting && userMessage && tallGroups.has(groupIndex)) {
+            if (visibleGroupsRef.has(groupIndex)) {
+              setFloatingUserMessage({ message: userMessage, groupIndex });
+            }
+          } else if (entry.isIntersecting) {
+            setFloatingUserMessage(prev =>
+              prev && prev.groupIndex === groupIndex ? null : prev
+            );
+          }
+        },
+        {
+          threshold: 0,
+          rootMargin: `-${stickyTopOffset + CONTEXT_BAR_ROOT_MARGIN_OFFSET}px 0px 0px 0px`,
+        }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
+  }, [conversations, tallGroups, stickyTopOffset, newMessageManager]);
 
   const loadMoreRangeText = () => {
     if (!totalThreads || actualThreads === 0) return '';
@@ -145,7 +273,6 @@ export default function ConversationList({
 
   return (
     <div className="bg-gray-100 rounded-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-slate-50 px-4 py-2 border-b border-gray-200/60 rounded-t-lg rounded-b-lg mb-4">
         <h2 className="text-xl font-semibold text-gray-800">{t('title')}</h2>
         <p className="text-sm text-gray-600 mt-1">
@@ -162,15 +289,15 @@ export default function ConversationList({
         </p>
       </div>
 
-      {/* Loading */}
       {loading && conversations.length === 0 && (
         <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
+          <div className="mx-auto w-12 h-12 text-primary-500 animate-spin">
+            <LoadingSpinnerIcon className="w-12 h-12" />
+          </div>
           <p className="text-gray-500 mt-4">{t('loading')}</p>
         </div>
       )}
 
-      {/* No conversations */}
       {!loading && conversations.length === 0 && (
         <div className="p-8 text-center">
           <div className="text-gray-400 text-6xl mb-4">💬</div>
@@ -178,43 +305,136 @@ export default function ConversationList({
           <p className="text-gray-500">{t('noConversationsHint')}</p>
         </div>
       )}
+      {floatingUserMessage && (
+        <div
+          className="fixed left-0 right-0 z-40 px-4 animate-fade-in"
+          style={{ top: `${stickyTopOffset}px` }}
+        >
+          <div className="max-w-7xl mx-auto">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/30 to-transparent pointer-events-none"></div>
+
+            <div
+              onClick={() => {
+                const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
+                if (element) {
+                  scrollToElement(element);
+                }
+              }}
+              className="relative w-full bg-gradient-to-r from-blue-100 via-indigo-100 to-blue-100 border-y-2 border-blue-300 hover:border-blue-500 px-5 py-3 transition-all duration-200 shadow-context-bar hover:shadow-context-bar-hover group backdrop-blur-sm cursor-pointer"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 text-blue-600">
+                  <ChatBubbleIcon />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-blue-600 font-medium mb-0.5">
+                    {t('respondingTo')}
+                  </p>
+                  <p className="text-sm text-gray-700 line-clamp-2 group-hover:text-gray-900">
+                    {floatingUserMessage.message.content}
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  {/* Jump to Latest (Bottom) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const element = lastAssistantMessageRefs.current.get(floatingUserMessage.groupIndex);
+                      if (element) {
+                        scrollToElement(element, CONTEXT_BAR_HEIGHT);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200 text-xs font-medium"
+                    title={t('jumpToLatest')}
+                  >
+                    <ArrowDownIcon className="w-4 h-4" />
+                    {t('jumpToLatest')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Conversation list */}
       {conversations.length > 0 && (
         <div className="space-y-6">
-          {conversations.map((threadGroup, threadIndex) => (
-            <div
-              key={`thread-${threadIndex}`}
-              className="bg-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <div className="space-y-3">
-                {getDisplayMessages(threadGroup, threadIndex).map((conversation, index) => (
-                  <MessageItem
-                    key={`${conversation.session_id}-${index}`}
-                    conversation={conversation}
-                    index={Number(index)}
-                    expandedItems={expandedItems}
-                    renderMarkdown={renderMarkdown}
-                    handleCodeCopy={handleCodeCopy}
-                    shouldShowToggleButton={shouldShowToggleButton}
-                    onToggleExpand={toggleExpand}
-                  />
-                ))}
-              </div>
+          {conversations.map((threadGroup, threadIndex) => {
+            const displayMessages = getDisplayMessages(threadGroup, threadIndex);
+            const userMessage = displayMessages.find(msg => msg.type === 'user');
+            const assistantMessages = displayMessages.filter(msg => msg.type === 'assistant');
 
-              {/* Show new messages button */}
-              {shouldShowNewMessageButton(threadGroup, threadIndex) && (
-                <div className="mt-4 text-center">
-                  <button
-                    onClick={() => showNewMessages(threadGroup, threadIndex)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
-                  >
-                    {t('loadMore')} ({getUnreadMessageCount(threadGroup, threadIndex)})
-                  </button>
+            return (
+              <div
+                key={`thread-${threadIndex}`}
+                ref={(el) => {
+                  if (el) groupRefs.current.set(threadIndex, el);
+                  else groupRefs.current.delete(threadIndex);
+                }}
+                className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <div className="p-4 space-y-3">
+                  {/* User Message */}
+                  {userMessage && (
+                    <div
+                      ref={(el) => {
+                        if (el) userMessageRefs.current.set(threadIndex, el);
+                        else userMessageRefs.current.delete(threadIndex);
+                      }}
+                    >
+                      <MessageItem
+                        key={`${userMessage.session_id}-user`}
+                        conversation={userMessage}
+                        index={0}
+                        expandedItems={expandedItems}
+                        renderMarkdown={renderMarkdown}
+                        handleCodeCopy={handleCodeCopy}
+                        shouldShowToggleButton={shouldShowToggleButton}
+                        onToggleExpand={toggleExpand}
+                      />
+                    </div>
+                  )}
+
+                  {/* Assistant Messages */}
+                  {assistantMessages.map((conversation, index) => (
+                    <div
+                      key={`${conversation.session_id}-${index}`}
+                      ref={(el) => {
+                        // Save reference to last assistant message
+                        if (index === assistantMessages.length - 1) {
+                          if (el) lastAssistantMessageRefs.current.set(threadIndex, el);
+                          else lastAssistantMessageRefs.current.delete(threadIndex);
+                        }
+                      }}
+                    >
+                      <MessageItem
+                        conversation={conversation}
+                        index={Number(index) + 1}
+                        expandedItems={expandedItems}
+                        renderMarkdown={renderMarkdown}
+                        handleCodeCopy={handleCodeCopy}
+                        shouldShowToggleButton={shouldShowToggleButton}
+                        onToggleExpand={toggleExpand}
+                      />
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Show new messages button */}
+                {shouldShowNewMessageButton(threadGroup, threadIndex) && (
+                  <div className="p-4 pt-0 text-center">
+                    <button
+                      onClick={() => showNewMessages(threadGroup, threadIndex)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+                    >
+                      {t('loadMore')} ({getUnreadMessageCount(threadGroup, threadIndex)})
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -233,26 +453,9 @@ export default function ConversationList({
           >
             {loading ? (
               <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+                <div className="animate-spin -ml-1 mr-3">
+                  <LoadingSpinnerIcon className="h-5 w-5 text-white" />
+                </div>
                 {t('loading')}
               </span>
             ) : (

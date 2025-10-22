@@ -15,7 +15,10 @@
     "loadMore": "もっと読み込む",
     "loadMoreRange": "({start}〜{end}件)",
     "loadMoreThreadRange": "({start}〜{end}件)",
-    "newConversationsLoaded": "{count}件の新しい会話を読み込みました"
+    "newConversationsLoaded": "{count}件の新しい会話を読み込みました",
+    "respondingTo": "返信先:",
+    "jumpToLatest": "最新",
+    "backToQuestion": "質問"
   },
   "search": {
     "placeholder": "キーワードで検索...",

@@ -74,6 +74,7 @@ export default function MessageItem({
     return `${base} ${color}`;
   }, [isUser]);
 
+
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return new Intl.DateTimeFormat('ja-JP', {
@@ -89,9 +90,9 @@ export default function MessageItem({
 
   const getMessageIcon = () => {
     if (isUser) {
-      return <i className="fas fa-user text-base" style={{ fontSize: '16px' }} />;
+      return <i className="fas fa-user text-base" />;
     }
-    return <i className="fas fa-robot text-base" style={{ fontSize: '16px' }} />;
+    return <i className="fas fa-robot text-base" />;
   };
 
   const renderedContent = renderMarkdown(

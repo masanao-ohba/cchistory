@@ -16,6 +16,7 @@ import NotificationBell from '@/components/NotificationBell';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import BackToTopButton from '@/components/BackToTopButton';
 import DailyConversationChart from '@/components/DailyConversationChart';
+import { ChatBubbleIcon, MessageIcon, FolderIcon, LoadingSpinnerIcon } from '@/components/icons';
 
 export default function HomeContent() {
   const t = useTranslations('app');
@@ -44,6 +45,8 @@ export default function HomeContent() {
   const searchBoxRef = useRef<SearchBoxHandle>(null);
   const queryClient = useQueryClient();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [filterBarHeight, setFilterBarHeight] = useState(0);
+  const filterBarRef = useRef<HTMLDivElement>(null);
 
   // Handle file changes from WebSocket - memoized to prevent re-creation
   const handleFileChange = useCallback(async () => {
@@ -109,6 +112,19 @@ export default function HomeContent() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, [isScrolled]);
+
+  // Measure filter bar height for sticky user messages
+  useEffect(() => {
+    const updateFilterBarHeight = () => {
+      if (filterBarRef.current) {
+        setFilterBarHeight(filterBarRef.current.offsetHeight);
+      }
+    };
+
+    updateFilterBarHeight();
+    window.addEventListener('resize', updateFilterBarHeight);
+    return () => window.removeEventListener('resize', updateFilterBarHeight);
   }, [isScrolled]);
 
   useEffect(() => {
@@ -206,31 +222,56 @@ export default function HomeContent() {
       </header>
 
       {/* Sticky Filter Area */}
-      <div className="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
+      <div ref={filterBarRef} className="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-start justify-between">
-            {/* Filter & Search Area */}
-            <div className="flex-1 min-w-0">
-              <FilterBar
-                projects={projectsData?.projects || []}
-                loading={conversationsLoading}
-                onFilterChange={handleFilterChange}
-                compact={isScrolled}
-              />
-              <div className="py-2">
-                <SearchBox
-                  ref={searchBoxRef}
-                  onSearch={handleSearch}
-                  onClear={handleClearSearch}
-                />
+          {isScrolled ? (
+            /* Compact layout when scrolled - only show title, search, and bell */
+            <div className="py-2">
+              <div className="flex items-center justify-between gap-4">
+                {/* Title */}
+                <h2 className="text-lg font-bold text-gray-800 flex-shrink-0">{t('title')}</h2>
+
+                {/* Search Box */}
+                <div className="flex-1 min-w-0">
+                  <SearchBox
+                    ref={searchBoxRef}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                  />
+                </div>
+
+                {/* Right side: Bell only */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <NotificationBell />
+                </div>
               </div>
             </div>
+          ) : (
+            /* Full layout when not scrolled */
+            <div className="flex items-start justify-between">
+              {/* Filter & Search Area */}
+              <div className="flex-1 min-w-0">
+                <FilterBar
+                  projects={projectsData?.projects || []}
+                  loading={conversationsLoading}
+                  onFilterChange={handleFilterChange}
+                  compact={isScrolled}
+                />
+                <div className="py-2">
+                  <SearchBox
+                    ref={searchBoxRef}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                  />
+                </div>
+              </div>
 
-            {/* Notification Bell */}
-            <div className="flex-shrink-0 ml-4 pt-2">
-              <NotificationBell />
+              {/* Notification Bell */}
+              <div className="flex-shrink-0 ml-4 pt-2">
+                <NotificationBell />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -244,9 +285,7 @@ export default function HomeContent() {
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
                     <div className="flex items-center space-x-2">
                       <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
+                        <ChatBubbleIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <div className="text-xl font-bold text-blue-700">{(statsData.total_threads || 0).toLocaleString()}</div>
@@ -257,9 +296,7 @@ export default function HomeContent() {
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
                     <div className="flex items-center space-x-2">
                       <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                        </svg>
+                        <MessageIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <div className="text-xl font-bold text-green-700">{(statsData.total_messages || 0).toLocaleString()}</div>
@@ -270,9 +307,7 @@ export default function HomeContent() {
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
                     <div className="flex items-center space-x-2">
                       <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                        </svg>
+                        <FolderIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <div className="text-xl font-bold text-purple-700">{(statsData.projects || 0).toLocaleString()}</div>
@@ -305,6 +340,7 @@ export default function HomeContent() {
           actualThreads={accumulatedConversations.length}
           actualMessages={accumulatedConversations.reduce((sum, group) => sum + group.length, 0)}
           newMessageManager={newMessageManager}
+          stickyTopOffset={filterBarHeight}
           onLoadMore={handleLoadMore}
           onShowNewMessages={handleShowNewMessages}
         />
