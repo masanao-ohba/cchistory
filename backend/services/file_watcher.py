@@ -9,9 +9,10 @@ import threading
 logger = logging.getLogger(__name__)
 
 class FileChangeHandler(FileSystemEventHandler):
-    def __init__(self, connection_manager, loop):
+    def __init__(self, connection_manager, loop, parser=None):
         self.connection_manager = connection_manager
         self.loop = loop
+        self.parser = parser
         super().__init__()
 
     def on_modified(self, event):
@@ -48,6 +49,7 @@ class FileChangeHandler(FileSystemEventHandler):
         from config import Config
 
         project_id = None
+        project_dir_path = None
         file_path_obj = Path(file_path)
 
         # プロジェクトディレクトリを特定
@@ -55,9 +57,15 @@ class FileChangeHandler(FileSystemEventHandler):
             try:
                 file_path_obj.relative_to(project_dir)
                 project_id = project_dir.name
+                project_dir_path = project_dir
                 break
             except ValueError:
                 continue
+
+        # プロジェクトキャッシュを無効化
+        if self.parser and project_dir_path:
+            self.parser.invalidate_project_cache(project_dir_path)
+            logger.info(f"Invalidated project cache for {project_id}")
 
         message = {
             "type": "file_change",
@@ -73,6 +81,13 @@ class FileWatcher:
         self.watch_path = watch_path
         self.observer: Optional[Observer] = None
         self.handler: Optional[FileChangeHandler] = None
+        self.parser = None
+
+    def set_parser(self, parser):
+        """Set parser instance for cache invalidation"""
+        self.parser = parser
+        if self.handler:
+            self.handler.parser = parser
 
     async def start(self, connection_manager):
         """ファイル監視を開始"""
@@ -82,7 +97,7 @@ class FileWatcher:
 
         # 現在のイベントループを取得
         loop = asyncio.get_event_loop()
-        self.handler = FileChangeHandler(connection_manager, loop)
+        self.handler = FileChangeHandler(connection_manager, loop, self.parser)
         self.observer = Observer()
 
         # 再帰的に監視

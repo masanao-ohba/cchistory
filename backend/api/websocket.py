@@ -46,26 +46,35 @@ class ConnectionManager:
     async def broadcast(self, message: dict):
         """全ての接続クライアントにメッセージを送信"""
         if not self.active_connections:
+            logger.debug(f"No active connections to broadcast {message.get('type')} message")
             return
 
+        message_type = message.get("type")
         message_str = json.dumps(message)
         disconnected = []
+        sent_count = 0
 
         for connection in self.active_connections:
             try:
                 # ファイル変更通知の場合、フィルタリング条件をチェック
-                if message.get("type") == "file_change" and message.get("project_id"):
+                if message_type == "file_change" and message.get("project_id"):
                     if not self._should_notify_connection(connection, message["project_id"]):
+                        logger.debug(f"Skipping file_change broadcast for filtered project: {message.get('project_id')}")
                         continue
 
                 await connection.send_text(message_str)
+                sent_count += 1
             except Exception as e:
-                logger.error(f"Error sending message: {e}")
+                logger.error(f"Error sending {message_type} message: {e}")
                 disconnected.append(connection)
 
         # 切断されたコネクションを削除
         for conn in disconnected:
             self.disconnect(conn)
+
+        # Log broadcast result
+        if message_type == "file_change":
+            logger.info(f"Broadcasted file_change for {message.get('project_id')} to {sent_count}/{len(self.active_connections)} clients")
 
     async def broadcast_notification(self, notification: NotificationInDB):
         """新着通知をブロードキャスト"""

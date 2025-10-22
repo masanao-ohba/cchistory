@@ -40,6 +40,11 @@ async def lifespan(app: FastAPI):
     # 通知APIにWebSocket Managerを注入
     set_connection_manager(manager)
 
+    # Import parser from routes and inject into file watcher
+    from api.routes import parser
+    file_watcher.set_parser(parser)
+    logger.info("Injected parser into file watcher for cache invalidation")
+
     await file_watcher.start(manager)
     yield
     # 終了時の処理

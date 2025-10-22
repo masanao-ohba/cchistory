@@ -82,15 +82,19 @@ class JSONLParser:
         conversations = []
 
         try:
-            # ファイルの更新時間をチェック（キャッシュ用）
-            file_mtime = file_path.stat().st_mtime
+            # ファイルの更新時間とサイズをチェック（キャッシュ用）
+            file_stat = file_path.stat()
+            file_mtime = file_stat.st_mtime
+            file_size = file_stat.st_size
             cache_key = str(file_path)
 
-            # キャッシュがある場合はそれを使用
-            if (cache_key in self._cache and
-                cache_key in self._cache_timestamps and
-                self._cache_timestamps[cache_key] >= file_mtime):
-                return self._cache[cache_key]
+            # キャッシュがある場合は、mtime AND size の両方をチェック
+            # size が異なる = ファイルが追記された = キャッシュ無効
+            if cache_key in self._cache:
+                cached_mtime = self._cache_timestamps.get(cache_key, {}).get('mtime', 0)
+                cached_size = self._cache_timestamps.get(cache_key, {}).get('size', 0)
+                if cached_mtime >= file_mtime and cached_size == file_size:
+                    return self._cache[cache_key]
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line_no, line in enumerate(f, 1):
@@ -109,9 +113,12 @@ class JSONLParser:
                     except Exception as e:
                         logger.error(f"Error processing line {line_no} in {file_path}: {e}")
 
-            # キャッシュを更新
+            # キャッシュを更新（mtime と size の両方を保存）
             self._cache[cache_key] = conversations
-            self._cache_timestamps[cache_key] = file_mtime
+            self._cache_timestamps[cache_key] = {
+                'mtime': file_mtime,
+                'size': file_size
+            }
 
             # 会話データパース完了
 

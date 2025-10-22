@@ -73,3 +73,23 @@ CLAUDE.md
 
 # Work directory for temporary files and development
 .work/
+
+# Playwright screenshots and debug files
+.playwright-mcp/
+*.png
+*.jpg
+*.jpeg
+screenshot*.png
+SCR-*.png
+
+# Debug files
+debug/
+curl-debug.log
+
+# Claude settings (contains local paths)
+.claude/settings.local.json
+.claude/settings.local.json.backup.*
+
+# Migration documentation (temporary)
+MIGRATION_SUMMARY.md
+requirements.md
