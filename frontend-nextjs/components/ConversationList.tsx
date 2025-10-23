@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import MessageItem from './MessageItem';
 import { renderMarkdown, copyToClipboard } from '@/lib/utils/markdown';
+import { useFloatingUserMessage } from '@/lib/hooks/useFloatingUserMessage';
 import { ChatBubbleIcon, ArrowUpIcon, ArrowDownIcon, LoadingSpinnerIcon } from '@/components/icons';
 
 interface Message {
@@ -14,6 +15,8 @@ interface Message {
   session_id?: string;
   is_search_match?: boolean;
   search_keyword?: string;
+  is_continuation_session?: boolean;
+  parent_session_id?: string;
 }
 
 interface NewMessageManager {
@@ -63,10 +66,16 @@ export default function ConversationList({
   const groupRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const userMessageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const lastAssistantMessageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const [floatingUserMessage, setFloatingUserMessage] = useState<{
-    message: Message;
-    groupIndex: number;
-  } | null>(null);
+
+  // Use custom hook for floating user message management
+  const floatingUserMessage = useFloatingUserMessage(
+    conversations,
+    tallGroups,
+    stickyTopOffset,
+    newMessageManager,
+    groupRefs,
+    userMessageRefs
+  );
 
   // Helper function for smooth scrolling with offset
   const scrollToElement = useCallback((
@@ -199,67 +208,6 @@ export default function ConversationList({
     };
   }, [conversations, stickyTopOffset, expandedItems, newMessageManager]);
 
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    const visibleGroupsRef = new Set<number>();
-
-    groupRefs.current.forEach((element, groupIndex) => {
-      const mgObserver = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            visibleGroupsRef.add(groupIndex);
-          } else {
-            visibleGroupsRef.delete(groupIndex);
-            setFloatingUserMessage(prev =>
-              prev && prev.groupIndex === groupIndex ? null : prev
-            );
-          }
-        },
-        {
-          threshold: 0.1,
-        }
-      );
-
-      mgObserver.observe(element);
-      observers.push(mgObserver);
-    });
-
-    userMessageRefs.current.forEach((element, groupIndex) => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (!conversations[groupIndex]) return;
-
-          const group = conversations[groupIndex];
-          const displayMessages = !newMessageManager || !Array.isArray(group)
-            ? (Array.isArray(group) ? group : [])
-            : newMessageManager.getDisplayMessages(group, groupIndex);
-          const userMessage = displayMessages.find(msg => msg.type === 'user');
-
-          if (!entry.isIntersecting && userMessage && tallGroups.has(groupIndex)) {
-            if (visibleGroupsRef.has(groupIndex)) {
-              setFloatingUserMessage({ message: userMessage, groupIndex });
-            }
-          } else if (entry.isIntersecting) {
-            setFloatingUserMessage(prev =>
-              prev && prev.groupIndex === groupIndex ? null : prev
-            );
-          }
-        },
-        {
-          threshold: 0,
-          rootMargin: `-${stickyTopOffset + CONTEXT_BAR_ROOT_MARGIN_OFFSET}px 0px 0px 0px`,
-        }
-      );
-
-      observer.observe(element);
-      observers.push(observer);
-    });
-
-    return () => {
-      observers.forEach(observer => observer.disconnect());
-    };
-  }, [conversations, tallGroups, stickyTopOffset, newMessageManager]);
-
   const loadMoreRangeText = () => {
     if (!totalThreads || actualThreads === 0) return '';
 
@@ -375,6 +323,21 @@ export default function ConversationList({
                 className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <div className="p-4 space-y-3">
+                  {/* Session Continuation Indicator */}
+                  {userMessage && userMessage.is_continuation_session && (
+                    <div className="mb-3 px-3 py-2 bg-indigo-50 border-l-4 border-indigo-400 rounded">
+                      <div className="flex items-center text-sm text-indigo-800">
+                        <span className="mr-2">🔗</span>
+                        <span className="font-medium">{t('continuedFromPreviousSession')}</span>
+                        {userMessage.parent_session_id && (
+                          <span className="ml-2 text-xs text-indigo-600">
+                            (Session: {userMessage.parent_session_id.substring(0, 8)}...)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* User Message */}
                   {userMessage && (
                     <div

@@ -6,6 +6,7 @@ import logging
 
 from services.jsonl_parser import JSONLParser
 from services.message_grouper import find_matching_user_threads, group_conversations_by_thread, group_conversations_by_thread_array
+from utils.date_filter import apply_date_filter
 from config import Config
 from .notifications import router as notifications_router
 
@@ -45,52 +46,6 @@ def _calculate_filtered_stats(thread_groups):
         "daily_thread_counts": daily_thread_counts
     }
 
-def _apply_date_filter(conversations, start_date, end_date):
-    """日付フィルタリングを適用（会話の流れを保持）"""
-    # まず日付範囲内のメッセージを特定
-    date_filtered_indices = set()
-    for i, conv in enumerate(conversations):
-        conv_date = datetime.fromisoformat(conv["timestamp"].replace('Z', '+00:00'))
-        conv_date = conv_date.astimezone(tz).date()
-
-        if start_date and end_date and not (start_date <= conv_date <= end_date):
-            continue
-        if start_date and not end_date and conv_date < start_date:
-            continue
-        if end_date and not start_date and conv_date > end_date:
-            continue
-
-        date_filtered_indices.add(i)
-
-    # 各セッションの最初のメッセージがアシスタントの場合、ユーザーメッセージを追加
-    enhanced_indices = set(date_filtered_indices)
-    session_first_indices = {}
-
-    # 日付範囲内の各セッションの最初のインデックスを特定
-    for i in sorted(date_filtered_indices):
-        session_id = conversations[i]["session_id"]
-        if session_id not in session_first_indices:
-            session_first_indices[session_id] = i
-
-    for session_id, first_idx in session_first_indices.items():
-        if conversations[first_idx]["type"] != "assistant":
-            continue
-
-        # このセッションの開始（ユーザーメッセージ）を探す
-        for j in range(first_idx - 1, -1, -1):
-            if conversations[j]["session_id"] != session_id:
-                break
-
-            enhanced_indices.add(j)
-            if conversations[j]["type"] == "user":
-                break
-
-    # インデックス順に会話を構築
-    filtered_conversations = []
-    for i in sorted(enhanced_indices):
-        filtered_conversations.append(conversations[i])
-
-    return filtered_conversations
 
 def _apply_keyword_filter(conversations, keyword, show_related_threads):
     """キーワード検索フィルタリングを適用"""
@@ -170,7 +125,7 @@ async def get_conversations(
 
         # 日付フィルタリング（会話の流れを保持）
         if start_date or end_date:
-            all_conversations = _apply_date_filter(all_conversations, start_date, end_date)
+            all_conversations = apply_date_filter(all_conversations, start_date, end_date, tz)
 
         # キーワード検索処理
         search_match_count = 0

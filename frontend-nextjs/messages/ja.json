@@ -18,7 +18,8 @@
     "newConversationsLoaded": "{count}件の新しい会話を読み込みました",
     "respondingTo": "返信先:",
     "jumpToLatest": "最新",
-    "backToQuestion": "質問"
+    "backToQuestion": "質問",
+    "continuedFromPreviousSession": "前のセッションから継続"
   },
   "search": {
     "placeholder": "キーワードで検索...",

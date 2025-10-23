@@ -15,7 +15,11 @@
     "loadMore": "더 불러오기",
     "loadMoreRange": "({start}~{end}개 항목)",
     "loadMoreThreadRange": "({start}~{end}개 항목)",
-    "newConversationsLoaded": "{count}개의 새 대화를 불러왔습니다"
+    "newConversationsLoaded": "{count}개의 새 대화를 불러왔습니다",
+    "respondingTo": "답변 대상:",
+    "jumpToLatest": "최신",
+    "backToQuestion": "질문",
+    "continuedFromPreviousSession": "이전 세션에서 계속됨"
   },
   "search": {
     "placeholder": "키워드로 검색...",

@@ -18,7 +18,8 @@
     "newConversationsLoaded": "Loaded {count} new conversations",
     "respondingTo": "Responding to:",
     "jumpToLatest": "Latest",
-    "backToQuestion": "Question"
+    "backToQuestion": "Question",
+    "continuedFromPreviousSession": "Continued from previous session"
   },
   "search": {
     "placeholder": "Search by keyword...",

@@ -15,7 +15,11 @@
     "loadMore": "加载更多",
     "loadMoreRange": "（{start}～{end} 项）",
     "loadMoreThreadRange": "（{start}～{end} 项）",
-    "newConversationsLoaded": "已加载 {count} 个新对话"
+    "newConversationsLoaded": "已加载 {count} 个新对话",
+    "respondingTo": "回复：",
+    "jumpToLatest": "最新",
+    "backToQuestion": "问题",
+    "continuedFromPreviousSession": "从上一会话继续"
   },
   "search": {
     "placeholder": "按关键字搜索...",

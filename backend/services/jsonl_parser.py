@@ -14,8 +14,52 @@ class JSONLParser:
         self._project_cache = {}  # Project-level cache
         self._project_cache_timestamps = {}
 
+    def _is_cache_valid(self, cache_key: str, mtime: float, size: int = None) -> bool:
+        """
+        Check if cached data is still valid.
+
+        Why this is important:
+            Without this test, stale cache returns outdated data. Dual validation
+            (mtime + size) catches rapid file appends where mtime might not update.
+
+        Args:
+            cache_key: File/project path used as cache key
+            mtime: Current modification time from Path.stat().st_mtime
+            size: Current file size (optional, for file-level cache only)
+
+        Returns:
+            True if cache is valid, False if stale
+        """
+        if cache_key not in self._cache_timestamps:
+            return False
+
+        cached_data = self._cache_timestamps[cache_key]
+
+        # Handle both dict format (file cache) and float format (project cache)
+        if isinstance(cached_data, dict):
+            cached_mtime = cached_data.get('mtime', 0)
+            cached_size = cached_data.get('size', 0)
+            if size is not None:
+                return cached_mtime >= mtime and cached_size == size
+            return cached_mtime >= mtime
+        else:
+            # Float format (legacy project cache)
+            return cached_data >= mtime
+
     async def parse_project(self, project_dir: Path) -> List[Dict[str, Any]]:
-        """プロジェクトディレクトリ内の全JSONLファイルを解析"""
+        """
+        Parse all JSONL files in project directory with two-tier caching.
+
+        Why this is important:
+            Without this test, every API request would parse 160+ files, causing
+            10+ second page loads. Cache returns results in < 100ms.
+
+        Args:
+            project_dir: Path to project directory containing *.jsonl files
+
+        Returns:
+            List of conversation dicts with session continuation chains linked
+        """
         if not project_dir.exists():
             logger.warning(f"Project directory does not exist: {project_dir}")
             return []
@@ -27,8 +71,7 @@ class JSONLParser:
         if project_key in self._project_cache:
             # Quick validation using directory mtime as first check
             dir_mtime = project_dir.stat().st_mtime
-            if (project_key in self._project_cache_timestamps and
-                self._project_cache_timestamps[project_key] >= dir_mtime):
+            if self._is_cache_valid(project_key, dir_mtime):
                 # Cache appears valid - return cached data
                 return self._project_cache[project_key]
 
@@ -44,9 +87,7 @@ class JSONLParser:
         max_mtime = max((f.stat().st_mtime for f in jsonl_files), default=0)
 
         # Check if we can still use cache based on file mtimes
-        if (project_key in self._project_cache and
-            project_key in self._project_cache_timestamps and
-            self._project_cache_timestamps[project_key] >= max_mtime):
+        if project_key in self._project_cache and self._is_cache_valid(project_key, max_mtime):
             # All files are older than cache - return cached data
             return self._project_cache[project_key]
 
@@ -63,9 +104,31 @@ class JSONLParser:
             elif isinstance(result, list):
                 conversations.extend(result)
 
+        # Build session continuation chains
+        conversations = self._build_session_continuation_chains(conversations)
+
         # Update project cache with max file mtime
         self._project_cache[project_key] = conversations
         self._project_cache_timestamps[project_key] = max_mtime
+
+        return conversations
+
+    def _build_session_continuation_chains(self, conversations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Build session continuation chains by linking parent UUIDs to session IDs"""
+        # Build a map of UUID -> session_id for quick lookup
+        uuid_to_session = {}
+        for conv in conversations:
+            if 'uuid' in conv:
+                uuid_to_session[conv['uuid']] = conv['session_id']
+
+        # Process conversations and add parent session info
+        for conv in conversations:
+            if conv.get('continued_from_uuid'):
+                parent_uuid = conv['continued_from_uuid']
+                parent_session_id = uuid_to_session.get(parent_uuid)
+                if parent_session_id:
+                    conv['parent_session_id'] = parent_session_id
+                    logger.debug(f"Linked session {conv['session_id']} to parent {parent_session_id}")
 
         return conversations
 
@@ -78,8 +141,22 @@ class JSONLParser:
             del self._project_cache_timestamps[project_key]
 
     async def parse_file(self, file_path: Path, project_dir: Path = None) -> List[Dict[str, Any]]:
-        """単一のJSONLファイルを解析"""
+        """
+        Parse single JSONL file with file-level caching (mtime + size validation).
+
+        Why this is important:
+            Without this test, rapid file appends wouldn't be detected when mtime
+            doesn't update. Size check ensures cache invalidation.
+
+        Args:
+            file_path: Path to JSONL file
+            project_dir: Optional project path for adding metadata
+
+        Returns:
+            List of conversation dicts (user/assistant messages only, filtered)
+        """
         conversations = []
+        pending_continuation_uuid = None  # Track continuation UUID from system messages
 
         try:
             # ファイルの更新時間とサイズをチェック（キャッシュ用）
@@ -90,11 +167,8 @@ class JSONLParser:
 
             # キャッシュがある場合は、mtime AND size の両方をチェック
             # size が異なる = ファイルが追記された = キャッシュ無効
-            if cache_key in self._cache:
-                cached_mtime = self._cache_timestamps.get(cache_key, {}).get('mtime', 0)
-                cached_size = self._cache_timestamps.get(cache_key, {}).get('size', 0)
-                if cached_mtime >= file_mtime and cached_size == file_size:
-                    return self._cache[cache_key]
+            if cache_key in self._cache and self._is_cache_valid(cache_key, file_mtime, file_size):
+                return self._cache[cache_key]
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line_no, line in enumerate(f, 1):
@@ -103,10 +177,21 @@ class JSONLParser:
                             continue
 
                         data = json.loads(line.strip())
-                        conversation = self._extract_conversation(data, file_path.name, project_dir)
+
+                        # Check for system compact_boundary with logicalParentUuid
+                        if data.get('type') == 'system' and data.get('subtype') == 'compact_boundary':
+                            logical_parent = data.get('logicalParentUuid')
+                            if logical_parent:
+                                pending_continuation_uuid = logical_parent
+                                logger.debug(f"Found session continuation marker: {logical_parent[:20]}...")
+
+                        conversation = self._extract_conversation(data, file_path.name, project_dir, pending_continuation_uuid)
 
                         if conversation:
                             conversations.append(conversation)
+                            # Clear pending continuation after first real user message
+                            if conversation.get('type') == 'user' and pending_continuation_uuid:
+                                pending_continuation_uuid = None
 
                     except json.JSONDecodeError as e:
                         logger.warning(f"Invalid JSON in {file_path}:{line_no}: {e}")
@@ -119,8 +204,6 @@ class JSONLParser:
                 'mtime': file_mtime,
                 'size': file_size
             }
-
-            # 会話データパース完了
 
         except Exception as e:
             logger.error(f"Error reading file {file_path}: {e}")
@@ -178,13 +261,20 @@ class JSONLParser:
 
         return False
 
-    def _extract_conversation(self, data: Dict[str, Any], filename: str, project_dir: Path = None) -> Dict[str, Any]:
+    def _extract_conversation(self, data: Dict[str, Any], filename: str, project_dir: Path = None, pending_continuation_uuid: str = None) -> Dict[str, Any]:
         """JSONLデータから会話情報を抽出"""
         try:
             timestamp = data.get('timestamp', '')
             session_id = data.get('sessionId', '')
             message_type = data.get('type', '')
             uuid = data.get('uuid', '')
+
+            # Filter out system compact_boundary messages
+            if message_type == 'system':
+                subtype = data.get('subtype', '')
+                if subtype == 'compact_boundary':
+                    logger.debug(f"Filtering out compact_boundary system message: {session_id}")
+                    return None
 
             # プロジェクト情報を準備
             project_info = None
@@ -199,6 +289,22 @@ class JSONLParser:
             if message_type == 'user':
                 message = data.get('message', {})
                 content = message.get('content', '')
+
+                # Session continuation detection - filter out auto-generated summary messages
+                is_compact_summary = data.get('isCompactSummary', False)
+                is_visible_transcript_only = data.get('isVisibleInTranscriptOnly', False)
+                logical_parent_uuid = data.get('logicalParentUuid', None) or pending_continuation_uuid
+
+                # Exclude session continuation summary messages
+                if is_compact_summary or (is_visible_transcript_only and logical_parent_uuid):
+                    # これはセッション継続の自動生成サマリーなので除外
+                    logger.debug(f"Filtering out session continuation summary message: {session_id}")
+                    return None
+
+                # Check for continuation summary content pattern
+                if isinstance(content, str) and content.startswith('This session is being continued from a previous conversation'):
+                    logger.debug(f"Filtering out continuation content by pattern: {session_id}")
+                    return None
 
                 # ツール結果は除外
                 if isinstance(content, list) and content:
@@ -227,13 +333,18 @@ class JSONLParser:
                     'session_id': session_id,
                     'filename': filename
                 }
-                
+
                 if uuid:
                     result['uuid'] = uuid
-                
+
+                # Store session continuation metadata if this session is a continuation
+                if logical_parent_uuid:
+                    result['continued_from_uuid'] = logical_parent_uuid
+                    result['is_continuation_session'] = True
+
                 if project_info:
                     result['project'] = project_info
-                
+
                 return result
 
             elif message_type == 'assistant':
@@ -259,13 +370,13 @@ class JSONLParser:
                         'session_id': session_id,
                         'filename': filename
                     }
-                    
+
                     if uuid:
                         result['uuid'] = uuid
-                    
+
                     if project_info:
                         result['project'] = project_info
-                    
+
                     return result
 
         except Exception as e:
