@@ -76,11 +76,12 @@ export function useConversations(
     },
     enabled,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,  // Prevent refetch on mount when we have initial data
+    refetchOnReconnect: false,  // Prevent refetch on reconnect
     staleTime: 30000,
     // Use initialData from server if provided
     initialData: initialData,
-    // Mark initial data as stale immediately if filters have changed
-    initialDataUpdatedAt: initialData ? Date.now() : undefined,
+    // Don't set initialDataUpdatedAt - let React Query manage staleness naturally
   });
 }
 
@@ -96,10 +97,12 @@ export function useProjects(
   return useQuery({
     queryKey: ['projects'],
     queryFn: () => apiClient.get<{ projects: Project[] }>('/projects'),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000,
     // Use initialData from server if provided
     initialData: initialData,
-    initialDataUpdatedAt: initialData ? Date.now() : undefined,
   });
 }
 
