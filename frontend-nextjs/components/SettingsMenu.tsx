@@ -9,16 +9,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
-import { type Locale } from '@/i18n';
+import { type Locale } from '@/i18n/request';
 
 const languageNames: Record<Locale, string> = {
   en: 'English',
   ja: '日本語',
+  zh: '中文',
+  ko: '한국어',
 };
 
 const languageFlags: Record<Locale, string> = {
   en: '🇺🇸',
   ja: '🇯🇵',
+  zh: '🇨🇳',
+  ko: '🇰🇷',
 };
 
 export default function SettingsMenu() {
