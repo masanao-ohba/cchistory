@@ -17,8 +17,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
-  // Show React Query Devtools only in dev mode
-  const showDevtools = process.env.NEXT_PUBLIC_SHOW_DEV_INDICATORS === 'true';
+  // Show React Query Devtools based on NODE_ENV
+  // Development mode: show devtools (unless explicitly disabled)
+  // Production mode: hide devtools (unless explicitly enabled)
+  const showDevtools = process.env.NEXT_PUBLIC_SHOW_DEV_INDICATORS
+    ? process.env.NEXT_PUBLIC_SHOW_DEV_INDICATORS === 'true'
+    : process.env.NODE_ENV === 'development';
 
   return (
     <QueryClientProvider client={queryClient}>

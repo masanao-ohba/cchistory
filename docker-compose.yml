@@ -29,9 +29,9 @@ services:
     ports:
       - "3001:3000"  # Next.js dev server (host:3001 -> container:3000)
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS:-false}  # Toggle Next.js build activity indicator (server-side)
-      - NEXT_PUBLIC_SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS:-false}  # Toggle React Query Devtools (client-side)
+      - NODE_ENV=${NODE_ENV:-development}  # Controls dev indicators: development=show, production=hide
+      - SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS}  # Optional override for Next.js build activity indicator
+      - NEXT_PUBLIC_SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS}  # Optional override for React Query Devtools
       - NEXT_PUBLIC_SHOW_HELPER_BUTTONS=${SHOW_HELPER_BUTTONS:-false}  # Toggle helper buttons (back-to-top, etc.)
     volumes:
       - ./frontend-nextjs:/app

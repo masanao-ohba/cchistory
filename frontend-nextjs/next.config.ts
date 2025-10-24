@@ -5,10 +5,12 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  // Toggle dev indicators via environment variable (default: hide)
-  // Note: In Next.js 15.5+, devIndicators configuration has changed
-  // Setting to false completely disables all dev indicators
-  devIndicators: process.env.SHOW_DEV_INDICATORS === 'true',
+  // Toggle dev indicators based on NODE_ENV
+  // Development mode: show indicators (unless explicitly disabled)
+  // Production mode: hide indicators (unless explicitly enabled)
+  devIndicators: process.env.SHOW_DEV_INDICATORS
+    ? process.env.SHOW_DEV_INDICATORS === 'true'
+    : process.env.NODE_ENV === 'development',
   async rewrites() {
     return [
       {
