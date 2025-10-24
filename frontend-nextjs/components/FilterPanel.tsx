@@ -6,6 +6,7 @@
  */
 'use client';
 
+import React from 'react';
 import { useTranslations } from 'next-intl';
 
 export interface FilterPanelProps {
@@ -40,10 +41,32 @@ export default function FilterPanel({
   const tSort = useTranslations('sortOrder');
   const tFilters = useTranslations('filters');
 
+  // Track if date input is focused to prevent auto-fill on mobile
+  const startDateFocusedRef = React.useRef(false);
+  const endDateFocusedRef = React.useRef(false);
+
   // Handle project selection change
   const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedOptions = Array.from(e.target.selectedOptions, (option) => option.value);
     onProjectsChange(selectedOptions);
+  };
+
+  // Handle start date change with mobile auto-fill prevention
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    // Only apply if user has actually interacted (not just focused)
+    if (startDateFocusedRef.current || newValue === '') {
+      onStartDateChange(newValue);
+    }
+  };
+
+  // Handle end date change with mobile auto-fill prevention
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    // Only apply if user has actually interacted (not just focused)
+    if (endDateFocusedRef.current || newValue === '') {
+      onEndDateChange(newValue);
+    }
   };
 
   // Check if any filters are active
@@ -70,33 +93,91 @@ export default function FilterPanel({
               {tDate('title')}
             </label>
             <div className="flex gap-3">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => onStartDateChange(e.target.value)}
-                className="
-                  flex-1 px-3 py-2 text-sm text-gray-900
-                  border border-gray-300 rounded-lg
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  bg-white
-                "
-                placeholder={tDate('fromPlaceholder')}
-                aria-label={tDate('from')}
-              />
+              {/* Start Date with Clear Button */}
+              <div className="flex-1 relative">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  onClick={() => {
+                    startDateFocusedRef.current = true;
+                  }}
+                  onBlur={() => {
+                    // Reset flag after a small delay
+                    setTimeout(() => {
+                      startDateFocusedRef.current = false;
+                    }, 100);
+                  }}
+                  className="
+                    w-full px-3 py-2 text-sm text-gray-900
+                    border border-gray-300 rounded-lg
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                    bg-white
+                  "
+                  placeholder={tDate('fromPlaceholder')}
+                  aria-label={tDate('from')}
+                />
+                {startDate && (
+                  <button
+                    type="button"
+                    onClick={() => onStartDateChange('')}
+                    className="
+                      absolute right-2 top-1/2 -translate-y-1/2
+                      w-5 h-5 flex items-center justify-center
+                      text-gray-400 hover:text-gray-600
+                      rounded-full hover:bg-gray-100
+                      transition-colors
+                    "
+                    aria-label="Clear start date"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
               <span className="flex items-center text-gray-500">→</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
-                className="
-                  flex-1 px-3 py-2 text-sm text-gray-900
-                  border border-gray-300 rounded-lg
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  bg-white
-                "
-                placeholder={tDate('toPlaceholder')}
-                aria-label={tDate('to')}
-              />
+
+              {/* End Date with Clear Button */}
+              <div className="flex-1 relative">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  onClick={() => {
+                    endDateFocusedRef.current = true;
+                  }}
+                  onBlur={() => {
+                    // Reset flag after a small delay
+                    setTimeout(() => {
+                      endDateFocusedRef.current = false;
+                    }, 100);
+                  }}
+                  className="
+                    w-full px-3 py-2 text-sm text-gray-900
+                    border border-gray-300 rounded-lg
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                    bg-white
+                  "
+                  placeholder={tDate('toPlaceholder')}
+                  aria-label={tDate('to')}
+                />
+                {endDate && (
+                  <button
+                    type="button"
+                    onClick={() => onEndDateChange('')}
+                    className="
+                      absolute right-2 top-1/2 -translate-y-1/2
+                      w-5 h-5 flex items-center justify-center
+                      text-gray-400 hover:text-gray-600
+                      rounded-full hover:bg-gray-100
+                      transition-colors
+                    "
+                    aria-label="Clear end date"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
