@@ -70,3 +70,10 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
+
+// Token usage API
+import type { TokenUsageResponse } from '../types/tokenUsage';
+
+export const fetchTokenUsage = async (): Promise<TokenUsageResponse> => {
+  return apiClient.get<TokenUsageResponse>('/token-usage');
+};

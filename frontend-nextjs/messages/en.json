@@ -33,6 +33,8 @@
     "title": "Date Filter",
     "from": "From",
     "to": "To",
+    "fromPlaceholder": "Start Date",
+    "toPlaceholder": "End Date",
     "apply": "Apply",
     "reset": "Reset",
     "search": "Search",
@@ -70,8 +72,8 @@
   },
   "sortOrder": {
     "label": "Sort Order",
-    "ascending": "Ascending (Oldest First)",
-    "descending": "Descending (Newest First)"
+    "ascending": "Oldest",
+    "descending": "Newest"
   },
   "app": {
     "title": "Claude Conversations History Viewer (Next.js)",
@@ -119,5 +121,27 @@
       "notification": "Notification",
       "unknown": "Unknown"
     }
+  },
+  "tokenUsage": {
+    "title": "Token Usage (5-hour block)",
+    "expand": "Expand token usage details",
+    "collapse": "Collapse token usage details",
+    "input": "Input",
+    "output": "Output",
+    "cacheCreation": "Cache Creation",
+    "cacheRead": "Cache Read",
+    "resetAt": "Resets at",
+    "resetIn": "Reset in",
+    "used": "used",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details"
+  },
+  "filters": {
+    "showFilters": "Show filters",
+    "hideFilters": "Hide filters",
+    "toggleFilters": "Toggle filters",
+    "filtersActive": "Filters active ({count})",
+    "activeFilterCount": "{count} active filters",
+    "reset": "Reset"
   }
 }

@@ -33,6 +33,8 @@
     "title": "日付フィルター",
     "from": "開始日",
     "to": "終了日",
+    "fromPlaceholder": "開始日",
+    "toPlaceholder": "終了日",
     "apply": "適用",
     "reset": "リセット",
     "search": "検索",
@@ -70,8 +72,8 @@
   },
   "sortOrder": {
     "label": "表示順",
-    "ascending": "昇順（古い順）",
-    "descending": "降順（新しい順）"
+    "ascending": "古い順",
+    "descending": "新しい順"
   },
   "app": {
     "title": "Claude会話履歴ビューア (Next.js)",
@@ -119,5 +121,27 @@
       "notification": "通知",
       "unknown": "不明"
     }
+  },
+  "tokenUsage": {
+    "title": "トークン使用状況（5時間ブロック）",
+    "expand": "トークン使用詳細を展開",
+    "collapse": "トークン使用詳細を折りたたむ",
+    "input": "入力",
+    "output": "出力",
+    "cacheCreation": "キャッシュ作成",
+    "cacheRead": "キャッシュ読込",
+    "resetAt": "リセット時刻",
+    "resetIn": "リセットまで",
+    "used": "使用中",
+    "showDetails": "詳細を表示",
+    "hideDetails": "詳細を隠す"
+  },
+  "filters": {
+    "showFilters": "フィルターを表示",
+    "hideFilters": "フィルターを隠す",
+    "toggleFilters": "フィルター切替",
+    "filtersActive": "フィルター適用中 ({count}件)",
+    "activeFilterCount": "{count}件のフィルター適用中",
+    "reset": "リセット"
   }
 }
