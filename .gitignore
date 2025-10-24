@@ -76,11 +76,11 @@ CLAUDE.md
 
 # Playwright screenshots and debug files
 .playwright-mcp/
-# *.png
-# *.jpg
-# *.jpeg
+*.png
+*.jpg
+*.jpeg
 screenshot*.png
-# SCR-*.png
+SCR-*.png
 
 # Debug files
 debug/
