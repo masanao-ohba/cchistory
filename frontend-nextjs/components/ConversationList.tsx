@@ -36,6 +36,7 @@ interface ConversationListProps {
   actualMessages?: number;
   newMessageManager?: NewMessageManager | null;
   stickyTopOffset?: number;
+  isFiltering?: boolean;
   onLoadMore?: () => void;
   onShowNewMessages?: (params: { group: Message[]; groupIndex: number }) => void;
 }
@@ -56,6 +57,7 @@ export default function ConversationList({
   actualMessages = 0,
   newMessageManager = null,
   stickyTopOffset = 0,
+  isFiltering = false,
   onLoadMore,
   onShowNewMessages,
 }: ConversationListProps) {
@@ -221,21 +223,23 @@ export default function ConversationList({
 
   return (
     <div className="bg-gray-100 rounded-lg overflow-hidden">
-      <div className="bg-slate-50 px-4 py-2 border-b border-gray-200/60 rounded-t-lg rounded-b-lg mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">{t('title')}</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          {totalThreads && totalThreads > actualThreads
-            ? t('showingThreadsFiltered', {
-                threads: actualThreads.toLocaleString(),
-                messages: actualMessages.toLocaleString(),
-                totalThreads: totalThreads.toLocaleString()
-              })
-            : t('showingThreads', {
-                threads: actualThreads.toLocaleString(),
-                messages: actualMessages.toLocaleString()
-              })}
-        </p>
-      </div>
+      {/* Smart Context-Aware Header - Show only when filtering */}
+      {isFiltering && conversations.length > 0 && (
+        <div className="bg-slate-50/50 px-4 py-2 border-b border-gray-200/60 mb-3">
+          <p className="text-xs text-gray-600">
+            {totalThreads && totalThreads > actualThreads
+              ? t('showingThreadsFiltered', {
+                  threads: actualThreads.toLocaleString(),
+                  messages: actualMessages.toLocaleString(),
+                  totalThreads: totalThreads.toLocaleString()
+                })
+              : t('showingThreads', {
+                  threads: actualThreads.toLocaleString(),
+                  messages: actualMessages.toLocaleString()
+                })}
+          </p>
+        </div>
+      )}
 
       {loading && conversations.length === 0 && (
         <div className="p-8 text-center">

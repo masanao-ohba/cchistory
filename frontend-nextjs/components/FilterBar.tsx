@@ -99,59 +99,52 @@ export default function FilterBar({
   return (
     <div
       className={`bg-white transition-all duration-300 ${
-        compact ? 'p-3' : 'px-4 pt-4 pb-1 rounded-lg'
+        compact ? 'p-2' : 'px-4 py-2 rounded-lg'
       }`}
     >
       {/* Main filter grid */}
       <div
-        className={`grid grid-cols-1 gap-4 items-end ${
+        className={`grid grid-cols-1 gap-3 items-end ${
           compact ? 'md:grid-cols-7' : 'md:grid-cols-6'
         }`}
       >
         {/* Start Date */}
         <div>
-          {!compact && (
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
-              {t('dateFilter.from')}
-            </label>
-          )}
           <input
             id="startDate"
             type="date"
             value={filters.startDate}
             onChange={(e) => updateFilter('startDate', e.target.value)}
             className={`${baseInputClasses} ${inputClasses}`}
+            placeholder={t('dateFilter.fromPlaceholder')}
+            aria-label={t('dateFilter.from')}
+            title={t('dateFilter.from')}
           />
         </div>
 
         {/* End Date */}
         <div>
-          {!compact && (
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-              {t('dateFilter.to')}
-            </label>
-          )}
           <input
             id="endDate"
             type="date"
             value={filters.endDate}
             onChange={(e) => updateFilter('endDate', e.target.value)}
             className={`${baseInputClasses} ${inputClasses}`}
+            placeholder={t('dateFilter.toPlaceholder')}
+            aria-label={t('dateFilter.to')}
+            title={t('dateFilter.to')}
           />
         </div>
 
         {/* Project Select */}
         <div className={compact ? 'md:col-span-2' : ''} ref={dropdownRef}>
-          {!compact && (
-            <label htmlFor="projectSelect" className="block text-sm font-medium text-gray-700 mb-2">
-              {t('projectFilter.projects')}
-            </label>
-          )}
           <div className="relative">
             <button
               type="button"
               onClick={toggleDropdown}
               className={`${baseInputClasses} ${inputClasses} bg-white text-left flex items-center justify-between`}
+              aria-label={t('projectFilter.projects')}
+              title={t('projectFilter.projects')}
             >
               <span className="truncate">{selectedProjectsText}</span>
               <svg
@@ -210,16 +203,13 @@ export default function FilterBar({
 
         {/* Sort Order */}
         <div>
-          {!compact && (
-            <label htmlFor="sortOrder" className="block text-sm font-medium text-gray-700 mb-2">
-              {t('sortOrder.label')}
-            </label>
-          )}
           <select
             id="sortOrder"
             value={filters.sortOrder}
             onChange={(e) => updateFilter('sortOrder', e.target.value as 'asc' | 'desc')}
             className={`${baseInputClasses} ${inputClasses} bg-white`}
+            aria-label={t('sortOrder.label')}
+            title={t('sortOrder.label')}
           >
             <option value="asc">{t('sortOrder.ascending')}</option>
             <option value="desc">{t('sortOrder.descending')}</option>
@@ -238,25 +228,6 @@ export default function FilterBar({
           </button>
         </div>
       </div>
-
-      {/* Quick Filters */}
-      {!compact && (
-        <div className="mt-4 mb-2 flex flex-wrap gap-2">
-          {quickFilters.map((quick) => (
-            <button
-              key={quick.key}
-              type="button"
-              onClick={() => applyQuickFilter(quick)}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              {quick.key === 'today' && t('dateFilter.today')}
-              {quick.key === 'yesterday' && t('dateFilter.yesterday')}
-              {quick.key === 'last7Days' && t('dateFilter.last7Days')}
-              {quick.key === 'last30Days' && t('dateFilter.last30Days')}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Selected Projects Tags */}
       {selectedProjectsDetails.length > 0 && !compact && (

@@ -10,13 +10,13 @@ import { useUrlSync } from '@/lib/hooks/useUrlSync';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import ConversationList from '@/components/ConversationList';
-import FilterBar from '@/components/FilterBar';
+import FilterPanel from '@/components/FilterPanel';
+import FilterToggle from '@/components/FilterToggle';
 import SearchBox, { SearchBoxHandle } from '@/components/SearchBox';
 import NotificationBell from '@/components/NotificationBell';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import TokenUsageBar from '@/components/TokenUsageBar';
+import SettingsMenu from '@/components/SettingsMenu';
 import BackToTopButton from '@/components/BackToTopButton';
-import DailyConversationChart from '@/components/DailyConversationChart';
-import { ChatBubbleIcon, MessageIcon, FolderIcon, LoadingSpinnerIcon } from '@/components/icons';
 
 export default function HomeContent() {
   const t = useTranslations('app');
@@ -42,6 +42,7 @@ export default function HomeContent() {
   const [hasMore, setHasMore] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [accumulatedConversations, setAccumulatedConversations] = useState<any[][]>([]);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const searchBoxRef = useRef<SearchBoxHandle>(null);
   const queryClient = useQueryClient();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -114,7 +115,7 @@ export default function HomeContent() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isScrolled]);
 
-  // Measure filter bar height for sticky user messages
+  // Measure filter bar height for main content padding
   useEffect(() => {
     const updateFilterBarHeight = () => {
       if (filterBarRef.current) {
@@ -122,10 +123,27 @@ export default function HomeContent() {
       }
     };
 
+    // Initial measurement
     updateFilterBarHeight();
+
+    // Update on resize and when filter panel expands/collapses
     window.addEventListener('resize', updateFilterBarHeight);
-    return () => window.removeEventListener('resize', updateFilterBarHeight);
-  }, [isScrolled]);
+
+    // Use MutationObserver to detect height changes when filter panel opens/closes
+    const observer = new MutationObserver(updateFilterBarHeight);
+    if (filterBarRef.current) {
+      observer.observe(filterBarRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateFilterBarHeight);
+      observer.disconnect();
+    };
+  }, [filtersExpanded]);
 
   useEffect(() => {
     if (conversationsData?.conversations) {
@@ -215,129 +233,105 @@ export default function HomeContent() {
 
   const tStats = useTranslations('statistics');
 
+  // Calculate active filter count
+  const activeFilterCount =
+    (currentFilters.startDate ? 1 : 0) +
+    (currentFilters.endDate ? 1 : 0) +
+    (currentFilters.projects.length > 0 ? 1 : 0);
+
+  const hasActiveFilters = activeFilterCount > 0;
+
+  // Auto-collapse filters on scroll
+  useEffect(() => {
+    if (isScrolled && filtersExpanded) {
+      setFiltersExpanded(false);
+    }
+  }, [isScrolled, filtersExpanded]);
+
+  // Filter change handlers for auto-apply
+  const handleStartDateChange = useCallback((date: string) => {
+    setFilters({ startDate: date || null, offset: 0 });
+  }, [setFilters]);
+
+  const handleEndDateChange = useCallback((date: string) => {
+    setFilters({ endDate: date || null, offset: 0 });
+  }, [setFilters]);
+
+  const handleProjectsChange = useCallback((projects: string[]) => {
+    setFilters({ projects, offset: 0 });
+  }, [setFilters]);
+
+  const handleSortOrderChange = useCallback((order: 'asc' | 'desc') => {
+    setFilters({ sortOrder: order, offset: 0 });
+  }, [setFilters]);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({
+      startDate: null,
+      endDate: null,
+      projects: [],
+      sortOrder: 'desc',
+      offset: 0,
+    });
+  }, [setFilters]);
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header (hidden when scrolled) */}
-      <header className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transition-all duration-500 ${isScrolled ? 'transform -translate-y-full opacity-0' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold">{t('title')}</h1>
-              <p className="text-purple-100 mt-1 text-sm">{t('subtitle')}</p>
-            </div>
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </header>
+      {/* Fixed Header Area - Changed from sticky to fixed for iOS Safari compatibility */}
+      <div ref={filterBarRef} className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        {/* Token Usage Bar - Always visible */}
+        <TokenUsageBar compact={isScrolled} />
 
-      {/* Sticky Filter Area */}
-      <div ref={filterBarRef} className="sticky top-0 z-50 bg-white shadow-md transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4">
-          {isScrolled ? (
-            /* Compact layout when scrolled - only show title, search, and bell */
-            <div className="py-2">
-              <div className="flex items-center justify-between gap-4">
-                {/* Title */}
-                <h2 className="text-lg font-bold text-gray-800 flex-shrink-0">{t('title')}</h2>
-
-                {/* Search Box */}
-                <div className="flex-1 min-w-0">
-                  <SearchBox
-                    ref={searchBoxRef}
-                    onSearch={handleSearch}
-                    onClear={handleClearSearch}
-                  />
-                </div>
-
-                {/* Right side: Bell only */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <NotificationBell />
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Full layout when not scrolled */
-            <div className="flex items-start justify-between">
-              {/* Filter & Search Area */}
-              <div className="flex-1 min-w-0">
-                <FilterBar
-                  projects={projectsData?.projects || []}
-                  loading={conversationsLoading}
-                  onFilterChange={handleFilterChange}
-                  compact={isScrolled}
+        {/* Primary Controls Row - Search, Notification, Filters, Settings */}
+        <div className="border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <div className="flex items-center gap-2">
+              {/* Search Box - Takes most space */}
+              <div className="flex-1">
+                <SearchBox
+                  ref={searchBoxRef}
+                  onSearch={handleSearch}
+                  onClear={handleClearSearch}
                 />
-                <div className="py-2">
-                  <SearchBox
-                    ref={searchBoxRef}
-                    onSearch={handleSearch}
-                    onClear={handleClearSearch}
-                  />
-                </div>
               </div>
 
-              {/* Notification Bell */}
-              <div className="flex-shrink-0 ml-4 pt-2">
+              {/* Right-side controls */}
+              <div className="flex items-center gap-2">
                 <NotificationBell />
+                <FilterToggle
+                  isExpanded={filtersExpanded}
+                  hasActiveFilters={hasActiveFilters}
+                  activeFilterCount={activeFilterCount}
+                  onToggle={() => setFiltersExpanded(!filtersExpanded)}
+                />
+                <SettingsMenu />
               </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Statistics (hidden when scrolled) */}
-      <div className={`transition-all duration-500 ${isScrolled ? 'transform -translate-y-full opacity-0 pointer-events-none' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
-          <div className="bg-white rounded-lg shadow-md p-4">
-            {statsData ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <ChatBubbleIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-blue-700">{(statsData.total_threads || 0).toLocaleString()}</div>
-                        <div className="text-xs font-medium text-blue-600">{tStats('totalThreads')}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <MessageIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-green-700">{(statsData.total_messages || 0).toLocaleString()}</div>
-                        <div className="text-xs font-medium text-green-600">{tStats('totalMessages')}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-1.5 shadow-sm flex-shrink-0">
-                        <FolderIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-purple-700">{(statsData.projects || 0).toLocaleString()}</div>
-                        <div className="text-xs font-medium text-purple-600">{tStats('totalProjects')}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Daily Conversation Chart */}
-                <DailyConversationChart dailyThreadCounts={statsData.daily_thread_counts} />
-              </>
-            ) : (
-              <div className="text-gray-500">{tStats('loading')}</div>
-            )}
           </div>
         </div>
+
+        {/* Collapsible Filter Panel */}
+        <FilterPanel
+          isExpanded={filtersExpanded}
+          startDate={currentFilters.startDate || ''}
+          endDate={currentFilters.endDate || ''}
+          selectedProjects={currentFilters.projects}
+          availableProjects={
+            projectsData?.projects?.map((p: any) =>
+              typeof p === 'string' ? p : p.id || p.display_name || ''
+            ) || []
+          }
+          sortOrder={currentFilters.sortOrder}
+          onStartDateChange={handleStartDateChange}
+          onEndDateChange={handleEndDateChange}
+          onProjectsChange={handleProjectsChange}
+          onSortOrderChange={handleSortOrderChange}
+          onReset={handleResetFilters}
+        />
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 pb-8 pt-2">
+      {/* Main Content - Add top padding to account for fixed header */}
+      <main className="max-w-7xl mx-auto px-4 pb-8" style={{ paddingTop: filterBarHeight > 0 ? `${filterBarHeight}px` : '140px' }}>
 
         {/* Conversations */}
         <ConversationList
@@ -350,6 +344,12 @@ export default function HomeContent() {
           actualMessages={accumulatedConversations.reduce((sum, group) => sum + group.length, 0)}
           newMessageManager={newMessageManager}
           stickyTopOffset={filterBarHeight}
+          isFiltering={
+            !!currentFilters.keyword ||
+            !!currentFilters.startDate ||
+            !!currentFilters.endDate ||
+            currentFilters.projects.length > 0
+          }
           onLoadMore={handleLoadMore}
           onShowNewMessages={handleShowNewMessages}
         />
@@ -359,17 +359,6 @@ export default function HomeContent() {
       <footer className="text-center text-gray-500 text-sm py-4">
         {t('footer')}
       </footer>
-
-      {/* WebSocket Connection Status */}
-      {isConnected ? (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm z-40">
-          🟢 {t('realTimeUpdate')}
-        </div>
-      ) : (
-        <div className="fixed bottom-4 right-4 bg-yellow-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm z-40">
-          🟡 {t('offline')}
-        </div>
-      )}
 
       {/* Back to Top Button */}
       {isScrolled && <BackToTopButton onClick={scrollToTop} />}

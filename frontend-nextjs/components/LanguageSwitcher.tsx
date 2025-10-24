@@ -70,24 +70,31 @@ export default function LanguageSwitcher() {
 
   return (
     <div ref={dropdownRef} className="relative">
-      {/* Current Language Button */}
+      {/* Current Language Button - Globe Icon + Locale Code */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
         aria-label={t('switch')}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        title={languageNames[locale as Locale]}
       >
-        <span className="text-lg">{languageFlags[locale as Locale]}</span>
-        <span>{languageNames[locale as Locale]}</span>
+        {/* Globe Icon - Colorized */}
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className="w-4 h-4 text-blue-500"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+          />
         </svg>
+        {/* Locale Code */}
+        <span className="text-xs font-semibold uppercase">{locale}</span>
       </button>
 
       {/* Dropdown Menu */}
