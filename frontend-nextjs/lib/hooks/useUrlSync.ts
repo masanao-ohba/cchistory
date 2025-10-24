@@ -36,20 +36,19 @@ export function useUrlSync() {
     }
   }, [searchParams, setFilters]);
 
-  // Sync filters to URL when they change (DISABLED to prevent infinite loop)
-  // The URL will only be set from user interactions, not from store changes
-  // useEffect(() => {
-  //   if (!isUpdatingFromUrl.current && !isInitialMount.current && hasHydratedRef.current) {
-  //     const queryString = createQueryStringFromState(currentFilters);
-  //     const newUrl = `${pathname}${queryString}`;
-  //
-  //     // Only update if the URL is actually different from last update
-  //     if (newUrl !== lastUrlRef.current) {
-  //       lastUrlRef.current = newUrl;
-  //       router.replace(newUrl, { scroll: false });
-  //     }
-  //   }
-  // }, [currentFilters, pathname, router]);
+  // Sync filters to URL when they change
+  useEffect(() => {
+    if (!isUpdatingFromUrl.current && !isInitialMount.current && hasHydratedRef.current) {
+      const queryString = createQueryStringFromState(currentFilters);
+      const newUrl = `${pathname}${queryString}`;
+
+      // Only update if the URL is actually different from last update
+      if (newUrl !== lastUrlRef.current) {
+        lastUrlRef.current = newUrl;
+        router.replace(newUrl, { scroll: false });
+      }
+    }
+  }, [currentFilters, pathname, router]);
 
   return {
     loadStateFromUrl: () => {
