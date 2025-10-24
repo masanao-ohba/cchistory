@@ -6,14 +6,18 @@ import logging
 
 from services.jsonl_parser import JSONLParser
 from services.message_grouper import find_matching_user_threads, group_conversations_by_thread, group_conversations_by_thread_array
+from services.token_usage import TokenUsageService
 from utils.date_filter import apply_date_filter
 from config import Config
 from .notifications import router as notifications_router
 
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+
 router = APIRouter()
 parser = JSONLParser()
+token_usage_service = TokenUsageService(projects_path=Config.CLAUDE_PROJECTS_PATH)
 
 # 通知APIルーターを含める
 router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
@@ -206,4 +210,14 @@ async def get_stats():
         }
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/token-usage")
+async def get_token_usage():
+    """トークン使用状況を取得"""
+    try:
+        usage = await token_usage_service.get_current_usage()
+        return usage
+    except Exception as e:
+        logger.error(f"Error getting token usage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
