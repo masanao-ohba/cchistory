@@ -118,7 +118,7 @@ const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
             value={searchKeyword}
             onChange={handleInputChange}
             placeholder={t('placeholder')}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder:text-gray-600"
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-400"
           />
 
           {/* Clear Button (right) */}

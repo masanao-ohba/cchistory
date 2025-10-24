@@ -193,16 +193,25 @@ export default function HomeContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Update search results when conversations data changes
+  // Sync SearchBox state with current filters (on mount and when filters change)
   useEffect(() => {
-    if (searchBoxRef.current && currentFilters.keyword) {
-      const totalMessages = conversationsData?.total_messages || 0;
-      searchBoxRef.current.setSearchResults({
-        total: totalMessages,
-        keyword: currentFilters.keyword,
-      });
+    if (searchBoxRef.current) {
+      // Restore search input value and showRelatedThreads state
+      searchBoxRef.current.setSearchState(
+        currentFilters.keyword || '',
+        currentFilters.showRelatedThreads
+      );
+
+      // Update search results if there's a keyword
+      if (currentFilters.keyword) {
+        const totalMessages = conversationsData?.total_messages || 0;
+        searchBoxRef.current.setSearchResults({
+          total: totalMessages,
+          keyword: currentFilters.keyword,
+        });
+      }
     }
-  }, [conversationsData?.total_messages, currentFilters.keyword]); // Only depend on specific field
+  }, [currentFilters.keyword, currentFilters.showRelatedThreads, conversationsData?.total_messages]);
 
   const tStats = useTranslations('statistics');
 

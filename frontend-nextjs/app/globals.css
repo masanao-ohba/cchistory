@@ -27,7 +27,7 @@ body {
 
 /* Search highlight */
 .prose mark {
-  @apply bg-yellow-200 px-1 py-0.5 rounded-sm;
+  @apply bg-yellow-200 px-1 py-0.5 rounded-sm border border-blue-300;
   font-weight: inherit;
   font-style: inherit;
   font-size: inherit;

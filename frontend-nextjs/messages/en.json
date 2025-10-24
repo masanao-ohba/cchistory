@@ -24,8 +24,8 @@
   "search": {
     "placeholder": "Search by keyword...",
     "button": "Search",
-    "foundMessages": "Found {count} messages for '{keyword}'",
-    "noMessagesFound": "No messages found matching '{keyword}'",
+    "foundMessages": "Found {count} messages for \"{keyword}\"",
+    "noMessagesFound": "No messages found matching \"{keyword}\"",
     "showRelatedThreads": "Show related messages and responses",
     "clear": "Clear"
   },
