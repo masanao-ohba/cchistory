@@ -51,9 +51,10 @@ const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null 
  * Hook to fetch and manage token usage data with automatic polling
  *
  * @param enabled - Whether to enable the query (default: true)
+ * @param initialData - Initial token usage data from server (optional)
  * @returns Query result with formatted token usage data
  */
-export const useTokenUsage = (enabled: boolean = true) => {
+export const useTokenUsage = (enabled: boolean = true, initialData?: TokenUsageResponse) => {
   const refreshInterval = getRefreshInterval();
 
   const query = useQuery({
@@ -65,6 +66,9 @@ export const useTokenUsage = (enabled: boolean = true) => {
     staleTime: refreshInterval - 1000, // Data considered stale just before next refetch
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Use initialData from server if provided
+    initialData: initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
   });
 
   // Format the data for easier consumption

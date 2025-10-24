@@ -1,7 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useConversations, useProjects, useStats } from '@/lib/hooks/useConversations';
+import { useConversations, useProjects } from '@/lib/hooks/useConversations';
+import type { ConversationsResponse } from '@/lib/hooks/useConversations';
+import type { TokenUsageResponse } from '@/lib/types/tokenUsage';
 import { useConversationStore } from '@/lib/stores/conversationStore';
 import { useNotificationStore } from '@/lib/stores/notificationStore';
 import { useNewMessageManager } from '@/lib/hooks/useNewMessageManager';
@@ -18,7 +20,19 @@ import TokenUsageBar from '@/components/TokenUsageBar';
 import SettingsMenu from '@/components/SettingsMenu';
 import BackToTopButton from '@/components/BackToTopButton';
 
-export default function HomeContent() {
+export interface HomeContentProps {
+  initialConversations?: ConversationsResponse;
+  initialProjects?: { projects: any[] };
+  initialTokenUsage?: TokenUsageResponse;
+  initialNotificationCount?: number;
+}
+
+export default function HomeContent({
+  initialConversations,
+  initialProjects,
+  initialTokenUsage,
+  initialNotificationCount,
+}: HomeContentProps = {}) {
   const t = useTranslations('app');
   const [mounted, setMounted] = useState(false);
   const currentFilters = useConversationStore((state) => state.currentFilters);
@@ -33,8 +47,8 @@ export default function HomeContent() {
 
   // URL state synchronization
   useUrlSync();
-  const { data: conversationsData, isLoading: conversationsLoading, refetch: refetchConversations } = useConversations(currentFilters, mounted);
-  const { data: projectsData } = useProjects();
+  const { data: conversationsData, isLoading: conversationsLoading, refetch: refetchConversations } = useConversations(currentFilters, mounted, initialConversations);
+  const { data: projectsData } = useProjects(initialProjects);
   const newMessageManager = useNewMessageManager();
 
   // Use stats from conversationsData (already filtered) instead of separate stats endpoint
@@ -280,7 +294,7 @@ export default function HomeContent() {
       {/* Fixed Header Area - Changed from sticky to fixed for iOS Safari compatibility */}
       <div ref={filterBarRef} className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
         {/* Token Usage Bar - Always visible */}
-        <TokenUsageBar compact={isScrolled} />
+        <TokenUsageBar compact={isScrolled} initialData={initialTokenUsage} />
 
         {/* Primary Controls Row - Search, Notification, Filters, Settings */}
         <div className="border-b border-gray-200">

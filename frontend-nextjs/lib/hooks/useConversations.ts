@@ -47,7 +47,8 @@ export interface ConversationsFilters {
 
 export function useConversations(
   filters: ConversationsFilters = {},
-  enabled: boolean = true
+  enabled: boolean = true,
+  initialData?: ConversationsResponse
 ): UseQueryResult<ConversationsResponse> {
   return useQuery({
     queryKey: ['conversations', filters],
@@ -76,6 +77,10 @@ export function useConversations(
     enabled,
     refetchOnWindowFocus: false,
     staleTime: 30000,
+    // Use initialData from server if provided
+    initialData: initialData,
+    // Mark initial data as stale immediately if filters have changed
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
   });
 }
 
@@ -85,11 +90,16 @@ export interface Project {
   path: string;
 }
 
-export function useProjects(): UseQueryResult<{ projects: Project[] }> {
+export function useProjects(
+  initialData?: { projects: Project[] }
+): UseQueryResult<{ projects: Project[] }> {
   return useQuery({
     queryKey: ['projects'],
     queryFn: () => apiClient.get<{ projects: Project[] }>('/projects'),
     staleTime: 5 * 60 * 1000,
+    // Use initialData from server if provided
+    initialData: initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
   });
 }
 

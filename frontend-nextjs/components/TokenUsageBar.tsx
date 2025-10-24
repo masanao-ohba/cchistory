@@ -13,13 +13,15 @@
 import { useState } from 'react';
 import { useTokenUsage } from '@/lib/hooks/useTokenUsage';
 import { useTranslations } from 'next-intl';
+import type { TokenUsageResponse } from '@/lib/types/tokenUsage';
 
 interface TokenUsageBarProps {
   compact?: boolean;
+  initialData?: TokenUsageResponse;
 }
 
-export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
-  const { tokenUsage, isLoading, error } = useTokenUsage();
+export default function TokenUsageBar({ compact = false, initialData }: TokenUsageBarProps) {
+  const { tokenUsage, isLoading, error } = useTokenUsage(true, initialData);
   const [isExpanded, setIsExpanded] = useState(false);
   const t = useTranslations('tokenUsage');
 
