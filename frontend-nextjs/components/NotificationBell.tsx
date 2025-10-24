@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNotificationStore } from '@/lib/stores/notificationStore';
 import NotificationPopup from './NotificationPopup';
 
 export default function NotificationBell() {
   const { notifications, unreadCount, showPopup, togglePopup, fetchNotifications, fetchStats, fetchProjects } = useNotificationStore();
-  const [isOpen, setIsOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
   // Total notifications count

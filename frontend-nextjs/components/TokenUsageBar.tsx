@@ -10,7 +10,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTokenUsage } from '@/lib/hooks/useTokenUsage';
 import { useTranslations } from 'next-intl';
 import type { TokenUsageResponse } from '@/lib/types/tokenUsage';
@@ -23,7 +23,13 @@ interface TokenUsageBarProps {
 export default function TokenUsageBar({ compact = false, initialData }: TokenUsageBarProps) {
   const { tokenUsage, isLoading, error } = useTokenUsage(true, initialData);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const t = useTranslations('tokenUsage');
+
+  // Set client-side flag to avoid hydration mismatch with time formatting
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Don't render if error
   if (error) {
@@ -172,7 +178,7 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
             <div className="col-span-2 bg-indigo-50 rounded px-2 py-1">
               <span className="text-gray-700">{t('resetAt')}:</span>
               <span className="ml-1 font-semibold text-indigo-700">
-                {formatResetTime(tokenUsage.blockEndTime)}
+                {isClient ? formatResetTime(tokenUsage.blockEndTime) : '--:--'}
               </span>
             </div>
           </div>
@@ -218,7 +224,7 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
             </div>
             <div className="flex justify-between mt-1 text-xs text-gray-600">
               <span>{timePercentage.toFixed(0)}% of block time elapsed</span>
-              <span>{t('resetAt')} {formatResetTime(tokenUsage.blockEndTime)}</span>
+              <span>{t('resetAt')} {isClient ? formatResetTime(tokenUsage.blockEndTime) : '--:--'}</span>
             </div>
           </div>
 

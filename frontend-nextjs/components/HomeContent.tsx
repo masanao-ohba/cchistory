@@ -31,7 +31,6 @@ export default function HomeContent({
   initialConversations,
   initialProjects,
   initialTokenUsage,
-  initialNotificationCount,
 }: HomeContentProps = {}) {
   const t = useTranslations('app');
   const [mounted, setMounted] = useState(false);
@@ -52,7 +51,6 @@ export default function HomeContent({
   const newMessageManager = useNewMessageManager();
 
   // Use stats from conversationsData (already filtered) instead of separate stats endpoint
-  const statsData = conversationsData?.stats;
   const [hasMore, setHasMore] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [accumulatedConversations, setAccumulatedConversations] = useState<any[][]>([]);
@@ -101,7 +99,7 @@ export default function HomeContent({
   }, []);
 
   // WebSocket connection
-  const { isConnected } = useWebSocket('/ws/updates', {
+  useWebSocket('/ws/updates', {
     onMessage: handleWSMessage,
     onOpen: handleWSOpen,
     onClose: handleWSClose,
@@ -184,15 +182,6 @@ export default function HomeContent({
     }
   }, [conversationsData?.conversations, conversationsData?.total_threads, conversationsData?.actual_threads, currentFilters.offset]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleFilterChange = useCallback((filters: any) => {
-    setFilters({
-      startDate: filters.startDate || null,
-      endDate: filters.endDate || null,
-      projects: filters.projects || [],
-      sortOrder: filters.sortOrder || 'desc',
-      offset: 0, // Reset offset when filters change
-    });
-  }, [setFilters]);
 
   const handleLoadMore = useCallback(() => {
     // Increment offset by limit to load next batch
@@ -244,8 +233,6 @@ export default function HomeContent({
       }
     }
   }, [currentFilters.keyword, currentFilters.showRelatedThreads, conversationsData?.total_messages]);
-
-  const tStats = useTranslations('statistics');
 
   // Calculate active filter count
   const activeFilterCount =
@@ -345,7 +332,7 @@ export default function HomeContent({
       </div>
 
       {/* Main Content - Add top padding to account for fixed header */}
-      <main className="max-w-7xl mx-auto px-4 pb-8" style={{ paddingTop: filterBarHeight > 0 ? `${filterBarHeight}px` : '140px' }}>
+      <main className="max-w-7xl mx-auto px-4 pb-8 pt-6" style={{ paddingTop: filterBarHeight > 0 ? `${filterBarHeight + 24}px` : '164px' }}>
 
         {/* Conversations */}
         <ConversationList

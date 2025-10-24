@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 interface Project {
   id: string;
@@ -34,14 +34,14 @@ export function useFilterBar({
   allProjectsText = 'All Projects',
   projectsSelectedText = (count) => `${count} projects selected`
 }: UseFilterBarOptions = {}) {
-  // Initial state
-  const initialState: FilterState = {
+  // Initial state - wrapped in useMemo to prevent recreation on every render
+  const initialState: FilterState = useMemo(() => ({
     startDate: '',
     endDate: '',
     projects: [],
     sortOrder: 'desc',
     ...initialFilters,
-  };
+  }), [initialFilters]);
 
   // State
   const [filters, setFilters] = useState<FilterState>(initialState);

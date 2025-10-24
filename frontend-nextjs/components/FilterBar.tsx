@@ -30,11 +30,9 @@ export default function FilterBar({
     filters,
     projects,
     isDropdownOpen,
-    quickFilters,
     setProjects,
     updateFilter,
     clearAllFilters,
-    applyQuickFilter,
     toggleAllProjects,
     removeProject,
     toggleDropdown,
@@ -190,7 +188,7 @@ export default function FilterBar({
                         onChange={() => handleProjectToggle(project.id)}
                         className="mr-2 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
                       />
-                      <span className="text-sm text-gray-900" title={project.path}>
+                      <span className="text-sm text-gray-900 truncate block" title={`${project.display_name} (${project.path})`}>
                         {project.display_name}
                       </span>
                     </label>
@@ -235,9 +233,11 @@ export default function FilterBar({
           {selectedProjectsDetails.map((project) => (
             <span
               key={project.id}
-              className="px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-md flex items-center"
+              className="px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-md flex items-center max-w-xs"
             >
-              {project.display_name}
+              <span className="truncate" title={project.display_name}>
+                {project.display_name}
+              </span>
               <button
                 type="button"
                 onClick={() => removeProject(project.id)}

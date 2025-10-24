@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useNotificationStore, Notification } from '@/lib/stores/notificationStore';
+import { useNotificationStore } from '@/lib/stores/notificationStore';
 import NotificationItem from './NotificationItem';
 
 export default function NotificationPopup() {
@@ -54,6 +54,9 @@ export default function NotificationPopup() {
   // Setup IntersectionObserver for auto-read (5-second visibility threshold)
   useEffect(() => {
     if (!scrollContainerRef.current) return;
+
+    // Capture ref values for cleanup
+    const timersMap = visibilityTimersRef.current;
 
     // Create observer
     observerRef.current = new IntersectionObserver(
@@ -118,9 +121,9 @@ export default function NotificationPopup() {
 
     // Cleanup on unmount
     return () => {
-      // Clear all timers
-      visibilityTimersRef.current.forEach((timer) => clearTimeout(timer));
-      visibilityTimersRef.current.clear();
+      // Clear all timers using captured ref value
+      timersMap.forEach((timer) => clearTimeout(timer));
+      timersMap.clear();
 
       // Disconnect observer
       if (observerRef.current) {

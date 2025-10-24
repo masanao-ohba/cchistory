@@ -9,7 +9,7 @@ services:
       - TIMEZONE=${TIMEZONE:-Asia/Tokyo}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro
+      - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro  # Includes token usage data
       - ./backend:/app:ro  # 開発時はソースコードをマウント（ホットリロード用）
       - cchistory-next-storage:/app/storage:rw  # 通知データ等の永続化用
     networks:
@@ -30,6 +30,9 @@ services:
       - "3001:3000"  # Next.js dev server (host:3001 -> container:3000)
     environment:
       - NODE_ENV=${NODE_ENV:-development}
+      - SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS:-false}  # Toggle Next.js build activity indicator (server-side)
+      - NEXT_PUBLIC_SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS:-false}  # Toggle React Query Devtools (client-side)
+      - NEXT_PUBLIC_SHOW_HELPER_BUTTONS=${SHOW_HELPER_BUTTONS:-false}  # Toggle helper buttons (back-to-top, etc.)
     volumes:
       - ./frontend-nextjs:/app
       - /app/node_modules

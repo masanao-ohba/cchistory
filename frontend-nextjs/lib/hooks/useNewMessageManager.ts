@@ -110,7 +110,8 @@ export function useNewMessageManager() {
    * Get messages for display
    * Returns only read messages (unread are hidden)
    */
-  const getDisplayMessages = (group: Message[], groupIndex: number): Message[] => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getDisplayMessages = (group: Message[], _groupIndex: number): Message[] => {
     if (!Array.isArray(group)) return [];
 
     const groupId = getGroupId(group);
@@ -123,7 +124,8 @@ export function useNewMessageManager() {
   /**
    * Get unread message count
    */
-  const getUnreadCount = (group: Message[], groupIndex: number): number => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getUnreadCount = (group: Message[], _groupIndex: number): number => {
     if (!Array.isArray(group)) return 0;
 
     const groupId = getGroupId(group);
@@ -144,7 +146,8 @@ export function useNewMessageManager() {
    * Show new messages (on button click)
    * Move unread to read and clear unread
    */
-  const showNewMessages = (group: Message[], groupIndex: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showNewMessages = (group: Message[], _groupIndex: number) => {
     if (!Array.isArray(group)) return;
 
     const groupId = getGroupId(group);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, MutableRefObject } from 'react';
+import { useEffect, useState, MutableRefObject } from 'react';
 
 interface Message {
   type: 'user' | 'assistant';

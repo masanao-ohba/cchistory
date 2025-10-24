@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import MessageItem from './MessageItem';
 import { renderMarkdown, copyToClipboard } from '@/lib/utils/markdown';
 import { useFloatingUserMessage } from '@/lib/hooks/useFloatingUserMessage';
-import { ChatBubbleIcon, ArrowUpIcon, ArrowDownIcon, LoadingSpinnerIcon } from '@/components/icons';
+import { ChatBubbleIcon, ArrowDownIcon, LoadingSpinnerIcon } from '@/components/icons';
 
 interface Message {
   type: 'user' | 'assistant';
@@ -43,7 +43,6 @@ interface ConversationListProps {
 
 // Constants
 const CONTEXT_BAR_HEIGHT = 80;
-const CONTEXT_BAR_ROOT_MARGIN_OFFSET = 80;
 const LOAD_MORE_NOTIFICATION_DELAY = 500;
 const LOAD_MORE_NOTIFICATION_DURATION = 3000;
 
@@ -52,7 +51,6 @@ export default function ConversationList({
   loading = false,
   hasMore = false,
   totalThreads = 0,
-  totalMessages = 0,
   actualThreads = 0,
   actualMessages = 0,
   newMessageManager = null,

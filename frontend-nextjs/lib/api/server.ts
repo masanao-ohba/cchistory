@@ -96,8 +96,14 @@ export async function fetchTokenUsage(): Promise<TokenUsageResponse> {
  */
 export async function fetchNotificationCount() {
   try {
-    const response = await fetchFromAPI<{ total: number; unread: number }>('/notifications/count');
-    return response.unread || 0;
+    const response = await fetchFromAPI<{
+      total_notifications: number;
+      unread_count: number;
+      by_project: Record<string, Record<string, number>>;
+      by_type: Record<string, number>;
+      recent_activity: Array<Record<string, string | number>>;
+    }>('/notifications/stats');
+    return response.unread_count || 0;
   } catch (error) {
     console.error('[Server API] Failed to fetch notification count:', error);
     return 0; // Fallback to 0 if notifications unavailable

@@ -95,6 +95,12 @@ export default function FilterPanel({
             <div className="flex gap-3">
               {/* Start Date with Clear Button */}
               <div className="flex-1 relative">
+                {/* Label that appears as placeholder when empty */}
+                {!startDate && (
+                  <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                    <span className="text-sm text-gray-400">{tDate('from')}</span>
+                  </div>
+                )}
                 <input
                   type="date"
                   value={startDate}
@@ -114,7 +120,6 @@ export default function FilterPanel({
                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                     bg-white
                   "
-                  placeholder={tDate('fromPlaceholder')}
                   aria-label={tDate('from')}
                 />
                 {startDate && (
@@ -139,6 +144,12 @@ export default function FilterPanel({
 
               {/* End Date with Clear Button */}
               <div className="flex-1 relative">
+                {/* Label that appears as placeholder when empty */}
+                {!endDate && (
+                  <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                    <span className="text-sm text-gray-400">{tDate('to')}</span>
+                  </div>
+                )}
                 <input
                   type="date"
                   value={endDate}
@@ -158,7 +169,6 @@ export default function FilterPanel({
                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
                     bg-white
                   "
-                  placeholder={tDate('toPlaceholder')}
                   aria-label={tDate('to')}
                 />
                 {endDate && (

@@ -37,6 +37,7 @@ export default function FilterToggle({
         }
         border border-gray-200
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+        cursor-pointer
       `}
       aria-label={isExpanded ? t('hideFilters') : t('showFilters')}
       aria-expanded={isExpanded}

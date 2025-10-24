@@ -17,10 +17,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  // Show React Query Devtools only in dev mode
+  const showDevtools = process.env.NEXT_PUBLIC_SHOW_DEV_INDICATORS === 'true';
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

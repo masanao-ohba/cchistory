@@ -15,13 +15,16 @@ md.options.highlight = function (str, lang) {
 };
 
 // Custom code block renderer with copy functionality
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const defaultFenceRenderer =
   md.renderer.rules.fence ||
-  function (tokens, idx, options, env, self) {
+  function (tokens, idx, options, _env, self) {
     return self.renderToken(tokens, idx, options);
   };
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
-md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+md.renderer.rules.fence = function (tokens, idx, _options, _env, _self) {
   const token = tokens[idx];
   const code = token.content;
   const lang = token.info ? token.info.trim() : '';
@@ -47,21 +50,26 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
 md.renderer.rules.code_block = md.renderer.rules.fence;
 
 // Custom table renderers
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const defaultTableRenderer =
   md.renderer.rules.table_open ||
-  function (tokens, idx, options, env, self) {
+  function (_tokens, _idx, _options, _env, _self) {
     return '<table>';
   };
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
-md.renderer.rules.table_open = function (tokens, idx, options, env, self) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+md.renderer.rules.table_open = function (_tokens, _idx, _options, _env, _self) {
   return '<table class="w-full border-collapse border border-gray-300 mb-3">';
 };
 
-md.renderer.rules.th_open = function (tokens, idx, options, env, self) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+md.renderer.rules.th_open = function (_tokens, _idx, _options, _env, _self) {
   return '<th class="border border-gray-300 px-3 py-2 text-left bg-gray-50 font-semibold">';
 };
 
-md.renderer.rules.td_open = function (tokens, idx, options, env, self) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+md.renderer.rules.td_open = function (_tokens, _idx, _options, _env, _self) {
   return '<td class="border border-gray-300 px-3 py-2 text-left">';
 };
 
