@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 interface Message {
@@ -16,17 +16,15 @@ interface MessageItemProps {
   conversation: Message;
   index: number;
   expandedItems: Set<number>;
-  renderMarkdown: (content: string, keyword?: string | null) => string;
   handleCodeCopy: (event: React.MouseEvent) => void;
   shouldShowToggleButton: (content: string) => boolean;
   onToggleExpand: (index: number) => void;
 }
 
-export default function MessageItem({
+const MessageItem = memo(function MessageItem({
   conversation,
   index,
   expandedItems,
-  renderMarkdown,
   handleCodeCopy,
   shouldShowToggleButton,
   onToggleExpand,
@@ -34,6 +32,11 @@ export default function MessageItem({
   const t = useTranslations('conversations');
   const isUser = conversation.type === 'user';
   const isExpanded = expandedItems.has(index);
+  const workerRef = useRef<Worker | null>(null);
+  const [renderedContent, setRenderedContent] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   const messageContainerClasses = useMemo(() => {
     const base = 'transition-all duration-200 hover:scale-[1.002] rounded-lg p-3 shadow-md';
@@ -95,13 +98,66 @@ export default function MessageItem({
     return <i className="fas fa-robot text-base" />;
   };
 
-  const renderedContent = renderMarkdown(
-    conversation.content,
-    conversation.is_search_match ? conversation.search_keyword : null
-  );
+  // Intersection Observer to detect visibility
+  useEffect(() => {
+    if (typeof window === 'undefined' || !containerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !isVisible) {
+            setIsVisible(true);
+          }
+        });
+      },
+      { rootMargin: '200px' } // Start processing 200px before visible
+    );
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  // Use Web Worker for markdown processing (only when visible)
+  useEffect(() => {
+    if (!isVisible) return;
+
+    // Create worker on first visibility
+    if (typeof window !== 'undefined' && !workerRef.current) {
+      workerRef.current = new Worker(new URL('@/lib/workers/markdown.worker', import.meta.url));
+
+      workerRef.current.onmessage = (e: MessageEvent) => {
+        const { id, html } = e.data;
+        if (id === conversation.uuid || id === `${index}-fallback`) {
+          setRenderedContent(html);
+          setIsProcessing(false);
+        }
+      };
+
+      workerRef.current.onerror = (error) => {
+        console.error('Worker error:', error);
+        setRenderedContent(`<p class="text-red-500">Error processing markdown</p>`);
+        setIsProcessing(false);
+      };
+    }
+
+    if (workerRef.current) {
+      setIsProcessing(true);
+      workerRef.current.postMessage({
+        id: conversation.uuid || `${index}-fallback`,
+        content: conversation.content,
+        searchKeyword: conversation.is_search_match ? conversation.search_keyword : null
+      });
+    }
+
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, [isVisible, conversation.content, conversation.uuid, conversation.is_search_match, conversation.search_keyword, index]);
 
   return (
-    <div className={messageContainerClasses}>
+    <div ref={containerRef} className={messageContainerClasses}>
       {/* Meta information */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
@@ -121,7 +177,11 @@ export default function MessageItem({
       {/* Content */}
       <div
         className={contentClasses}
-        dangerouslySetInnerHTML={{ __html: renderedContent }}
+        dangerouslySetInnerHTML={{
+          __html: isProcessing
+            ? `<pre class="whitespace-pre-wrap text-gray-700">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+            : renderedContent
+        }}
         onClick={handleCodeCopy}
       />
 
@@ -133,4 +193,6 @@ export default function MessageItem({
       )}
     </div>
   );
-}
+});
+
+export default MessageItem;

@@ -119,5 +119,49 @@
       "notification": "通知",
       "unknown": "未知"
     }
+  },
+  "tokenUsage": {
+    "title": "令牌使用情况",
+    "titleWithBlock": "令牌使用情况（5小时区块）",
+    "loading": "正在加载令牌使用情况...",
+    "session": "会话",
+    "currentSession": "当前会话",
+    "weekAll": "本周（全部）",
+    "weekOpus": "本周（Opus）",
+    "plan": "计划",
+    "expand": "展开",
+    "collapse": "折叠",
+    "expandDetails": "展开令牌使用详情",
+    "collapseDetails": "折叠令牌使用详情",
+    "input": "输入",
+    "output": "输出",
+    "cacheCreation": "缓存创建",
+    "cacheCreate": "缓存创建",
+    "cacheRead": "缓存读取",
+    "resetAt": "重置时间",
+    "resetIn": "重置倒计时",
+    "used": "已使用",
+    "showDetails": "显示详情",
+    "hideDetails": "隐藏详情"
+  },
+  "filters": {
+    "showFilters": "显示过滤器",
+    "hideFilters": "隐藏过滤器",
+    "toggleFilters": "切换过滤器",
+    "filtersActive": "过滤器已激活（{count} 个）",
+    "activeFilterCount": "{count} 个活动过滤器",
+    "reset": "重置",
+    "resetFilters": "重置所有过滤器",
+    "startDate": "开始",
+    "endDate": "结束",
+    "newestFirst": "最新",
+    "oldestFirst": "最旧",
+    "sortNewestFirst": "按最新排序",
+    "sortOldestFirst": "按最旧排序"
+  },
+  "projectTabs": {
+    "allProjects": "所有项目",
+    "scrollHint": "可滚动",
+    "newMessage": "新消息"
   }
 }

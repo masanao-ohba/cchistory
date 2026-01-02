@@ -1,11 +1,12 @@
 /**
  * React Query hook for Claude Code token usage data with auto-refresh
+ * Supports three usage metrics matching official Claude Code status
  */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchTokenUsage } from '../api/client';
-import type { TokenUsageResponse, FormattedTokenUsage } from '../types/tokenUsage';
+import type { TokenUsageResponse, FormattedTokenUsage, FormattedUsageMetric, UsageMetric } from '../types/tokenUsage';
 
 // Default refresh interval: 30 seconds (configurable via env)
 const DEFAULT_REFRESH_INTERVAL = 30000;
@@ -24,26 +25,38 @@ const getRefreshInterval = (): number => {
 };
 
 /**
+ * Format a single usage metric into UI-friendly data
+ */
+const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
+  return {
+    totalTokens: metric.usage.total_tokens,
+    inputTokens: metric.usage.input_tokens,
+    outputTokens: metric.usage.output_tokens,
+    cacheCreationTokens: metric.usage.cache_creation_tokens,
+    cacheReadTokens: metric.usage.cache_read_tokens,
+    startTime: new Date(metric.start_time),
+    endTime: new Date(metric.end_time),
+    timeRemainingMinutes: metric.time_remaining_minutes,
+    limitTokens: metric.limit_tokens,
+    percentageUsed: metric.percentage_used,
+    entries: metric.entries,
+  };
+};
+
+/**
  * Format raw token usage response into UI-friendly data
  */
 const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null => {
-  if (!data.available || !data.current_block) {
+  if (!data.available || !data.current_session || !data.weekly_all || !data.weekly_opus) {
     return null;
   }
 
-  const block = data.current_block;
-
   return {
-    totalTokens: block.total_tokens,
-    inputTokens: block.token_counts.input_tokens,
-    outputTokens: block.token_counts.output_tokens,
-    cacheCreationTokens: block.token_counts.cache_creation_tokens,
-    cacheReadTokens: block.token_counts.cache_read_tokens,
-    blockStartTime: new Date(block.start_time),
-    blockEndTime: new Date(block.end_time),
-    timeRemainingMinutes: block.time_remaining_minutes,
-    entries: block.entries,
-    isActive: block.is_active,
+    planType: data.plan_type || 'unknown',
+    limits: data.limits!,
+    currentSession: formatUsageMetric(data.current_session),
+    weeklyAll: formatUsageMetric(data.weekly_all),
+    weeklyOpus: formatUsageMetric(data.weekly_opus),
   };
 };
 
@@ -51,10 +64,9 @@ const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null 
  * Hook to fetch and manage token usage data with automatic polling
  *
  * @param enabled - Whether to enable the query (default: true)
- * @param initialData - Initial token usage data from server (optional)
  * @returns Query result with formatted token usage data
  */
-export const useTokenUsage = (enabled: boolean = true, initialData?: TokenUsageResponse) => {
+export const useTokenUsage = (enabled: boolean = true) => {
   const refreshInterval = getRefreshInterval();
 
   const query = useQuery({
@@ -66,9 +78,6 @@ export const useTokenUsage = (enabled: boolean = true, initialData?: TokenUsageR
     staleTime: refreshInterval - 1000, // Data considered stale just before next refetch
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    // Use initialData from server if provided
-    initialData: initialData,
-    initialDataUpdatedAt: initialData ? Date.now() : undefined,
   });
 
   // Format the data for easier consumption

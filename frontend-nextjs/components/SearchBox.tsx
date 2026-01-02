@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 interface SearchBoxProps {
   onSearch?: (data: { keyword: string; showRelatedThreads: boolean }) => void;
   onClear?: () => void;
+  compact?: boolean;
 }
 
 export interface SearchBoxHandle {
@@ -14,7 +15,7 @@ export interface SearchBoxHandle {
 }
 
 const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
-  ({ onSearch, onClear }, ref) => {
+  ({ onSearch, onClear, compact = false }, ref) => {
     const t = useTranslations('search');
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<{ total: number; keyword: string } | null>(null);
@@ -77,8 +78,8 @@ const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
 
     return (
       <div className="relative">
-        {/* Show Related Threads Checkbox (positioned ABOVE input) */}
-        {searchKeyword && (
+        {/* Show Related Threads Checkbox (positioned ABOVE input) - Hide in compact mode */}
+        {!compact && searchKeyword && (
           <div className="absolute -top-8 right-0 z-10">
             <label className="inline-flex items-center text-xs text-gray-600 bg-white px-2 py-1 rounded border border-gray-300 cursor-pointer">
               <input
@@ -98,9 +99,9 @@ const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
         {/* Search Input Container */}
         <div className="relative">
           {/* Search Icon (left) */}
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className={`absolute inset-y-0 left-0 ${compact ? 'pl-2' : 'pl-3'} flex items-center pointer-events-none`}>
             <svg
-              className="w-5 h-5 text-gray-400"
+              className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} text-gray-400`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -117,19 +118,19 @@ const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
             type="text"
             value={searchKeyword}
             onChange={handleInputChange}
-            placeholder={t('placeholder')}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-400"
+            placeholder={compact ? t('button') : t('placeholder')}
+            className={`w-full ${compact ? 'pl-10 pr-8 py-1 text-sm' : 'pl-10 pr-10 py-2'} border border-gray-300 ${compact ? 'rounded-md' : 'rounded-lg'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black placeholder:text-gray-400`}
           />
 
           {/* Clear Button (right) */}
           {searchKeyword && (
             <button
               onClick={clearSearch}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className={`absolute inset-y-0 right-0 ${compact ? 'pr-2' : 'pr-3'} flex items-center text-gray-400 hover:text-gray-600`}
               aria-label="Clear search"
             >
               <svg
-                className="w-5 h-5"
+                className={`${compact ? 'w-4 h-4' : 'w-5 h-5'}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -143,8 +144,8 @@ const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(
           )}
         </div>
 
-        {/* Search Results Summary */}
-        {searchKeyword && searchResults !== null && (
+        {/* Search Results Summary - Hide in compact mode */}
+        {!compact && searchKeyword && searchResults !== null && (
           <div className="mt-2 text-sm text-gray-600">
             {searchResults.total > 0 ? (
               <span>

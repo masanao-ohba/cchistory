@@ -40,10 +40,24 @@ async def lifespan(app: FastAPI):
     # 通知APIにWebSocket Managerを注入
     set_connection_manager(manager)
 
-    # Import parser from routes and inject into file watcher
+    # Import parser from routes for cache warming
     from api.routes import parser
-    file_watcher.set_parser(parser)
-    logger.info("Injected parser into file watcher for cache invalidation")
+
+    # Cache warming: Pre-load all projects to warm file-level cache
+    logger.info("Starting cache warming...")
+    try:
+        project_dirs = Config.get_project_dirs()
+        logger.info(f"Warming cache for {len(project_dirs)} projects...")
+
+        # Parse all projects in parallel to warm cache
+        import asyncio
+        tasks = [parser.parse_project(project_dir) for project_dir in project_dirs]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        logger.info("Cache warming completed successfully")
+    except Exception as e:
+        logger.error(f"Error during cache warming: {e}")
+        # Continue even if cache warming fails
 
     await file_watcher.start(manager)
     yield
@@ -334,6 +348,14 @@ app.add_middleware(
 
 # APIルーターを追加
 app.include_router(api_router, prefix=Config.API_PREFIX)
+
+# Test lazy loading router (temporary for debugging)
+try:
+    from api.test_lazy import router as test_lazy_router
+    app.include_router(test_lazy_router, prefix="/api/test")
+    logger.info("Test lazy router loaded for debugging")
+except ImportError:
+    pass
 
 # WebSocketエンドポイント
 @app.websocket("/ws/updates")

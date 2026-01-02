@@ -6,6 +6,7 @@ services:
     environment:
       - CLAUDE_PROJECTS_PATH=/data/projects
       - CLAUDE_PROJECTS=${CLAUDE_PROJECTS}
+      - CLAUDE_PLAN=${CLAUDE_PLAN:-max_20x}
       - TIMEZONE=${TIMEZONE:-Asia/Tokyo}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
@@ -32,7 +33,6 @@ services:
       - NODE_ENV=${NODE_ENV:-development}  # Controls dev indicators: development=show, production=hide
       - SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS}  # Optional override for Next.js build activity indicator
       - NEXT_PUBLIC_SHOW_DEV_INDICATORS=${SHOW_DEV_INDICATORS}  # Optional override for React Query Devtools
-      - NEXT_PUBLIC_SHOW_HELPER_BUTTONS=${SHOW_HELPER_BUTTONS:-false}  # Toggle helper buttons (back-to-top, etc.)
     volumes:
       - ./frontend-nextjs:/app
       - /app/node_modules

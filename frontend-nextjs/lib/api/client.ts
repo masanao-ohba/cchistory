@@ -17,8 +17,10 @@ class ApiClient {
     options?: RequestInit
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+    const startTime = performance.now();
 
     try {
+      const fetchStart = performance.now();
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -26,6 +28,8 @@ class ApiClient {
           ...options?.headers,
         },
       });
+      const fetchEnd = performance.now();
+      console.log(`[API] Fetch ${endpoint}: ${(fetchEnd - fetchStart).toFixed(0)}ms`);
 
       if (!response.ok) {
         throw {
@@ -34,7 +38,15 @@ class ApiClient {
         } as ApiError;
       }
 
-      return response.json();
+      const jsonStart = performance.now();
+      const data = await response.json();
+      const jsonEnd = performance.now();
+      console.log(`[API] JSON parse ${endpoint}: ${(jsonEnd - jsonStart).toFixed(0)}ms`);
+
+      const totalTime = performance.now() - startTime;
+      console.log(`[API] Total ${endpoint}: ${totalTime.toFixed(0)}ms`);
+
+      return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;

@@ -1,36 +1,34 @@
+/**
+ * LanguageSwitcher Component
+ *
+ * Compact language switcher optimized for footer placement.
+ * Shows current language code and cycles through available languages on click.
+ */
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
 import { locales, type Locale } from '@/i18n/request';
 
 export default function LanguageSwitcher() {
-  const t = useTranslations('language');
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Language names mapping
-  const languageNames: Record<Locale, string> = {
-    ja: t('japanese'),
-    en: t('english'),
-    zh: t('chinese'),
-    ko: t('korean'),
+  // Language labels for display
+  const languageLabels: Record<Locale, string> = {
+    en: 'EN',
+    ja: 'JA',
+    zh: 'ZH',
+    ko: 'KO',
   };
 
-  // Language flags (using emoji)
-  const languageFlags: Record<Locale, string> = {
-    ja: '🇯🇵',
-    en: '🇺🇸',
-    zh: '🇨🇳',
-    ko: '🇰🇷',
-  };
+  const handleLanguageChange = () => {
+    // Cycle to next language
+    const currentIndex = locales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % locales.length;
+    const newLocale = locales[nextIndex];
 
-  // Handle locale change
-  const handleLocaleChange = (newLocale: Locale) => {
     // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('locale', newLocale);
@@ -53,77 +51,41 @@ export default function LanguageSwitcher() {
     }
 
     router.push(newPath);
-    setIsOpen(false);
   };
 
-  // Click outside to close
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <div ref={dropdownRef} className="relative">
-      {/* Current Language Button - Globe Icon + Locale Code */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-        aria-label={t('switch')}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        title={languageNames[locale as Locale]}
+    <button
+      onClick={handleLanguageChange}
+      className="
+        inline-flex items-center gap-1
+        px-2.5 py-1.5
+        text-sm font-medium
+        text-gray-600 hover:text-gray-900
+        bg-white hover:bg-gray-50
+        transition-all duration-200
+        cursor-pointer
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+        rounded-md
+        border border-gray-300
+      "
+      aria-label="Change language"
+      title={`Language: ${languageLabels[locale]}. Click to change.`}
+    >
+      <svg
+        className="w-3.5 h-3.5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Globe Icon - Colorized */}
-        <svg
-          className="w-4 h-4 text-blue-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-          />
-        </svg>
-        {/* Locale Code */}
-        <span className="text-xs font-semibold uppercase">{locale}</span>
-      </button>
-
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] overflow-hidden">
-          {locales.map((loc) => (
-            <button
-              key={loc}
-              onClick={() => handleLocaleChange(loc)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 text-sm hover:bg-gray-50 transition-colors ${
-                locale === loc ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-700'
-              }`}
-              aria-current={locale === loc ? 'true' : undefined}
-            >
-              <span className="text-lg">{languageFlags[loc]}</span>
-              <span className="flex-1 text-left">{languageNames[loc]}</span>
-              {locale === loc && (
-                <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+        />
+      </svg>
+      <span className="font-semibold uppercase">{languageLabels[locale]}</span>
+    </button>
   );
 }

@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useNotificationStore } from '@/lib/stores/notificationStore';
 import NotificationItem from './NotificationItem';
 
 export default function NotificationPopup() {
+  const t = useTranslations('notifications');
   const { notifications, unreadCount, togglePopup } = useNotificationStore();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -25,7 +27,7 @@ export default function NotificationPopup() {
   };
 
   const handleDeleteAll = async () => {
-    if (!confirm('Delete all notifications? This action cannot be undone.')) {
+    if (!confirm(t('deleteAllConfirm'))) {
       return;
     }
     try {
@@ -137,7 +139,7 @@ export default function NotificationPopup() {
       {/* Header */}
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <h3 className="font-semibold text-gray-900">Notifications</h3>
+          <h3 className="font-semibold text-gray-900">{t('title')}</h3>
           {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
               {unreadCount}
@@ -151,9 +153,9 @@ export default function NotificationPopup() {
             <button
               onClick={handleMarkAllRead}
               className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-              title="Mark all as read"
+              title={t('markAllReadTitle')}
             >
-              Mark all read
+              {t('markAllRead')}
             </button>
           )}
 
@@ -162,9 +164,9 @@ export default function NotificationPopup() {
             <button
               onClick={handleDeleteAll}
               className="text-xs text-red-600 hover:text-red-800 font-medium"
-              title="Delete all notifications"
+              title={t('deleteAllTitle')}
             >
-              Delete all
+              {t('deleteAll')}
             </button>
           )}
 
@@ -172,7 +174,7 @@ export default function NotificationPopup() {
           <button
             onClick={togglePopup}
             className="text-gray-400 hover:text-gray-600 p-1"
-            title="Close"
+            title={t('closeTitle')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={closeIconPath} />
@@ -189,7 +191,7 @@ export default function NotificationPopup() {
             <svg className="w-8 h-8 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={bellIconPath} />
             </svg>
-            <p className="text-sm">No notifications</p>
+            <p className="text-sm">{t('noNotifications')}</p>
           </div>
         )}
 
@@ -212,12 +214,12 @@ export default function NotificationPopup() {
       {notifications.length > 0 && (
         <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Showing {notifications.length} notifications</span>
+            <span>{t('showing', { count: notifications.length })}</span>
             <button
               onClick={handleLoadMore}
               className="text-purple-600 hover:text-purple-800 font-medium"
             >
-              Load more
+              {t('loadMore')}
             </button>
           </div>
         </div>

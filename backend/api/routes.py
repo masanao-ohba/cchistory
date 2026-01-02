@@ -5,9 +5,11 @@ import pytz
 import logging
 
 from services.jsonl_parser import JSONLParser
-from services.message_grouper import find_matching_user_threads, group_conversations_by_thread, group_conversations_by_thread_array
+from services.message_grouper import group_conversations_by_thread_array
 from services.token_usage import TokenUsageService
-from utils.date_filter import apply_date_filter
+from services.streaming_collector import StreamingConversationCollector
+from services.streaming_grouper import StreamingThreadGrouper
+from services.lazy_streaming_grouper import LazyStreamingGrouper
 from config import Config
 from .notifications import router as notifications_router
 
@@ -23,6 +25,11 @@ token_usage_service = TokenUsageService(projects_path=Config.CLAUDE_PROJECTS_PAT
 router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 
 tz = pytz.timezone(Config.TIMEZONE)
+
+# Initialize streaming services
+streaming_collector = StreamingConversationCollector(parser, tz)
+streaming_grouper = StreamingThreadGrouper()
+lazy_grouper = LazyStreamingGrouper()
 
 def _calculate_filtered_stats(thread_groups):
     """フィルター適用後の統計情報を計算"""
@@ -51,44 +58,17 @@ def _calculate_filtered_stats(thread_groups):
     }
 
 
-def _apply_keyword_filter(conversations, keyword, show_related_threads):
-    """キーワード検索フィルタリングを適用"""
-    keyword_lower = keyword.lower()
+def _count_search_matches(thread_groups: list[list[dict]], keyword: Optional[str]) -> int:
+    """Count messages that match search keyword"""
+    if not keyword:
+        return 0
 
-    # キーワードマッチするメッセージ数をカウント
-    search_match_count = sum(1 for conv in conversations if keyword_lower in conv["content"].lower())
-
-    if show_related_threads:
-        # 関連スレッド全体を表示
-        matching_messages = find_matching_user_threads(conversations, keyword_lower)
-
-        # キーワードマッチフラグとハイライト用のキーワードを追加
-        for conv in matching_messages:
-            conv["is_search_match"] = keyword_lower in conv["content"].lower()
-            conv["search_keyword"] = keyword
-
-        return matching_messages, search_match_count
-    else:
-        # キーワードにマッチするメッセージのみを表示
-        keyword_conversations = [
-            conv for conv in conversations
-            if keyword_lower in conv["content"].lower()
-        ]
-
-        # キーワードマッチフラグとハイライト用のキーワードを追加
-        for conv in keyword_conversations:
-            conv["is_search_match"] = True
-            conv["search_keyword"] = keyword
-
-        return keyword_conversations, search_match_count
-
-def _clean_search_fields(conversations):
-    """検索関連フィールドをクリーンアップ"""
-    for conv in conversations:
-        if "search_keyword" in conv:
-            del conv["search_keyword"]
-        if "is_search_match" in conv:
-            del conv["is_search_match"]
+    count = 0
+    for thread_group in thread_groups:
+        for conv in thread_group:
+            if conv.get('is_search_match', False):
+                count += 1
+    return count
 
 @router.get("/projects")
 async def get_projects():
@@ -105,61 +85,58 @@ async def get_conversations(
     show_related_threads: bool = Query(True, description="関連スレッド全体を表示"),
     sort_order: str = Query("desc", description="表示順（asc=昇順、desc=降順）"),
     offset: int = Query(0, ge=0, description="オフセット"),
-    limit: int = Query(50, ge=1, le=1000, description="取得件数"),
+    limit: int = Query(15, ge=1, le=1000, description="取得件数"),
     _t: Optional[str] = Query(None, description="Cache busting timestamp")
 ):
-    """会話履歴を取得"""
+    """
+    会話履歴を取得（ストリーミングアーキテクチャ）
+
+    Unified code path for all queries using streaming-based filtering.
+    Applies filters during collection and stops early when enough data is collected.
+    """
     try:
-        # 全プロジェクトから会話を取得
-        all_conversations = []
-
-        # プロジェクトフィルタリング
+        # Get project directories (filter by 'projects' param if provided)
         project_dirs = Config.get_project_dirs()
-
         if projects:
             project_dirs = [d for d in project_dirs if d.name in projects]
 
-        for project_dir in project_dirs:
-            conversations = await parser.parse_project(project_dir)
-            all_conversations.extend(conversations)
+        # Build filter dictionary
+        filters = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'keyword': keyword,
+            'show_related_threads': show_related_threads,
+        }
 
-        # ソート（表示順に応じて昇順または降順）
-        reverse_sort = (sort_order == "desc")
-        all_conversations.sort(key=lambda x: x["timestamp"], reverse=reverse_sort)
+        # Stream conversations with filtering
+        conversation_stream = streaming_collector.collect_conversations(
+            project_dirs=project_dirs,
+            filters=filters,
+            sort_order=sort_order
+        )
 
-        # 日付フィルタリング（会話の流れを保持）
-        if start_date or end_date:
-            all_conversations = apply_date_filter(all_conversations, start_date, end_date, tz)
+        # Collect thread groups with early termination
+        thread_groups, total_threads, total_messages = \
+            await streaming_grouper.collect_thread_groups(
+                conversation_stream=conversation_stream,
+                limit=limit,
+                offset=offset,
+                sort_order=sort_order,
+                keyword_filter=keyword,
+                show_related_threads=show_related_threads
+            )
 
-        # キーワード検索処理
-        search_match_count = 0
-        if keyword:
-            all_conversations, search_match_count = _apply_keyword_filter(all_conversations, keyword, show_related_threads)
-        else:
-            # キーワードがない場合は、既存のsearch_keywordフィールドを除去
-            _clean_search_fields(all_conversations)
+        # Calculate stats
+        filtered_stats = _calculate_filtered_stats(thread_groups)
+        search_match_count = _count_search_matches(thread_groups, keyword)
 
-        # スレッド単位でのグループ化処理（ページング前に実行）
-        all_thread_groups = group_conversations_by_thread_array(all_conversations, sort_order)
-        total_threads = len(all_thread_groups)
-        total_messages = sum(len(group) for group in all_thread_groups)
-
-        # スレッド単位でページング
-        thread_groups = all_thread_groups[offset:offset + limit]
-        actual_threads = len(thread_groups)
-        actual_messages = sum(len(group) for group in thread_groups)
-
-        conversations = thread_groups
-
-        # フィルター適用後の統計情報を計算
-        filtered_stats = _calculate_filtered_stats(all_thread_groups)
-
+        # Build response
         return {
-            "conversations": conversations,
+            "conversations": thread_groups,
             "total_threads": total_threads,
             "total_messages": total_messages,
-            "actual_threads": actual_threads,
-            "actual_messages": actual_messages,
+            "actual_threads": len(thread_groups),
+            "actual_messages": sum(len(group) for group in thread_groups),
             "offset": offset,
             "limit": limit,
             "search_match_count": search_match_count,
@@ -170,8 +147,89 @@ async def get_conversations(
                 "daily_thread_counts": filtered_stats["daily_thread_counts"]
             }
         }
+
     except Exception as e:
         logger.error(f"Error getting conversations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/conversations/lazy")
+async def get_conversations_lazy(
+    start_date: Optional[date] = Query(None, description="開始日（日本時間）"),
+    end_date: Optional[date] = Query(None, description="終了日（日本時間）"),
+    projects: List[str] = Query(default=[], alias="project[]", description="プロジェクトID"),
+    keyword: Optional[str] = Query(None, description="検索キーワード"),
+    show_related_threads: bool = Query(True, description="関連スレッド全体を表示"),
+    sort_order: str = Query("desc", description="表示順（asc=昇順、desc=降順）"),
+    offset: int = Query(0, ge=0, description="オフセット"),
+    limit: int = Query(15, ge=1, le=1000, description="取得件数"),
+    _t: Optional[str] = Query(None, description="Cache busting timestamp")
+):
+    """
+    会話履歴を取得（Lazy K-Way Merge アルゴリズム）
+
+    Uses lazy loading with priority queue for O(log p + k) performance.
+    Only loads data as needed for pagination.
+    """
+    try:
+        # Quick test - return early for debugging
+        logger.info(f"Lazy endpoint called with limit={limit}, offset={offset}")
+
+        # Get project directories
+        project_dirs = Config.get_project_dirs()
+        if projects:
+            project_dirs = [d for d in project_dirs if d.name in projects]
+
+        logger.info(f"Found {len(project_dirs)} project directories")
+
+        # Get project files mapping
+        project_files = lazy_grouper.get_project_files(project_dirs)
+
+        logger.info(f"Project files: {len(project_files)} projects")
+
+        # Convert date to string if provided
+        start_date_str = start_date.isoformat() if start_date else None
+        end_date_str = end_date.isoformat() if end_date else None
+
+        # Get conversations using lazy loading
+        thread_groups, stats = lazy_grouper.get_conversations_lazy(
+            project_files=project_files,
+            offset=offset,
+            limit=limit,
+            start_date=start_date_str,
+            end_date=end_date_str,
+            keyword=keyword,
+            sort_order=sort_order,
+            show_related_threads=show_related_threads
+        )
+
+        logger.info(f"Lazy loading returned {len(thread_groups)} thread groups")
+
+        # Calculate additional stats
+        filtered_stats = _calculate_filtered_stats(thread_groups)
+        search_match_count = _count_search_matches(thread_groups, keyword)
+
+        # Build response
+        return {
+            "conversations": thread_groups,
+            "total_threads": stats.get("total_threads", 0),
+            "total_messages": stats.get("total_messages", 0),
+            "actual_threads": len(thread_groups),
+            "actual_messages": sum(len(group) for group in thread_groups),
+            "offset": offset,
+            "limit": limit,
+            "search_match_count": search_match_count,
+            "lazy_loaded": True,  # Indicator that this used lazy loading
+            "messages_scanned": stats.get("messages_scanned", 0),
+            "stats": {
+                "total_threads": stats.get("total_threads", 0),
+                "total_messages": stats.get("total_messages", 0),
+                "projects": filtered_stats["projects"],
+                "daily_thread_counts": filtered_stats["daily_thread_counts"]
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting lazy conversations: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/conversations/stats")

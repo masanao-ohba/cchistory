@@ -9,10 +9,11 @@ import threading
 logger = logging.getLogger(__name__)
 
 class FileChangeHandler(FileSystemEventHandler):
-    def __init__(self, connection_manager, loop, parser=None):
+    def __init__(self, connection_manager, loop):
         self.connection_manager = connection_manager
         self.loop = loop
-        self.parser = parser
+        self._debounce_timers = {}  # Track debounce timers per project
+        self._debounce_delay = 2.0  # 2 seconds debounce delay
         super().__init__()
 
     def on_modified(self, event):
@@ -44,7 +45,7 @@ class FileChangeHandler(FileSystemEventHandler):
         )
 
     async def _notify_clients(self, file_path: str, event_type: str):
-        """クライアントに変更を通知"""
+        """クライアントに変更を通知 (デバウンス付き)"""
         # ファイルパスからプロジェクトIDを抽出
         from config import Config
 
@@ -62,32 +63,44 @@ class FileChangeHandler(FileSystemEventHandler):
             except ValueError:
                 continue
 
-        # プロジェクトキャッシュを無効化
-        if self.parser and project_dir_path:
-            self.parser.invalidate_project_cache(project_dir_path)
-            logger.info(f"Invalidated project cache for {project_id}")
+        if not project_id:
+            return
 
-        message = {
-            "type": "file_change",
-            "event": event_type,
-            "file_path": file_path,
-            "project_id": project_id,
-            "timestamp": asyncio.get_event_loop().time()
-        }
-        await self.connection_manager.broadcast(message)
+        # Cancel existing timer for this project if it exists
+        if project_id in self._debounce_timers:
+            self._debounce_timers[project_id].cancel()
+
+        # Create new debounced notification
+        async def debounced_notification():
+            # Wait for debounce delay
+            await asyncio.sleep(self._debounce_delay)
+
+            # Remove timer from tracking
+            if project_id in self._debounce_timers:
+                del self._debounce_timers[project_id]
+
+            # File-level cache automatically invalidates on mtime/size change
+            # No need for explicit cache invalidation
+            logger.info(f"File change detected for {project_id} after debounce")
+
+            message = {
+                "type": "file_change",
+                "event": event_type,
+                "file_path": file_path,
+                "project_id": project_id,
+                "timestamp": asyncio.get_event_loop().time()
+            }
+            await self.connection_manager.broadcast(message)
+
+        # Schedule debounced notification
+        task = asyncio.create_task(debounced_notification())
+        self._debounce_timers[project_id] = task
 
 class FileWatcher:
     def __init__(self, watch_path: Path):
         self.watch_path = watch_path
         self.observer: Optional[Observer] = None
         self.handler: Optional[FileChangeHandler] = None
-        self.parser = None
-
-    def set_parser(self, parser):
-        """Set parser instance for cache invalidation"""
-        self.parser = parser
-        if self.handler:
-            self.handler.parser = parser
 
     async def start(self, connection_manager):
         """ファイル監視を開始"""
@@ -97,7 +110,7 @@ class FileWatcher:
 
         # 現在のイベントループを取得
         loop = asyncio.get_event_loop()
-        self.handler = FileChangeHandler(connection_manager, loop, self.parser)
+        self.handler = FileChangeHandler(connection_manager, loop)
         self.observer = Observer()
 
         # 再帰的に監視

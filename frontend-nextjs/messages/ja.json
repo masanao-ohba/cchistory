@@ -123,12 +123,22 @@
     }
   },
   "tokenUsage": {
-    "title": "トークン使用状況（5時間ブロック）",
-    "expand": "トークン使用詳細を展開",
-    "collapse": "トークン使用詳細を折りたたむ",
+    "title": "トークン使用状況",
+    "titleWithBlock": "トークン使用状況（5時間ブロック）",
+    "loading": "トークン使用状況を読み込み中...",
+    "session": "セッション",
+    "currentSession": "現在のセッション",
+    "weekAll": "週間（全体）",
+    "weekOpus": "週間（Opus）",
+    "plan": "プラン",
+    "expand": "展開",
+    "collapse": "折りたたむ",
+    "expandDetails": "トークン使用詳細を展開",
+    "collapseDetails": "トークン使用詳細を折りたたむ",
     "input": "入力",
     "output": "出力",
     "cacheCreation": "キャッシュ作成",
+    "cacheCreate": "キャッシュ作成",
     "cacheRead": "キャッシュ読込",
     "resetAt": "リセット時刻",
     "resetIn": "リセットまで",
@@ -142,6 +152,18 @@
     "toggleFilters": "フィルター切替",
     "filtersActive": "フィルター適用中 ({count}件)",
     "activeFilterCount": "{count}件のフィルター適用中",
-    "reset": "リセット"
+    "reset": "リセット",
+    "resetFilters": "全フィルターをリセット",
+    "startDate": "開始",
+    "endDate": "終了",
+    "newestFirst": "新しい順",
+    "oldestFirst": "古い順",
+    "sortNewestFirst": "新しい順で表示",
+    "sortOldestFirst": "古い順で表示"
+  },
+  "projectTabs": {
+    "allProjects": "全プロジェクト",
+    "scrollHint": "スクロール可能",
+    "newMessage": "新着"
   }
 }

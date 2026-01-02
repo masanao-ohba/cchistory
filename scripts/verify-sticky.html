@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Header Verification</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Simulate the fixed header */
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .token-bar {
+            height: 32px;
+            background: #f3f4f6;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 4px 16px;
+        }
+
+        .project-tabs {
+            height: 56px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 16px;
+        }
+
+        .filter-bar {
+            height: 48px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 16px;
+        }
+
+        /* Main content with padding for fixed header */
+        .main-content {
+            padding-top: 160px; /* Sum of all header sections */
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        /* Conversation group */
+        .conversation-group {
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .user-message {
+            background: #eff6ff;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .assistant-message {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            min-height: 300px; /* Make it tall to test sticky */
+        }
+
+        /* Floating user message bar */
+        .floating-user-message {
+            position: sticky;
+            /* Original: top = header height (136px) + 45px offset = 181px */
+            /* Fixed: top = header height (136px) + 40px offset = 176px */
+            top: 176px;
+            background: #dbeafe;
+            padding: 8px 16px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            margin-bottom: 10px;
+        }
+
+        .measurement {
+            position: fixed;
+            top: 200px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border: 2px solid red;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <div class="fixed-header">
+        <div class="token-bar">Token Usage Bar (32px)</div>
+        <div class="project-tabs">Project Tabs (56px)</div>
+        <div class="filter-bar">Filter Bar (48px)</div>
+    </div>
+
+    <!-- Total header height: 32 + 56 + 48 = 136px -->
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h2>Header Height Calculation</h2>
+        <ul>
+            <li>Token Bar: 32px</li>
+            <li>Project Tabs: 56px</li>
+            <li>Filter Bar: 48px</li>
+            <li><strong>Total: 136px</strong></li>
+        </ul>
+
+        <h2>Sticky Position Calculation</h2>
+        <ul>
+            <li>Header height: 136px</li>
+            <li>Context bar offset (old): 45px</li>
+            <li>Context bar offset (new): 40px</li>
+            <li><strong>Old sticky top: 181px (would create ~45px gap)</strong></li>
+            <li><strong>New sticky top: 176px (should create ~40px gap for the bar itself)</strong></li>
+        </ul>
+
+        <!-- Test Conversation Groups -->
+        <div class="conversation-group">
+            <div class="user-message">User: Short question</div>
+            <div class="assistant-message">Assistant: Short response</div>
+        </div>
+
+        <div class="conversation-group">
+            <div class="user-message" id="test-user">User: This is a test question that should become sticky when scrolling</div>
+            <div class="floating-user-message" style="display: none;">
+                📍 Context: This is a test question that should become sticky when scrolling
+            </div>
+            <div class="assistant-message" style="min-height: 800px;">
+                Assistant: This is a very long response that will make you scroll...<br><br>
+                The floating user message should appear right below the header (176px from top).<br><br>
+                Previously it was appearing at 181px which created a larger gap.<br><br>
+                Now with the fix, it should be at 176px (136px header + 40px for the bar itself).
+            </div>
+        </div>
+
+        <div class="conversation-group">
+            <div class="user-message">User: Another question</div>
+            <div class="assistant-message">Assistant: Another response</div>
+        </div>
+    </div>
+
+    <!-- Measurement tool -->
+    <div class="measurement">
+        <strong>Scroll Position:</strong> <span id="scrollPos">0</span>px<br>
+        <strong>Header Bottom:</strong> 136px<br>
+        <strong>Expected Sticky Top:</strong> 176px<br>
+        <strong>Gap:</strong> 40px (for context bar)
+    </div>
+
+    <script>
+        // Show floating message when original is out of view
+        window.addEventListener('scroll', () => {
+            document.getElementById('scrollPos').textContent = window.scrollY;
+
+            const userMsg = document.getElementById('test-user');
+            const floatingMsg = userMsg.nextElementSibling;
+            const rect = userMsg.getBoundingClientRect();
+
+            // Show floating message when user message goes above header
+            if (rect.top < 136) {
+                floatingMsg.style.display = 'block';
+            } else {
+                floatingMsg.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

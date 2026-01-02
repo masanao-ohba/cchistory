@@ -12,7 +12,7 @@ export default function BackToTopButton({ onClick }: BackToTopButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-20 left-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-40 cursor-pointer"
+      className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-40 cursor-pointer"
       title={t('backToTop')}
       aria-label={t('backToTop')}
     >

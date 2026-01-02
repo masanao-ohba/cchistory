@@ -26,7 +26,6 @@ interface NewMessageManager {
  *
  * @param conversations - Array of message groups
  * @param tallGroups - Set of group indices that need floating context
- * @param stickyTopOffset - Offset for sticky positioning (filter bar height)
  * @param newMessageManager - Manager for handling display messages
  * @param groupRefs - Map of group indices to DOM elements
  * @param userMessageRefs - Map of group indices to user message DOM elements
@@ -35,13 +34,11 @@ interface NewMessageManager {
 export function useFloatingUserMessage(
   conversations: Message[][],
   tallGroups: Set<number>,
-  stickyTopOffset: number,
   newMessageManager: NewMessageManager | null,
   groupRefs: MutableRefObject<Map<number, HTMLDivElement>>,
   userMessageRefs: MutableRefObject<Map<number, HTMLDivElement>>
 ) {
   const [floatingUserMessage, setFloatingUserMessage] = useState<FloatingMessage | null>(null);
-  const CONTEXT_BAR_ROOT_MARGIN_OFFSET = 80;
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -93,7 +90,7 @@ export function useFloatingUserMessage(
         },
         {
           threshold: 0,
-          rootMargin: `-${stickyTopOffset + CONTEXT_BAR_ROOT_MARGIN_OFFSET}px 0px 0px 0px`,
+          rootMargin: '-300px 0px 0px 0px', // Header (220px) + Floating bar (80px)
         }
       );
 
@@ -104,7 +101,7 @@ export function useFloatingUserMessage(
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
-  }, [conversations, tallGroups, stickyTopOffset, newMessageManager, groupRefs, userMessageRefs]);
+  }, [conversations, tallGroups, newMessageManager, groupRefs, userMessageRefs]);
 
   return floatingUserMessage;
 }

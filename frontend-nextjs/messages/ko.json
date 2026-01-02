@@ -119,5 +119,49 @@
       "notification": "알림",
       "unknown": "알 수 없음"
     }
+  },
+  "tokenUsage": {
+    "title": "토큰 사용량",
+    "titleWithBlock": "토큰 사용량 (5시간 블록)",
+    "loading": "토큰 사용량 로딩 중...",
+    "session": "세션",
+    "currentSession": "현재 세션",
+    "weekAll": "주간 (전체)",
+    "weekOpus": "주간 (Opus)",
+    "plan": "플랜",
+    "expand": "펼치기",
+    "collapse": "접기",
+    "expandDetails": "토큰 사용 세부정보 펼치기",
+    "collapseDetails": "토큰 사용 세부정보 접기",
+    "input": "입력",
+    "output": "출력",
+    "cacheCreation": "캐시 생성",
+    "cacheCreate": "캐시 생성",
+    "cacheRead": "캐시 읽기",
+    "resetAt": "리셋 시간",
+    "resetIn": "리셋까지",
+    "used": "사용됨",
+    "showDetails": "세부정보 표시",
+    "hideDetails": "세부정보 숨기기"
+  },
+  "filters": {
+    "showFilters": "필터 표시",
+    "hideFilters": "필터 숨기기",
+    "toggleFilters": "필터 전환",
+    "filtersActive": "필터 활성화 ({count}개)",
+    "activeFilterCount": "{count}개 필터 활성화",
+    "reset": "초기화",
+    "resetFilters": "모든 필터 초기화",
+    "startDate": "시작",
+    "endDate": "종료",
+    "newestFirst": "최신순",
+    "oldestFirst": "오래된순",
+    "sortNewestFirst": "최신순으로 정렬",
+    "sortOldestFirst": "오래된순으로 정렬"
+  },
+  "projectTabs": {
+    "allProjects": "모든 프로젝트",
+    "scrollHint": "스크롤 가능",
+    "newMessage": "새로운"
   }
 }

@@ -55,7 +55,11 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      // WebSocket errors don't contain useful information in the Event object
+      // Only log if it's not a normal connection error (e.g., server not available)
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('WebSocket connection error - this is normal if the server is restarting');
+      }
       setIsConnected(false);
       onErrorRef.current?.(error);
     };

@@ -1,35 +1,45 @@
 /**
  * TokenUsageBar Component
  *
- * Displays Claude Code token usage with progress bars and reset timer.
+ * Displays Claude Code token usage matching official status display:
+ * - Current session (5-hour block)
+ * - Current week (all models)
+ * - Current week (Opus)
+ *
  * Features:
- * - Compact progress bar showing 5-hour block usage
- * - Time remaining until next reset
+ * - Shows percentage used for each metric
+ * - Displays reset times in local timezone
  * - Expandable details for token breakdown
  * - Auto-refreshes based on configured interval
+ * - Right-aligned progress bars for consistent start position
  */
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useTokenUsage } from '@/lib/hooks/useTokenUsage';
-import { useTranslations } from 'next-intl';
-import type { TokenUsageResponse } from '@/lib/types/tokenUsage';
+import type { FormattedUsageMetric } from '@/lib/types/tokenUsage';
 
 interface TokenUsageBarProps {
   compact?: boolean;
-  initialData?: TokenUsageResponse;
 }
 
-export default function TokenUsageBar({ compact = false, initialData }: TokenUsageBarProps) {
-  const { tokenUsage, isLoading, error } = useTokenUsage(true, initialData);
+export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
+  const t = useTranslations('tokenUsage');
+  const locale = useLocale();
+  const { tokenUsage, isLoading, error } = useTokenUsage(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const t = useTranslations('tokenUsage');
 
   // Set client-side flag to avoid hydration mismatch with time formatting
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[TokenUsageBar] State:', { isLoading, hasData: !!tokenUsage, error: !!error });
+  }, [isLoading, tokenUsage, error]);
 
   // Don't render if error
   if (error) {
@@ -46,13 +56,13 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <div className="flex-1 text-xs text-gray-500">Loading token usage...</div>
+          <div className="flex-1 text-xs text-gray-500">{t('loading')}</div>
         </div>
       </div>
     );
   }
 
-  // Format token count with K/M suffix
+  // Format tokens with K/M suffix
   const formatTokens = (tokens: number): string => {
     if (tokens >= 1000000) {
       return `${(tokens / 1000000).toFixed(1)}M`;
@@ -63,43 +73,130 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
     return tokens.toString();
   };
 
-  // Calculate total including cache tokens for display
-  const totalWithCache = tokenUsage.totalTokens + tokenUsage.cacheCreationTokens + tokenUsage.cacheReadTokens;
-
   // Format time remaining
   const formatTimeRemaining = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
+    const safeMinutes = Math.max(0, minutes || 0);
+    const days = Math.floor(safeMinutes / (60 * 24));
+    const hours = Math.floor((safeMinutes % (60 * 24)) / 60);
+    const mins = Math.floor(safeMinutes % 60);
 
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
     if (hours > 0) {
       return `${hours}h ${mins}m`;
     }
     return `${mins}m`;
   };
 
-  // Format reset time in local timezone (to match Claude Code /status display)
+  // Format reset time in local timezone (rounded to hour)
   const formatResetTime = (date: Date): string => {
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
+    // Round to nearest hour as per official Claude Code display
+    const rounded = new Date(date);
+    if (rounded.getMinutes() >= 30) {
+      rounded.setHours(rounded.getHours() + 1);
+    }
+    rounded.setMinutes(0);
+    rounded.setSeconds(0);
+    rounded.setMilliseconds(0);
+
+    // Format based on locale
+    if (locale === 'ja') {
+      // Japanese format: "10月26日 12:00"
+      return rounded.toLocaleString('ja-JP', {
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } else if (locale === 'zh') {
+      // Chinese format: "10月26日 12:00"
+      return rounded.toLocaleString('zh-CN', {
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } else if (locale === 'ko') {
+      // Korean format: "10월 26일 12:00"
+      return rounded.toLocaleString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } else {
+      // English format: "Oct 26, 12:00"
+      return rounded.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
   };
 
-  // Progress bar visualization (based on relative usage within the session)
-  // Shows visual representation of time passed in the 5-hour block
-  const timeElapsedMinutes = 300 - tokenUsage.timeRemainingMinutes; // 5 hours = 300 minutes
-  const timePercentage = Math.min((timeElapsedMinutes / 300) * 100, 100);
+  // Get progress bar color based on percentage
+  const getProgressColor = (percentage: number): string => {
+    if (percentage < 50) return 'bg-blue-500';
+    if (percentage < 75) return 'bg-indigo-500';
+    if (percentage < 90) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
 
-  // Color based on time elapsed (not token usage, since there's no hard limit)
-  const getProgressColor = (): string => {
-    if (timePercentage < 50) return 'bg-blue-500';
-    if (timePercentage < 75) return 'bg-indigo-500';
-    return 'bg-purple-500';
+  // Render a single usage metric row
+  const renderMetricRow = (
+    label: string,
+    metric: FormattedUsageMetric,
+    showTokens: boolean = false
+  ) => {
+    const percentage = Math.min(metric.percentageUsed, 100);
+    const color = getProgressColor(percentage);
+
+    return (
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Label - responsive width */}
+        <div className="w-20 sm:w-28 lg:w-32 text-xs text-gray-700 font-medium flex-shrink-0">
+          {label}
+        </div>
+
+        {/* Progress bar - flexible width */}
+        <div className="flex-1 min-w-0">
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${color} transition-all duration-300`}
+              style={{ width: `${percentage}%` }}
+              title={`${percentage.toFixed(1)}% used of ${formatTokens(metric.limitTokens)} limit`}
+            />
+          </div>
+        </div>
+
+        {/* Percentage */}
+        <div className="flex-shrink-0 text-xs font-semibold text-gray-800 w-10 text-right">
+          {percentage.toFixed(0)}%
+        </div>
+
+        {/* Token count (optional) - hide on small screens */}
+        {showTokens && (
+          <div className="hidden sm:block flex-shrink-0 text-xs text-gray-600 w-12 text-right">
+            {formatTokens(metric.totalTokens)}
+          </div>
+        )}
+
+        {/* Reset time - responsive width */}
+        <div className="flex-shrink-0 text-xs text-gray-600 w-20 sm:w-24 lg:w-32 text-right truncate">
+          {isClient ? formatResetTime(metric.endTime) : '--:--'}
+        </div>
+      </div>
+    );
   };
 
   if (compact) {
-    // Compact mode: Single line with progress bar and time
+    // Compact mode: Show only current session with expandable full view
     return (
       <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
         <div className="flex items-center gap-3">
@@ -110,25 +207,15 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
             </svg>
           </div>
 
-          {/* Progress bar - shows time elapsed in 5-hour block */}
-          <div className="flex-1 min-w-0">
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${getProgressColor()} transition-all duration-300`}
-                style={{ width: `${timePercentage}%` }}
-                title={`${timeElapsedMinutes.toFixed(0)} of 300 minutes elapsed in this 5-hour block`}
-              />
-            </div>
-          </div>
-
-          {/* Token count - show total with cache */}
-          <div className="flex-shrink-0 text-xs font-medium text-gray-700">
-            {formatTokens(totalWithCache)}
-          </div>
-
-          {/* Reset timer */}
-          <div className="flex-shrink-0 text-xs text-gray-600">
-            ↻ {formatTimeRemaining(tokenUsage.timeRemainingMinutes)}
+          {/* Current session info */}
+          <div className="flex-1 flex items-center gap-2">
+            <span className="text-xs text-gray-700">{t('session')}:</span>
+            <span className="text-xs font-bold text-indigo-700">
+              {tokenUsage.currentSession.percentageUsed.toFixed(0)}%
+            </span>
+            <span className="text-xs text-gray-500">
+              ↻ {formatTimeRemaining(tokenUsage.currentSession.timeRemainingMinutes)}
+            </span>
           </div>
 
           {/* Expand button */}
@@ -148,38 +235,44 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
           </button>
         </div>
 
-        {/* Expanded details */}
+        {/* Expanded full view */}
         {isExpanded && (
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-white rounded px-2 py-1">
-              <span className="text-gray-600">{t('input')}:</span>
-              <span className="ml-1 font-medium text-gray-800">
-                {formatTokens(tokenUsage.inputTokens)}
-              </span>
+          <div className="mt-3 space-y-2">
+            {renderMetricRow(t('session'), tokenUsage.currentSession, true)}
+            {renderMetricRow(t('weekAll'), tokenUsage.weeklyAll, true)}
+            {renderMetricRow(t('weekOpus'), tokenUsage.weeklyOpus, true)}
+
+            {/* Token breakdown */}
+            <div className="mt-3 pt-2 border-t border-indigo-100 grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-white rounded px-2 py-1">
+                <span className="text-gray-600">{t('input')}:</span>
+                <span className="ml-1 font-medium text-blue-700">
+                  {formatTokens(tokenUsage.currentSession.inputTokens)}
+                </span>
+              </div>
+              <div className="bg-white rounded px-2 py-1">
+                <span className="text-gray-600">{t('output')}:</span>
+                <span className="ml-1 font-medium text-green-700">
+                  {formatTokens(tokenUsage.currentSession.outputTokens)}
+                </span>
+              </div>
+              <div className="bg-white rounded px-2 py-1">
+                <span className="text-gray-600">{t('cacheCreate')}:</span>
+                <span className="ml-1 font-medium text-orange-700">
+                  {formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
+                </span>
+              </div>
+              <div className="bg-white rounded px-2 py-1">
+                <span className="text-gray-600">{t('cacheRead')}:</span>
+                <span className="ml-1 font-medium text-purple-700">
+                  {formatTokens(tokenUsage.currentSession.cacheReadTokens)}
+                </span>
+              </div>
             </div>
-            <div className="bg-white rounded px-2 py-1">
-              <span className="text-gray-600">{t('output')}:</span>
-              <span className="ml-1 font-medium text-gray-800">
-                {formatTokens(tokenUsage.outputTokens)}
-              </span>
-            </div>
-            <div className="bg-white rounded px-2 py-1">
-              <span className="text-gray-600">{t('cacheCreation')}:</span>
-              <span className="ml-1 font-medium text-gray-800">
-                {formatTokens(tokenUsage.cacheCreationTokens)}
-              </span>
-            </div>
-            <div className="bg-white rounded px-2 py-1">
-              <span className="text-gray-600">{t('cacheRead')}:</span>
-              <span className="ml-1 font-medium text-gray-800">
-                {formatTokens(tokenUsage.cacheReadTokens)}
-              </span>
-            </div>
-            <div className="col-span-2 bg-indigo-50 rounded px-2 py-1">
-              <span className="text-gray-700">{t('resetAt')}:</span>
-              <span className="ml-1 font-semibold text-indigo-700">
-                {isClient ? formatResetTime(tokenUsage.blockEndTime) : '--:--'}
-              </span>
+
+            {/* Plan info */}
+            <div className="mt-2 pt-2 border-t border-indigo-100 text-xs text-gray-600">
+              {t('plan')}: <span className="font-medium text-gray-800">{tokenUsage.planType.replace('_', ' ').toUpperCase()}</span>
             </div>
           </div>
         )}
@@ -187,7 +280,7 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
     );
   }
 
-  // Full mode: More detailed display
+  // Full mode: Show all three metrics
   return (
     <div className="py-3 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
       <div className="flex items-start gap-4">
@@ -202,34 +295,23 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-800">{t('title')}</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">
-                {formatTokens(totalWithCache)} tokens
+            <h3 className="text-sm font-semibold text-gray-800">
+              {t('title')}
+              <span className="ml-2 text-xs font-normal text-gray-600">
+                ({tokenUsage.planType.replace('_', ' ').toUpperCase()})
               </span>
-              <span className="text-sm text-gray-600">
-                {t('resetIn')}: {formatTimeRemaining(tokenUsage.timeRemainingMinutes)}
-              </span>
-            </div>
+            </h3>
           </div>
 
-          {/* Progress bar - shows time elapsed in 5-hour block */}
-          <div className="mb-2">
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-              <div
-                className={`h-full ${getProgressColor()} transition-all duration-300 shadow-sm`}
-                style={{ width: `${timePercentage}%` }}
-                title={`${timeElapsedMinutes.toFixed(0)} of 300 minutes elapsed in this 5-hour block`}
-              />
-            </div>
-            <div className="flex justify-between mt-1 text-xs text-gray-600">
-              <span>{timePercentage.toFixed(0)}% of block time elapsed</span>
-              <span>{t('resetAt')} {isClient ? formatResetTime(tokenUsage.blockEndTime) : '--:--'}</span>
-            </div>
+          {/* Three usage metrics */}
+          <div className="space-y-2">
+            {renderMetricRow(t('currentSession'), tokenUsage.currentSession)}
+            {renderMetricRow(t('weekAll'), tokenUsage.weeklyAll)}
+            {renderMetricRow(t('weekOpus'), tokenUsage.weeklyOpus)}
           </div>
 
           {/* Expandable details */}
-          <div>
+          <div className="mt-3">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors flex items-center gap-1"
@@ -250,25 +332,25 @@ export default function TokenUsageBar({ compact = false, initialData }: TokenUsa
                 <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
                   <div className="text-xs text-gray-600 mb-1">{t('input')}</div>
                   <div className="text-sm font-semibold text-blue-700">
-                    {formatTokens(tokenUsage.inputTokens)}
+                    {formatTokens(tokenUsage.currentSession.inputTokens)}
                   </div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
                   <div className="text-xs text-gray-600 mb-1">{t('output')}</div>
                   <div className="text-sm font-semibold text-green-700">
-                    {formatTokens(tokenUsage.outputTokens)}
+                    {formatTokens(tokenUsage.currentSession.outputTokens)}
                   </div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
                   <div className="text-xs text-gray-600 mb-1">{t('cacheCreation')}</div>
                   <div className="text-sm font-semibold text-orange-700">
-                    {formatTokens(tokenUsage.cacheCreationTokens)}
+                    {formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
                   </div>
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
                   <div className="text-xs text-gray-600 mb-1">{t('cacheRead')}</div>
                   <div className="text-sm font-semibold text-purple-700">
-                    {formatTokens(tokenUsage.cacheReadTokens)}
+                    {formatTokens(tokenUsage.currentSession.cacheReadTokens)}
                   </div>
                 </div>
               </div>

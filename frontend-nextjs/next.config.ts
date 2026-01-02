@@ -6,11 +6,10 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig: NextConfig = {
   output: 'standalone',
   // Toggle dev indicators based on NODE_ENV
-  // Development mode: show indicators (unless explicitly disabled)
-  // Production mode: hide indicators (unless explicitly enabled)
-  devIndicators: process.env.SHOW_DEV_INDICATORS
-    ? process.env.SHOW_DEV_INDICATORS === 'true'
-    : process.env.NODE_ENV === 'development',
+  devIndicators: {
+    buildActivity: process.env.SHOW_DEV_INDICATORS === 'true',
+    buildActivityPosition: 'bottom-right',
+  },
   async rewrites() {
     return [
       {

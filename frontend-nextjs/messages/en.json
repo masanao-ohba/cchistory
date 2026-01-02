@@ -123,18 +123,28 @@
     }
   },
   "tokenUsage": {
-    "title": "Token Usage (5-hour block)",
-    "expand": "Expand token usage details",
-    "collapse": "Collapse token usage details",
+    "title": "Token Usage",
+    "titleWithBlock": "Token Usage (5-hour block)",
+    "loading": "Loading token usage...",
+    "session": "Session",
+    "currentSession": "Current Session",
+    "weekAll": "Week (All)",
+    "weekOpus": "Week (Opus)",
+    "plan": "Plan",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "expandDetails": "Expand token usage details",
+    "collapseDetails": "Collapse token usage details",
     "input": "Input",
     "output": "Output",
     "cacheCreation": "Cache Creation",
+    "cacheCreate": "Cache Create",
     "cacheRead": "Cache Read",
     "resetAt": "Resets at",
     "resetIn": "Reset in",
     "used": "used",
-    "showDetails": "Show details",
-    "hideDetails": "Hide details"
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details"
   },
   "filters": {
     "showFilters": "Show filters",
@@ -142,6 +152,18 @@
     "toggleFilters": "Toggle filters",
     "filtersActive": "Filters active ({count})",
     "activeFilterCount": "{count} active filters",
-    "reset": "Reset"
+    "reset": "Reset",
+    "resetFilters": "Reset all filters",
+    "startDate": "Start",
+    "endDate": "End",
+    "newestFirst": "Newest",
+    "oldestFirst": "Oldest",
+    "sortNewestFirst": "Sort by newest first",
+    "sortOldestFirst": "Sort by oldest first"
+  },
+  "projectTabs": {
+    "allProjects": "All Projects",
+    "scrollHint": "Scroll for more",
+    "newMessage": "New"
   }
 }

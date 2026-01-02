@@ -9,50 +9,43 @@ logger = logging.getLogger(__name__)
 
 class JSONLParser:
     def __init__(self):
-        self._cache = {}
-        self._cache_timestamps = {}
-        self._project_cache = {}  # Project-level cache
-        self._project_cache_timestamps = {}
+        self._cache = {}  # File-level cache: {file_path: conversations}
+        self._cache_timestamps = {}  # File-level cache metadata: {file_path: {mtime, size}}
 
-    def _is_cache_valid(self, cache_key: str, mtime: float, size: int = None) -> bool:
+    def _is_cache_valid(self, cache_key: str, mtime: float, size: int) -> bool:
         """
-        Check if cached data is still valid.
+        Check if file-level cached data is still valid.
 
         Why this is important:
             Without this test, stale cache returns outdated data. Dual validation
             (mtime + size) catches rapid file appends where mtime might not update.
 
         Args:
-            cache_key: File/project path used as cache key
+            cache_key: File path used as cache key
             mtime: Current modification time from Path.stat().st_mtime
-            size: Current file size (optional, for file-level cache only)
+            size: Current file size in bytes
 
         Returns:
-            True if cache is valid, False if stale
+            True if cache is valid (mtime and size match), False if stale
         """
         if cache_key not in self._cache_timestamps:
             return False
 
         cached_data = self._cache_timestamps[cache_key]
+        cached_mtime = cached_data.get('mtime', 0)
+        cached_size = cached_data.get('size', 0)
 
-        # Handle both dict format (file cache) and float format (project cache)
-        if isinstance(cached_data, dict):
-            cached_mtime = cached_data.get('mtime', 0)
-            cached_size = cached_data.get('size', 0)
-            if size is not None:
-                return cached_mtime >= mtime and cached_size == size
-            return cached_mtime >= mtime
-        else:
-            # Float format (legacy project cache)
-            return cached_data >= mtime
+        # Cache is valid only if BOTH mtime and size match
+        return cached_mtime >= mtime and cached_size == size
 
     async def parse_project(self, project_dir: Path) -> List[Dict[str, Any]]:
         """
-        Parse all JSONL files in project directory with two-tier caching.
+        Parse all JSONL files in project directory with file-level caching.
 
-        Why this is important:
-            Without this test, every API request would parse 160+ files, causing
-            10+ second page loads. Cache returns results in < 100ms.
+        Why file-level caching is important:
+            Project-level cache would invalidate on ANY file change, causing full
+            re-parse of all 240 files (900MB). File-level cache only re-parses
+            modified files, keeping performance fast during active Claude Code usage.
 
         Args:
             project_dir: Path to project directory containing *.jsonl files
@@ -60,43 +53,28 @@ class JSONLParser:
         Returns:
             List of conversation dicts with session continuation chains linked
         """
+        import time
+        start_time = time.time()
+
         if not project_dir.exists():
             logger.warning(f"Project directory does not exist: {project_dir}")
             return []
 
-        project_key = str(project_dir)
-
-        # Get latest file modification time for cache validation
-        # First do a quick check without glob if cache exists
-        if project_key in self._project_cache:
-            # Quick validation using directory mtime as first check
-            dir_mtime = project_dir.stat().st_mtime
-            if self._is_cache_valid(project_key, dir_mtime):
-                # Cache appears valid - return cached data
-                return self._project_cache[project_key]
-
-        # Cache miss or possibly stale - scan files
         conversations = []
         jsonl_files = list(project_dir.glob("*.jsonl"))
 
-        # Only log when actually scanning (to reduce log spam)
         if not jsonl_files:
             return conversations
 
-        # Get max mtime from all files for accurate cache validation
-        max_mtime = max((f.stat().st_mtime for f in jsonl_files), default=0)
+        glob_time = time.time()
+        logger.info(f"[TIMING] Glob {len(jsonl_files)} files in {project_dir.name}: {(glob_time - start_time) * 1000:.0f}ms")
 
-        # Check if we can still use cache based on file mtimes
-        if project_key in self._project_cache and self._is_cache_valid(project_key, max_mtime):
-            # All files are older than cache - return cached data
-            return self._project_cache[project_key]
-
-        # Need to re-parse files
-        logger.info(f"Parsing {len(jsonl_files)} JSONL files in {project_dir}")
-
-        # 各ファイルを並行処理で解析
+        # Parse each file individually - parse_file() handles caching
         tasks = [self.parse_file(file_path, project_dir) for file_path in jsonl_files]
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        gather_time = time.time()
+        logger.info(f"[TIMING] Parse {len(jsonl_files)} files in {project_dir.name}: {(gather_time - glob_time) * 1000:.0f}ms")
 
         for result in results:
             if isinstance(result, Exception):
@@ -107,9 +85,9 @@ class JSONLParser:
         # Build session continuation chains
         conversations = self._build_session_continuation_chains(conversations)
 
-        # Update project cache with max file mtime
-        self._project_cache[project_key] = conversations
-        self._project_cache_timestamps[project_key] = max_mtime
+        chain_time = time.time()
+        logger.info(f"[TIMING] Build chains in {project_dir.name}: {(chain_time - gather_time) * 1000:.0f}ms")
+        logger.info(f"[TIMING] Total for {project_dir.name}: {(chain_time - start_time) * 1000:.0f}ms")
 
         return conversations
 
@@ -131,14 +109,6 @@ class JSONLParser:
                     logger.debug(f"Linked session {conv['session_id']} to parent {parent_session_id}")
 
         return conversations
-
-    def invalidate_project_cache(self, project_dir: Path):
-        """Invalidate cache for a specific project"""
-        project_key = str(project_dir)
-        if project_key in self._project_cache:
-            del self._project_cache[project_key]
-        if project_key in self._project_cache_timestamps:
-            del self._project_cache_timestamps[project_key]
 
     async def parse_file(self, file_path: Path, project_dir: Path = None) -> List[Dict[str, Any]]:
         """

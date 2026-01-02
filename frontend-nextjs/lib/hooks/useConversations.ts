@@ -47,12 +47,14 @@ export interface ConversationsFilters {
 
 export function useConversations(
   filters: ConversationsFilters = {},
-  enabled: boolean = true,
-  initialData?: ConversationsResponse
+  enabled: boolean = true
 ): UseQueryResult<ConversationsResponse> {
   return useQuery({
     queryKey: ['conversations', filters],
     queryFn: async () => {
+      const queryStart = performance.now();
+      console.log('[useConversations] Query started');
+
       const params: Record<string, any> = {};
 
       if (filters.startDate) params.start_date = filters.startDate;
@@ -72,16 +74,22 @@ export function useConversations(
       if (filters.offset !== undefined) params.offset = filters.offset;
       if (filters.limit !== undefined) params.limit = filters.limit;
 
-      return apiClient.get<ConversationsResponse>('/conversations', params);
+      // Use original endpoint with project-level caching (correct filtering and sorting)
+      const data = await apiClient.get<ConversationsResponse>('/conversations', params);
+
+      const queryEnd = performance.now();
+      console.log(`[useConversations] Query completed in ${(queryEnd - queryStart).toFixed(0)}ms`);
+      console.log(`[useConversations] Data: ${data.conversations?.length || 0} conversations, ${data.total_messages || 0} messages`);
+
+      return data;
     },
     enabled,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,  // Prevent refetch on mount when we have initial data
-    refetchOnReconnect: false,  // Prevent refetch on reconnect
-    staleTime: 30000,
-    // Use initialData from server if provided
-    initialData: initialData,
-    // Don't set initialDataUpdatedAt - let React Query manage staleness naturally
+    refetchOnMount: true, // Allow initial fetch on mount for accurate loading state
+    refetchOnReconnect: false,
+    staleTime: 30 * 1000, // 30 seconds - balance between freshness and performance
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1, // Only retry once on failure
   });
 }
 
@@ -91,18 +99,12 @@ export interface Project {
   path: string;
 }
 
-export function useProjects(
-  initialData?: { projects: Project[] }
-): UseQueryResult<{ projects: Project[] }> {
+export function useProjects(): UseQueryResult<{ projects: Project[] }> {
   return useQuery({
     queryKey: ['projects'],
     queryFn: () => apiClient.get<{ projects: Project[] }>('/projects'),
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000,
-    // Use initialData from server if provided
-    initialData: initialData,
   });
 }
 

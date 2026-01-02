@@ -47,6 +47,7 @@ export function useNewMessageManager() {
   /**
    * Set initial state (on reload/initial load)
    * All messages go to read, unread is empty
+   * First 2 messages are always visible, rest start as read
    */
   const setInitialMessages = (conversations: Message[][]) => {
     // Clear existing state
@@ -56,8 +57,10 @@ export function useNewMessageManager() {
       if (Array.isArray(group) && group.length > 0) {
         const groupId = getGroupId(group);
         if (groupId) {
+          // First 2 messages are always immediately visible
+          // Remaining messages start as read (will be visible after clicking button)
           groupStatesRef.current.set(groupId, {
-            read: [...group], // All messages set as read
+            read: group.length > 2 ? group.slice(2) : [], // Messages from index 2 onwards
             unread: [], // unread initialized as empty
           });
         }
@@ -68,6 +71,7 @@ export function useNewMessageManager() {
   /**
    * Add new messages (on WebSocket update)
    * Add messages not in existing read to unread
+   * Only process messages from index 2 onwards (first 2 are always visible)
    */
   const addNewMessages = (conversations: Message[][]) => {
     conversations.forEach((group) => {
@@ -79,8 +83,9 @@ export function useNewMessageManager() {
       const currentState = groupStatesRef.current.get(groupId);
       if (!currentState) {
         // Create new group if doesn't exist (new group)
+        // First 2 messages are always visible, rest go to read
         groupStatesRef.current.set(groupId, {
-          read: [...group],
+          read: group.length > 2 ? group.slice(2) : [],
           unread: [],
         });
         return;
@@ -88,11 +93,13 @@ export function useNewMessageManager() {
 
       // Create UUID set for existing read and unread messages
       const readUuids = new Set(currentState.read.map((msg) => msg.uuid).filter((uuid) => uuid));
-
       const unreadUuids = new Set(currentState.unread.map((msg) => msg.uuid).filter((uuid) => uuid));
 
+      // Only consider messages from index 2 onwards
+      const messagesFromIndexTwo = group.slice(2);
+
       // Add new messages (not in read or unread) to unread
-      const newMessages = group.filter((msg) => {
+      const newMessages = messagesFromIndexTwo.filter((msg) => {
         // Don't treat as new if no UUID (for safety)
         if (!msg.uuid) return false;
 
@@ -108,7 +115,7 @@ export function useNewMessageManager() {
 
   /**
    * Get messages for display
-   * Returns only read messages (unread are hidden)
+   * Always show first 2 messages (user + first assistant), hide unread messages after that
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getDisplayMessages = (group: Message[], _groupIndex: number): Message[] => {
@@ -118,11 +125,26 @@ export function useNewMessageManager() {
     if (!groupId) return group; // Return original group if groupId cannot be obtained
 
     const state = groupStatesRef.current.get(groupId);
-    return state ? state.read : group;
+    if (!state) return group;
+
+    // Always include first 2 messages + read messages
+    const firstTwoMessages = group.slice(0, 2);
+    const remainingReadMessages = state.read.filter((msg) => {
+      // Skip first 2 messages as they're already included
+      if (!msg.uuid) return false;
+      // UUID comparison instead of object reference
+      const matchingMsg = group.find(m => m.uuid === msg.uuid);
+      if (!matchingMsg) return false;
+      const index = group.indexOf(matchingMsg);
+      return index >= 2;
+    });
+
+    return [...firstTwoMessages, ...remainingReadMessages];
   };
 
   /**
    * Get unread message count
+   * Only count messages from index 2 onwards (3rd message and beyond)
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getUnreadCount = (group: Message[], _groupIndex: number): number => {
@@ -132,7 +154,13 @@ export function useNewMessageManager() {
     if (!groupId) return 0;
 
     const state = groupStatesRef.current.get(groupId);
-    return state ? state.unread.length : 0;
+    if (!state) return 0;
+
+    // Only count unread messages that are at index 2 or later in the original group
+    return state.unread.filter((msg) => {
+      const msgIndex = group.indexOf(msg);
+      return msgIndex >= 2;
+    }).length;
   };
 
   /**

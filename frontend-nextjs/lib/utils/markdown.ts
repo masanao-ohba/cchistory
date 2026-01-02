@@ -30,15 +30,15 @@ md.renderer.rules.fence = function (tokens, idx, _options, _env, _self) {
   const lang = token.info ? token.info.trim() : '';
   const id = `code-block-${Math.random().toString(36).substr(2, 9)}`;
 
-  return `<div class="code-block-container relative mb-4 rounded-lg overflow-hidden border border-gray-300">
-    <div class="code-block-header flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
-      <span class="code-language text-sm font-medium text-gray-600">${lang || 'text'}</span>
-      <button class="copy-button flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200" data-code-id="${id}" title="Copy">
-        <svg class="copy-icon text-gray-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  return `<div class="code-block-container relative rounded-lg overflow-hidden border border-gray-300">
+    <div class="code-block-header flex items-center justify-between bg-gray-50 px-3 py-1 border-b border-gray-200">
+      <span class="code-language text-xs font-medium text-gray-600">${lang || 'text'}</span>
+      <button class="copy-button flex items-center justify-center w-6 h-6 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200" data-code-id="${id}" title="Copy">
+        <svg class="copy-icon text-gray-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
-        <svg class="check-icon hidden text-gray-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="check-icon hidden text-gray-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20,6 9,17 4,12"></polyline>
         </svg>
       </button>
