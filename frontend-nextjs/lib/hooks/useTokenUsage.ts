@@ -26,8 +26,12 @@ const getRefreshInterval = (): number => {
 
 /**
  * Format a single usage metric into UI-friendly data
+ * Uses corrected values for display (Claude Code estimated) when available
  */
 const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
+  // Use corrected percentage for display (Claude Code estimated), fallback to raw
+  const displayPercentage = metric.corrected?.percentage ?? metric.percentage_used;
+
   return {
     totalTokens: metric.usage.total_tokens,
     inputTokens: metric.usage.input_tokens,
@@ -38,8 +42,15 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
     endTime: new Date(metric.end_time),
     timeRemainingMinutes: metric.time_remaining_minutes,
     limitTokens: metric.limit_tokens,
-    percentageUsed: metric.percentage_used,
+    limitHoursSonnet: metric.limit_hours_sonnet,
+    limitHoursOpus: metric.limit_hours_opus,
+    limitNote: metric.limit_note,
+    percentageUsed: displayPercentage,  // Corrected value for display
     entries: metric.entries,
+    // Hybrid display: keep raw values for transparency
+    rawTokens: metric.raw?.tokens,
+    rawPercentage: metric.raw?.percentage ?? metric.percentage_used,
+    correctionFactor: metric.corrected?.factor,
   };
 };
 
@@ -47,7 +58,7 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
  * Format raw token usage response into UI-friendly data
  */
 const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null => {
-  if (!data.available || !data.current_session || !data.weekly_all || !data.weekly_opus) {
+  if (!data.available || !data.current_session || !data.weekly_all || !data.weekly_sonnet) {
     return null;
   }
 
@@ -56,7 +67,7 @@ const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null 
     limits: data.limits!,
     currentSession: formatUsageMetric(data.current_session),
     weeklyAll: formatUsageMetric(data.weekly_all),
-    weeklyOpus: formatUsageMetric(data.weekly_opus),
+    weeklySonnet: formatUsageMetric(data.weekly_sonnet),
   };
 };
 

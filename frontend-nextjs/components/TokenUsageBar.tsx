@@ -154,8 +154,18 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     metric: FormattedUsageMetric,
     showTokens: boolean = false
   ) => {
-    const percentage = Math.min(metric.percentageUsed, 100);
+    // Handle null percentageUsed (for hour-based weekly limits)
+    const hasPercentage = metric.percentageUsed !== null;
+    const percentage = hasPercentage ? Math.min(metric.percentageUsed!, 100) : 0;
     const color = getProgressColor(percentage);
+
+    // Build tooltip based on limit type
+    let tooltipText = '';
+    if (metric.limitTokens) {
+      tooltipText = `${percentage.toFixed(1)}% used of ${formatTokens(metric.limitTokens)} token limit`;
+    } else if (metric.limitHoursSonnet) {
+      tooltipText = `${formatTokens(metric.totalTokens)} tokens used. Weekly limit: ${metric.limitHoursSonnet} hours (Sonnet)`;
+    }
 
     return (
       <div className="flex items-center gap-2 sm:gap-3">
@@ -169,15 +179,15 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
               className={`h-full ${color} transition-all duration-300`}
-              style={{ width: `${percentage}%` }}
-              title={`${percentage.toFixed(1)}% used of ${formatTokens(metric.limitTokens)} limit`}
+              style={{ width: hasPercentage ? `${percentage}%` : '0%' }}
+              title={tooltipText}
             />
           </div>
         </div>
 
-        {/* Percentage */}
+        {/* Percentage or info indicator */}
         <div className="flex-shrink-0 text-xs font-semibold text-gray-800 w-10 text-right">
-          {percentage.toFixed(0)}%
+          {hasPercentage ? `${percentage.toFixed(0)}%` : '-'}
         </div>
 
         {/* Token count (optional) - hide on small screens */}
@@ -211,7 +221,9 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
           <div className="flex-1 flex items-center gap-2">
             <span className="text-xs text-gray-700">{t('session')}:</span>
             <span className="text-xs font-bold text-indigo-700">
-              {tokenUsage.currentSession.percentageUsed.toFixed(0)}%
+              {tokenUsage.currentSession.percentageUsed !== null
+                ? `${tokenUsage.currentSession.percentageUsed.toFixed(0)}%`
+                : '-'}
             </span>
             <span className="text-xs text-gray-500">
               ↻ {formatTimeRemaining(tokenUsage.currentSession.timeRemainingMinutes)}
@@ -240,7 +252,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
           <div className="mt-3 space-y-2">
             {renderMetricRow(t('session'), tokenUsage.currentSession, true)}
             {renderMetricRow(t('weekAll'), tokenUsage.weeklyAll, true)}
-            {renderMetricRow(t('weekOpus'), tokenUsage.weeklyOpus, true)}
+            {renderMetricRow(t('weekSonnet'), tokenUsage.weeklySonnet, true)}
 
             {/* Token breakdown */}
             <div className="mt-3 pt-2 border-t border-indigo-100 grid grid-cols-2 gap-2 text-xs">
@@ -307,7 +319,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
           <div className="space-y-2">
             {renderMetricRow(t('currentSession'), tokenUsage.currentSession)}
             {renderMetricRow(t('weekAll'), tokenUsage.weeklyAll)}
-            {renderMetricRow(t('weekOpus'), tokenUsage.weeklyOpus)}
+            {renderMetricRow(t('weekSonnet'), tokenUsage.weeklySonnet)}
           </div>
 
           {/* Expandable details */}

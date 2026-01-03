@@ -29,32 +29,37 @@ export const DEFAULT_TOKEN_THRESHOLDS: TokenUsageThresholds = {
 };
 
 /**
- * Plan-specific token thresholds
- * Will be used when plan detection is implemented
+ * Plan-specific token thresholds (based on official 5-hour session limits)
+ * Updated to match Claude Code official limits (January 2026)
+ *
+ * Official session limits:
+ * - Pro: ~44,000 tokens per 5-hour session
+ * - Max 5x: ~88,000 tokens per 5-hour session
+ * - Max 20x: ~220,000 tokens per 5-hour session
  */
 export const PLAN_TOKEN_THRESHOLDS = {
   pro: {
-    light: 25000,
-    medium: 50000,
-    heavy: 75000,
-    veryHeavy: 100000,
-    warning: 100000,
+    light: 11000,      // 0-25% of 44K
+    medium: 22000,     // 25-50% of 44K
+    heavy: 33000,      // 50-75% of 44K
+    veryHeavy: 39600,  // 75-90% of 44K
+    warning: 44000,    // 90-100% of 44K
   } as TokenUsageThresholds,
 
   max5x: {
-    light: 100000,
-    medium: 250000,
-    heavy: 400000,
-    veryHeavy: 500000,
-    warning: 500000,
+    light: 22000,      // 0-25% of 88K
+    medium: 44000,     // 25-50% of 88K
+    heavy: 66000,      // 50-75% of 88K
+    veryHeavy: 79200,  // 75-90% of 88K
+    warning: 88000,    // 90-100% of 88K
   } as TokenUsageThresholds,
 
   max20x: {
-    light: 400000,
-    medium: 900000,
-    heavy: 1200000,
-    veryHeavy: 1500000,
-    warning: 1500000,
+    light: 55000,      // 0-25% of 220K
+    medium: 110000,    // 25-50% of 220K
+    heavy: 165000,     // 50-75% of 220K
+    veryHeavy: 198000, // 75-90% of 220K
+    warning: 220000,   // 90-100% of 220K
   } as TokenUsageThresholds,
 };
 

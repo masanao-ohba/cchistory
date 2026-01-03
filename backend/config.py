@@ -19,61 +19,58 @@ class ClaudePlanLimits:
     """
     Claude plan usage limits configuration
 
-    Based on reverse-engineering from official Claude Code /status display:
-    - Session limits reset every 5 hours (US Eastern Time blocks)
-    - Weekly limits track usage Monday 00:00 ET to next Monday
-    - Opus limits are separate from all-models limits
-    - Limits are FIXED token counts, not derived from message counts
+    Based on official Claude Code documentation (as of January 2026):
+    - Session limits: 5-hour rolling window, token-based
+    - Weekly limits: 7-day rolling window, hour-based (measured in usage hours, not tokens)
+    - Opus limits: Separate weekly caps for Opus 4.5 usage
+    - Session resets: Every 5 hours (timezone-specific display in /status)
+    - Weekly resets: Every 7 days (timezone-specific display in /status)
 
-    Actual token limits determined from production usage:
-    - MAX_20X session: 1,307,680 tokens (verified: 71,411 tokens = 5.5%)
-    - MAX_20X weekly: 11,811,189 tokens (verified: 4,376,167 tokens = 37.1%)
-    - Other plans scaled proportionally from official message/hour ratios
+    Official token limits (session) and hour limits (weekly):
+    - Session limits are in actual tokens per 5-hour window
+    - Weekly limits are measured in "usage hours" (not directly convertible to tokens)
+    - Usage is shared across Claude.ai and Claude Code
+
+    Sources:
+    - https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan
+    - https://support.claude.com/en/articles/11014257-about-claude-s-max-plan-usage
     """
 
-    # Plan-specific limits (in actual tokens)
-    # These are ACTUAL limits reverse-engineered from Claude Code /status
+    # Plan-specific limits
+    # Session limits: actual tokens per 5-hour window (official)
+    # Weekly limits: usage hours per 7-day window (official)
     LIMITS = {
         ClaudePlanType.PRO: {
             "session": {
-                "messages": 45,  # Official limit
-                "tokens": 84_006,  # Scaled from MAX_20X: 1,680,129 * (45/900)
+                "tokens": 44_000,  # Official: ~44,000 tokens per 5-hour session
+                "equivalent_prompts": "10-40",  # Approximate prompts per session
             },
             "weekly_all": {
-                "hours": 60,  # 40-80 hours Sonnet 4 (using middle estimate)
-                "tokens": 1_968_532,  # Scaled from MAX_20X: 11,811,189 / 6
-            },
-            "weekly_opus": {
-                "hours": 0,  # Pro doesn't have Opus access
-                "tokens": 0,
+                "hours_sonnet": "40-80",  # Official: 40-80 hours Sonnet per week
+                "hours_opus": 0,  # Pro doesn't have Opus access
+                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
             },
         },
         ClaudePlanType.MAX_5X: {
             "session": {
-                "messages": 225,  # Official limit
-                "tokens": 420_032,  # Scaled from MAX_20X: 1,680,129 * (225/900)
+                "tokens": 88_000,  # Official: ~88,000 tokens per 5-hour session
+                "equivalent_prompts": "50-200",  # Approximate prompts per session
             },
             "weekly_all": {
-                "hours": 210,  # 140-280 hours (using middle estimate)
-                "tokens": 6_889_527,  # Scaled from MAX_20X: 11,811,189 * (210/360)
-            },
-            "weekly_opus": {
-                "hours": 25,  # 15-35 hours (using middle estimate)
-                "tokens": 60_726,  # Scaled from MAX_20X: 242,906 * (225/900)
+                "hours_sonnet": "140-280",  # Official: 140-280 hours Sonnet per week
+                "hours_opus": "15-35",  # Official: 15-35 hours Opus per week
+                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
             },
         },
         ClaudePlanType.MAX_20X: {
             "session": {
-                "messages": 900,  # Official limit
-                "tokens": 1_680_129,  # ACTUAL limit (reverse-engineered from 117,609 tokens = 7%)
+                "tokens": 220_000,  # Official: ~220,000 tokens per 5-hour session
+                "equivalent_prompts": "200-800",  # Approximate prompts per session
             },
             "weekly_all": {
-                "hours": 360,  # 240-480 hours (using middle estimate)
-                "tokens": 11_811_189,  # ACTUAL limit (reverse-engineered from 4,381,903 tokens = 37.1%)
-            },
-            "weekly_opus": {
-                "hours": 32,  # 24-40 hours (using middle estimate)
-                "tokens": 242_906,  # ACTUAL limit (reverse-engineered from 82,588 tokens = 34%)
+                "hours_sonnet": "240-480",  # Official: 240-480 hours Sonnet per week
+                "hours_opus": "24-40",  # Official: 24-40 hours Opus per week (as of late 2025)
+                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
             },
         },
     }
@@ -103,6 +100,16 @@ class Config:
     CLAUDE_PROJECTS = os.getenv("CLAUDE_PROJECTS", "")  # カンマ区切りまたはJSON配列形式のプロジェクト名
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Tokyo")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+    # Claude Code補正係数（Claude Codeの内部最適化に対応するための経験的補正）
+    # これらの係数は、生のトークン数からClaude Code /statusに近い推定値を計算するために使用
+    # 詳細: Claude Codeは非公開の最適化を行っているため、完全一致は不可能
+    # ユーザーは自身の使用パターンに基づいて、環境変数で補正係数を調整できる
+    CORRECTION_FACTORS = {
+        "session": float(os.getenv("CORRECTION_FACTOR_SESSION", "0.24")),  # デフォルト: 0.24 (4.17xの逆数)
+        "weekly_all": float(os.getenv("CORRECTION_FACTOR_WEEKLY_ALL", "0.20")),  # デフォルト: 0.20 (5.00xの逆数)
+        "weekly_sonnet": float(os.getenv("CORRECTION_FACTOR_WEEKLY_SONNET", "0.18"))  # デフォルト: 0.18 (5.57xの逆数)
+    }
 
     # APIの設定
     API_PREFIX = "/api"
