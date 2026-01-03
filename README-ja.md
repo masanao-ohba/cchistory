@@ -1,49 +1,34 @@
 # Claude Conversations History Viewer
 
-A modern web application for viewing and searching Claude CLI conversation history.
-
-Claude CLIの会話履歴を閲覧・検索するためのモダンなWebアプリケーションです。
+Claude Code の会話履歴を閲覧・検索するためのモダンなWebアプリケーションです。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.x-green.svg)](https://vuejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
 
 ## 特徴
 
 - 🚀 **軽量で高速** - Docker化されたマイクロサービス構成
 - 📱 **レスポンシブデザイン** - モダンなUIで快適な閲覧体験
-- 🔍 **柔軟な検索** - 日付・プロジェクト別フィルタリング
+- 🔍 **柔軟な検索** - 日付・プロジェクト・キーワードでフィルタリング
 - ⚡ **リアルタイム更新** - WebSocketによる自動更新
 - 🎯 **マルチプロジェクト対応** - 複数のClaude Projectsを統合表示
 - 🔔 **Claude Code Hooks連携** - Claude Code hooksからのリアルタイム通知
+- 📊 **トークン使用量表示** - セッション・週間の使用量を監視
 - 🔧 **設定可能** - 環境変数による柔軟な設定
 
-## 画面概要
+## スクリーンショット
 
-**UI概要:**
+![Claude Conversations History Viewer](screenshot.png)
 
-| 検索・フィルター機能 |
-|---------------------|
-| **開始日** \| **終了日** \| **実行ボタン** |
-
-| 統計表示 |
-|----------|
-| **42,257** 全会話数 \| **1,234** フィルター結果 \| **156** セッション \| **3** プロジェクト |
-
-**会話履歴表示:**
-```
-[User] 2024-01-15 14:30:45
-APIの実装についてサポートしてください...
-
-[Assistant] 2024-01-15 14:31:02  
-APIの実装についてお手伝いします...
-```
+*会話履歴と検索・フィルター機能を備えたメインインターフェース*
 
 ## 必要要件
 
 - Docker & Docker Compose
-- Claude CLI（`~/.claude/projects`にデータが存在する）
+- Claude Code CLI（`~/.claude/projects`にデータが存在する）
 
 ## クイックスタート
 
@@ -80,7 +65,7 @@ docker-compose logs -f
 
 ## Claude Code Hooks連携
 
-このアプリケーションは、Claude Code hooksからのリアルタイム通知を受信し、複数のプロジェクトのClaude CLI活動を監視できます。
+このアプリケーションは、Claude Code hooksからのリアルタイム通知を受信し、複数のプロジェクトのClaude Code活動を監視できます。
 
 ### Hooksの設定
 
@@ -88,7 +73,7 @@ docker-compose logs -f
    ```bash
    # cchistoryディレクトリに移動
    cd /path/to/cchistory
-   
+
    # 対象プロジェクトのパスを指定してhooks インストーラを実行
    ./scripts/install-hooks.sh --target-project-path /path/to/your/claude/project
    ```
@@ -133,23 +118,6 @@ docker-compose logs -f
 - 個別通知を削除
 - 全通知を既読にマーク
 
-## 開発
-
-```bash
-# 開発用Docker Composeで起動
-docker-compose -f docker-compose.yml up --build
-
-# ログを確認
-docker-compose -f docker-compose.yml logs -f
-```
-
-開発用では以下のポートでアクセス可能：
-- フロントエンド: http://localhost:3000 （Vite開発サーバー）
-- バックエンド: http://localhost:8000 （FastAPI）
-
-ファイルを編集すると自動でリロードされます。
-
-
 ## 設定
 
 ### 環境変数
@@ -163,8 +131,8 @@ docker-compose -f docker-compose.yml logs -f
 | `LOG_LEVEL` | `INFO` | ログレベル |
 | `NGROK_AUTHTOKEN` | - | ngrok認証トークン |
 | `NGROK_DOMAIN` | - | ngrokドメイン名 |
-| `NGROK_OAUTH_ALLOW_EMAIL` | - | OAuth許可メールアドレス（単一の値、ドメインと併用可） |
-| `NGROK_OAUTH_ALLOW_DOMAIN` | - | OAuth許可メールドメイン（単一の値、メールと併用可） |
+| `NGROK_OAUTH_ALLOW_EMAIL` | - | OAuth許可メールアドレス |
+| `NGROK_OAUTH_ALLOW_DOMAIN` | - | OAuth許可メールドメイン |
 
 ### ngrokによる公開とOAuth認証
 
@@ -196,17 +164,6 @@ docker-compose down
 docker-compose up -d
 ```
 
-### カスタムClaude Projectsパス
-
-```bash
-# .envファイルを編集
-echo "CLAUDE_PROJECTS_PATH=/path/to/your/claude/projects" >> .env
-
-# 再起動
-docker-compose down
-docker-compose up -d
-```
-
 ## 使用方法
 
 ### 基本操作
@@ -214,8 +171,9 @@ docker-compose up -d
 1. **全件表示**: 初期状態では全ての会話が表示されます
 2. **日付フィルター**: 開始日・終了日を指定して期間検索
 3. **プロジェクトフィルター**: 特定のプロジェクトのみ表示
-4. **クイックフィルター**: 今日、昨日、過去7日、過去30日の便利ボタン
-5. **通知機能**: ベルアイコンからClaude Code hooksのリアルタイム通知を確認
+4. **キーワード検索**: 会話内容を検索
+5. **クイックフィルター**: 今日、昨日、過去7日、過去30日の便利ボタン
+6. **通知機能**: ベルアイコンからClaude Code hooksのリアルタイム通知を確認
 
 ### リアルタイム更新
 
@@ -235,12 +193,14 @@ docker-compose up -d
 ├── Nginx (Port 80)
 │   ├── リバースプロキシ
 │   └── 静的ファイル配信
-├── Vue.js Frontend  
-│   ├── モダンなSPA
-│   └── Tailwind CSS
+├── Next.js Frontend (Port 3000)
+│   ├── React 19 with App Router
+│   ├── TanStack React Query
+│   ├── Zustand State Management
+│   └── Tailwind CSS v4
 └── FastAPI Backend (Port 8000)
     ├── REST API
-    ├── WebSocket  
+    ├── WebSocket
     └── ファイル監視
 ```
 
@@ -262,12 +222,16 @@ docker-compose up -d
 - uvicorn (ASGIサーバー)
 - watchdog (ファイル監視)
 - WebSocket (リアルタイム通信)
+- Pydantic (データ検証)
 
 **フロントエンド:**
-- Vue 3 (Composition API)
-- Vite (高速ビルドツール)
-- Pinia (状態管理)
-- Tailwind CSS (ユーティリティファーストCSS)
+- Next.js 15 (App Router搭載Reactフレームワーク)
+- React 19 (UIライブラリ)
+- TypeScript 5 (型安全JavaScript)
+- TanStack React Query v5 (サーバー状態管理)
+- Zustand (クライアント状態管理)
+- Tailwind CSS v4 (ユーティリティファーストCSS)
+- next-intl (国際化)
 
 **インフラ:**
 - Docker & Docker Compose
@@ -286,30 +250,17 @@ docker-compose up -d
 - `start_date` (optional): 開始日 (YYYY-MM-DD)
 - `end_date` (optional): 終了日 (YYYY-MM-DD)
 - `project[]` (optional): プロジェクトID（複数指定可）
+- `keyword` (optional): 検索キーワード
 - `offset` (optional): オフセット (default: 0)
 - `limit` (optional): 取得件数 (default: 100, max: 1000)
-
-**レスポンス:**
-```json
-{
-  "conversations": [...],
-  "total": 42257,
-  "offset": 0,
-  "limit": 100,
-  "stats": {
-    "total_conversations": 42257,
-    "unique_sessions": 156
-  }
-}
-```
 
 #### GET `/api/projects`
 
 利用可能なプロジェクト一覧を取得
 
-#### GET `/api/conversations/stats`
+#### GET `/api/token-usage`
 
-統計情報を取得
+セッション・週間のトークン使用量統計を取得
 
 #### POST `/api/notifications/hook`
 
@@ -356,17 +307,7 @@ docker-compose logs backend
 docker-compose ps
 ```
 
-#### 4. WebSocket接続エラー
-
-```bash
-# Nginxの設定確認
-docker-compose logs nginx
-
-# バックエンドの状態確認
-docker-compose logs backend
-```
-
-#### 5. Claude Code Hooksが動作しない
+#### 4. Claude Code Hooksが動作しない
 
 ```bash
 # hooksが正しくインストールされているか確認
@@ -389,7 +330,7 @@ docker-compose logs -f
 
 # 特定サービスのログ
 docker-compose logs -f backend
-docker-compose logs -f frontend
+docker-compose logs -f frontend-nextjs
 docker-compose logs -f nginx
 ```
 
@@ -398,17 +339,20 @@ docker-compose logs -f nginx
 ### 開発環境のセットアップ
 
 ```bash
+# ホットリロードで起動
+docker-compose up --build
+
+# フロントエンド開発
+cd frontend-nextjs
+npm install
+npm run dev  # Next.js with Turbopackをポート3000で起動
+
 # バックエンド開発
 cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
-
-# フロントエンド開発
-cd frontend
-npm install
-npm run dev
 ```
 
 ### 貢献方法
@@ -425,3 +369,8 @@ MIT License
 ## 作者
 
 Masanao Ohba
+
+## サポート
+
+問題や質問がある場合：
+- [GitHub Issues](https://github.com/masanao-ohba/cchistory/issues)でIssueを作成

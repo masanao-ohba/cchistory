@@ -1,10 +1,11 @@
 # Claude Conversations History Viewer
 
-A modern web application for viewing and searching Claude CLI conversation history.
+A modern web application for viewing and searching Claude Code conversation history.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.x-green.svg)](https://vuejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
 
 ## Features
@@ -15,6 +16,7 @@ A modern web application for viewing and searching Claude CLI conversation histo
 - ⚡ **Real-time Updates** - Automatic updates via WebSocket
 - 🎯 **Multi-project Support** - Integrated display of multiple Claude projects
 - 🔔 **Claude Code Hooks Integration** - Real-time notifications from Claude Code hooks
+- 📊 **Token Usage Tracking** - Monitor session and weekly usage
 - 🔧 **Configurable** - Flexible configuration through environment variables
 
 ## Screenshots
@@ -26,7 +28,7 @@ A modern web application for viewing and searching Claude CLI conversation histo
 ## Requirements
 
 - Docker & Docker Compose
-- Claude CLI (with data in `~/.claude/projects`)
+- Claude Code CLI (with data in `~/.claude/projects`)
 
 ## Quick Start
 
@@ -63,7 +65,7 @@ Open your browser and navigate to http://localhost:18080
 
 ## Claude Code Hooks Integration
 
-This application can receive real-time notifications from Claude Code hooks, allowing you to monitor Claude CLI activity across multiple projects.
+This application can receive real-time notifications from Claude Code hooks, allowing you to monitor Claude Code activity across multiple projects.
 
 ### Setup Hooks
 
@@ -71,7 +73,7 @@ This application can receive real-time notifications from Claude Code hooks, all
    ```bash
    # Navigate to the cchistory directory
    cd /path/to/cchistory
-   
+
    # Run the hooks installer with target project path
    ./scripts/install-hooks.sh --target-project-path /path/to/your/claude/project
    ```
@@ -116,22 +118,6 @@ This application can receive real-time notifications from Claude Code hooks, all
 - Delete individual notifications
 - Mark all notifications as read
 
-## Development
-
-```bash
-# Start with development Docker Compose
-docker-compose -f docker-compose.yml up --build
-
-# Check logs
-docker-compose -f docker-compose.yml logs -f
-```
-
-In development mode, you can access:
-- Frontend: http://localhost:3000 (Vite dev server)
-- Backend: http://localhost:8000 (FastAPI)
-
-Files are automatically reloaded when edited.
-
 ## Configuration
 
 ### Environment Variables
@@ -145,8 +131,8 @@ Files are automatically reloaded when edited.
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `NGROK_AUTHTOKEN` | - | ngrok authentication token |
 | `NGROK_DOMAIN` | - | ngrok domain name |
-| `NGROK_OAUTH_ALLOW_EMAIL` | - | Allowed email address for OAuth (single value, can be used with domain) |
-| `NGROK_OAUTH_ALLOW_DOMAIN` | - | Allowed email domain for OAuth (single value, can be used with email) |
+| `NGROK_OAUTH_ALLOW_EMAIL` | - | Allowed email address for OAuth |
+| `NGROK_OAUTH_ALLOW_DOMAIN` | - | Allowed email domain for OAuth |
 
 ### ngrok Public Access with OAuth
 
@@ -178,27 +164,6 @@ docker-compose down
 docker-compose up -d
 ```
 
-### Custom Claude Projects Path
-
-```bash
-# Edit .env file
-echo "CLAUDE_PROJECTS_PATH=/path/to/your/claude/projects" >> .env
-
-# Restart
-docker-compose down
-docker-compose up -d
-```
-
-### Specific Project Selection
-
-```bash
-# Select specific projects (comma-separated)
-echo "CLAUDE_PROJECTS=project1,project2" >> .env
-
-# Or use JSON array format
-echo 'CLAUDE_PROJECTS=["project1", "project2"]' >> .env
-```
-
 ## Usage
 
 ### Basic Operations
@@ -228,12 +193,14 @@ echo 'CLAUDE_PROJECTS=["project1", "project2"]' >> .env
 ├── Nginx (Port 80)
 │   ├── Reverse Proxy
 │   └── Static File Serving
-├── Vue.js Frontend  
-│   ├── Modern SPA
-│   └── Tailwind CSS
+├── Next.js Frontend (Port 3000)
+│   ├── React 19 with App Router
+│   ├── TanStack React Query
+│   ├── Zustand State Management
+│   └── Tailwind CSS v4
 └── FastAPI Backend (Port 8000)
     ├── REST API
-    ├── WebSocket  
+    ├── WebSocket
     └── File Watcher
 ```
 
@@ -255,12 +222,16 @@ echo 'CLAUDE_PROJECTS=["project1", "project2"]' >> .env
 - uvicorn (ASGI server)
 - watchdog (File monitoring)
 - WebSocket (Real-time communication)
+- Pydantic (Data validation)
 
 **Frontend:**
-- Vue 3 (Composition API)
-- Vite (Fast build tool)
-- Pinia (State management)
-- Tailwind CSS (Utility-first CSS)
+- Next.js 15 (React framework with App Router)
+- React 19 (UI library)
+- TypeScript 5 (Type-safe JavaScript)
+- TanStack React Query v5 (Server state management)
+- Zustand (Client state management)
+- Tailwind CSS v4 (Utility-first CSS)
+- next-intl (Internationalization)
 
 **Infrastructure:**
 - Docker & Docker Compose
@@ -283,27 +254,13 @@ Retrieve conversation history
 - `offset` (optional): Offset (default: 0)
 - `limit` (optional): Number of items (default: 100, max: 1000)
 
-**Response:**
-```json
-{
-  "conversations": [...],
-  "total": 42257,
-  "offset": 0,
-  "limit": 100,
-  "stats": {
-    "total_conversations": 42257,
-    "unique_sessions": 156
-  }
-}
-```
-
 #### GET `/api/projects`
 
 Get list of available projects
 
-#### GET `/api/conversations/stats`
+#### GET `/api/token-usage`
 
-Get statistics
+Get token usage statistics for session and weekly limits
 
 #### POST `/api/notifications/hook`
 
@@ -350,17 +307,7 @@ docker-compose logs backend
 docker-compose ps
 ```
 
-#### 4. WebSocket Connection Error
-
-```bash
-# Check Nginx configuration
-docker-compose logs nginx
-
-# Check backend status
-docker-compose logs backend
-```
-
-#### 5. Claude Code Hooks Not Working
+#### 4. Claude Code Hooks Not Working
 
 ```bash
 # Check if hooks are properly installed
@@ -383,7 +330,7 @@ docker-compose logs -f
 
 # Specific service logs
 docker-compose logs -f backend
-docker-compose logs -f frontend
+docker-compose logs -f frontend-nextjs
 docker-compose logs -f nginx
 ```
 
@@ -392,17 +339,20 @@ docker-compose logs -f nginx
 ### Development Environment Setup
 
 ```bash
+# Start with hot reload
+docker-compose up --build
+
+# Frontend development
+cd frontend-nextjs
+npm install
+npm run dev  # Starts Next.js with Turbopack on port 3000
+
 # Backend development
 cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
-
-# Frontend development
-cd frontend
-npm install
-npm run dev
 ```
 
 ### Contributing
@@ -424,8 +374,3 @@ Masanao Ohba
 
 If you encounter any issues or have questions:
 - Create an issue on [GitHub Issues](https://github.com/masanao-ohba/cchistory/issues)
-- Check the [project documentation](https://github.com/masanao-ohba/cchistory)
-
-## Acknowledgments
-
-This project utilizes the conversation history generated by [Claude CLI](https://claude.ai) to provide an enhanced viewing and searching experience.

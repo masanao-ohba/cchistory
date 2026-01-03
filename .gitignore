@@ -80,7 +80,7 @@ CLAUDE.md
 *.png
 *.jpg
 *.jpeg
-screenshot*.png
+screenshot-*.png
 SCR-*.png
 
 # Debug files
@@ -94,3 +94,6 @@ curl-debug.log
 # Migration documentation (temporary)
 MIGRATION_SUMMARY.md
 requirements.md
+
+!screenshot.png
+
