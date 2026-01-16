@@ -67,10 +67,10 @@ export default function ProjectTabs({
   }, [tabs, selectedTabId, projects, onTabChange]);
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center min-w-0">
       {/* タブスクロールコンテナ */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-1" role="tablist">
+      <div className="flex-1 overflow-x-auto min-w-0">
+        <div className="flex gap-1 w-max" role="tablist">
               {tabs.map((tab) => {
                 const isSelected = tab.id === selectedTabId;
                 const isAllTab = tab.id === 'all';

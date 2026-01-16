@@ -419,8 +419,8 @@ export default function HomeContent({}: HomeContentProps = {}) {
 
         {/* Project Tabs Row */}
         <Container>
-          <div className="flex items-center">
-            <div className="flex-1">
+          <div className="flex items-center min-w-0">
+            <div className="flex-1 min-w-0">
               <ProjectTabs
                 projects={projectTabs}
                 selectedTabId={activeProjectTab}
