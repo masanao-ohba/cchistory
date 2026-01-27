@@ -87,6 +87,9 @@ SCR-*.png
 debug/
 curl-debug.log
 
+# Debug/test scripts (Playwright, etc.)
+scripts/*.js
+
 # Claude settings (contains local paths)
 .claude/settings.local.json
 .claude/settings.local.json.backup.*
