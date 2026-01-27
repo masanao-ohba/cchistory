@@ -120,7 +120,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
         {/* Sort Order Toggle - Icon only in compact mode */}
         <button
           onClick={handleSortToggle}
-          className="p-1.5 bg-white rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
+          className="p-1.5 bg-white rounded-md border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer"
           title={t(sortOrder === 'desc' ? 'sortNewestFirst' : 'sortOldestFirst')}
         >
           {sortOrder === 'desc' ? (
@@ -134,7 +134,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
         {hasActiveFilters && (
           <button
             onClick={onReset}
-            className="p-1.5 bg-red-50 rounded-md border border-red-200 hover:bg-red-100 transition-colors"
+            className="p-1.5 bg-red-50 rounded-md border border-red-200 hover:bg-red-100 transition-colors cursor-pointer"
             title={t('resetFilters')}
           >
             <XMarkIcon className="h-4 w-4 text-red-600" />
@@ -185,7 +185,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
           {/* Sort Order Toggle */}
           <button
             onClick={handleSortToggle}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-sm cursor-pointer"
             title={t(sortOrder === 'desc' ? 'sortNewestFirst' : 'sortOldestFirst')}
           >
             {sortOrder === 'desc' ? (
@@ -202,7 +202,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
           {hasActiveFilters && (
             <button
               onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100 transition-colors text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100 transition-colors text-sm cursor-pointer"
               title={t('resetFilters')}
             >
               <XMarkIcon className="h-4 w-4" />

@@ -72,7 +72,7 @@ const MessageItem = memo(function MessageItem({
   }, [isUser, isExpanded]);
 
   const toggleButtonClasses = useMemo(() => {
-    const base = 'mt-2 text-sm font-medium hover:underline';
+    const base = 'mt-2 text-sm font-medium hover:underline cursor-pointer';
     const color = isUser
       ? 'text-blue-600 hover:text-blue-800'
       : 'text-green-600 hover:text-green-800';
@@ -186,7 +186,7 @@ const MessageItem = memo(function MessageItem({
         <div className="flex items-center space-x-2">
           <button
             onClick={handleCopyMessage}
-            className={`p-1 rounded transition-colors duration-200 ${
+            className={`p-1 rounded transition-colors duration-200 cursor-pointer ${
               isCopied
                 ? 'text-green-600'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
