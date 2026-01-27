@@ -58,6 +58,13 @@ class UsageCalculator:
         self._cache_block_id = None
         self.CACHE_TTL_SECONDS = 300  # 5 minutes
 
+    def invalidate_cache(self) -> None:
+        """Invalidate the usage calculator cache to force fresh data on next request."""
+        self._cache = None
+        self._cache_timestamp = None
+        self._cache_block_id = None
+        logger.info("UsageCalculator cache invalidated")
+
     def _is_cache_valid(self, block_id: str) -> bool:
         """Check if cached data is still valid"""
         if self._cache is None:

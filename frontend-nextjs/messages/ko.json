@@ -12,6 +12,8 @@
     "assistant": "어시스턴트",
     "showMore": "더 보기",
     "collapse": "접기",
+    "copyMessage": "메시지 복사",
+    "copied": "복사됨!",
     "loadMore": "더 불러오기",
     "loadMoreRange": "({start}~{end}개 항목)",
     "loadMoreThreadRange": "({start}~{end}개 항목)",
@@ -124,8 +126,8 @@
     "title": "토큰 사용량",
     "titleWithBlock": "토큰 사용량 (5시간 블록)",
     "loading": "토큰 사용량 로딩 중...",
-    "session": "세션",
-    "currentSession": "현재 세션",
+    "session": "5시간",
+    "currentSession": "5시간 창",
     "weekAll": "주간 (전체)",
     "weekSonnet": "주간 (Sonnet)",
     "plan": "플랜",
@@ -142,7 +144,11 @@
     "resetIn": "리셋까지",
     "used": "사용됨",
     "showDetails": "세부정보 표시",
-    "hideDetails": "세부정보 숨기기"
+    "hideDetails": "세부정보 숨기기",
+    "sourceApi": "Anthropic API의 실시간 데이터",
+    "sourceEstimate": "로컬 데이터 기반 추정",
+    "refresh": "새로고침",
+    "refreshing": "새로고침 중..."
   },
   "filters": {
     "showFilters": "필터 표시",

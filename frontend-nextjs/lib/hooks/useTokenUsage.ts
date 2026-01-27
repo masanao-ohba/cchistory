@@ -26,11 +26,25 @@ const getRefreshInterval = (): number => {
 
 /**
  * Format a single usage metric into UI-friendly data
- * Uses corrected values for display (Claude Code estimated) when available
+ *
+ * Priority for display percentage:
+ * 1. Anthropic API value (anthropic_utilization) - most accurate
+ * 2. Corrected estimate (corrected.percentage) - estimated from JSONL
+ * 3. Raw percentage (percentage_used) - fallback
  */
 const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
-  // Use corrected percentage for display (Claude Code estimated), fallback to raw
-  const displayPercentage = metric.corrected?.percentage ?? metric.percentage_used;
+  // Priority: Anthropic API > Corrected estimate > Raw percentage
+  let displayPercentage: number | null;
+  let isFromApi = false;
+
+  if (metric.anthropic_utilization !== undefined) {
+    displayPercentage = metric.anthropic_utilization;
+    isFromApi = true;
+  } else if (metric.corrected?.percentage !== undefined) {
+    displayPercentage = metric.corrected.percentage;
+  } else {
+    displayPercentage = metric.percentage_used;
+  }
 
   return {
     totalTokens: metric.usage.total_tokens,
@@ -45,12 +59,16 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
     limitHoursSonnet: metric.limit_hours_sonnet,
     limitHoursOpus: metric.limit_hours_opus,
     limitNote: metric.limit_note,
-    percentageUsed: displayPercentage,  // Corrected value for display
+    percentageUsed: displayPercentage,
     entries: metric.entries,
     // Hybrid display: keep raw values for transparency
     rawTokens: metric.raw?.tokens,
     rawPercentage: metric.raw?.percentage ?? metric.percentage_used,
     correctionFactor: metric.corrected?.factor,
+    // Anthropic API integration
+    anthropicUtilization: metric.anthropic_utilization,
+    anthropicResetsAt: metric.anthropic_resets_at ? new Date(metric.anthropic_resets_at) : undefined,
+    isFromApi,
   };
 };
 
@@ -68,6 +86,7 @@ const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null 
     currentSession: formatUsageMetric(data.current_session),
     weeklyAll: formatUsageMetric(data.weekly_all),
     weeklySonnet: formatUsageMetric(data.weekly_sonnet),
+    source: data.source || 'jsonl_estimate',
   };
 };
 
@@ -94,10 +113,33 @@ export const useTokenUsage = (enabled: boolean = true) => {
   // Format the data for easier consumption
   const formattedData = query.data ? formatTokenUsage(query.data) : null;
 
+  // Function to refresh OAuth token and refetch data
+  const refreshOAuthToken = async () => {
+    try {
+      // Call the host-side token refresh server
+      // This extracts fresh token from Keychain and updates the token file
+      const response = await fetch('http://localhost:18081/refresh');
+      const result = await response.json();
+      if (result.success) {
+        // Token file updated, now refetch the usage data
+        await query.refetch();
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (err) {
+      // Token server not running
+      return {
+        success: false,
+        error: 'Token refresh server not running. Start with: ./start.sh'
+      };
+    }
+  };
+
   return {
     ...query,
     tokenUsage: formattedData,
     rawData: query.data,
     error: query.data?.error || (query.error as Error)?.message || null,
+    refreshOAuthToken,
   };
 };

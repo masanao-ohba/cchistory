@@ -52,12 +52,20 @@ vim .env
 ### 3. 起動
 
 ```bash
-# Docker Composeで起動
-docker-compose up -d
+# 全サービスを起動（推奨）
+./start.sh
+
+# バックグラウンドで起動
+./start.sh -d
 
 # ログを確認
 docker-compose logs -f
+
+# 全サービスを停止
+./start.sh stop
 ```
+
+> **注意（macOSのみ）**: `start.sh`スクリプトは、Anthropic API連携のためのトークンリフレッシュサーバーを自動的に起動します。これにより、Anthropic APIからのリアルタイムトークン使用量表示が可能になります。詳細は[トークン使用量機能](#トークン使用量機能)を参照してください。
 
 ### 4. アクセス
 
@@ -118,6 +126,50 @@ docker-compose logs -f
 - 個別通知を削除
 - 全通知を既読にマーク
 
+## トークン使用量機能
+
+このアプリケーションは、Anthropic APIからのリアルタイムトークン使用量を表示し、公式Claude Codeステータスと同様のセッション・週間リミットを表示します。
+
+### 仕組み
+
+1. **データソース**:
+   - **Anthropic API**（優先）: OAuthトークン経由でリアルタイムデータを取得
+   - **ローカルJSONLファイル**（フォールバック）: 会話履歴から推定した使用量
+
+2. **OAuthトークンリフレッシュ**（macOSのみ）:
+   - `start.sh`スクリプトがポート18081で軽量HTTPサーバーを起動
+   - このサーバーはリクエスト時にmacOS KeychainからOAuthトークンを抽出
+   - トークンは`./secrets/oauth-token`に保存され、Dockerにマウント
+
+3. **トークンリフレッシュボタン**:
+   - OAuthトークンが期限切れの場合、トークン使用量パネルの「更新」ボタンをクリック
+   - Keychainから新しいトークンを取得し、表示を更新
+
+### 必要要件
+
+- **macOS**: OAuthトークンアクセスに必要（macOS Keychain経由）
+- **Claude Code CLI**: ログイン済みであること（トークンがKeychainに保存される）
+
+### 手動でトークンをリフレッシュ
+
+```bash
+# トークンを手動でリフレッシュ
+./scripts/refresh-oauth-token.sh
+
+# トークンリフレッシュサーバーの状態を確認
+curl http://localhost:18081/refresh
+```
+
+### macOS以外での使用
+
+Linux/Windowsでは、アプリケーションはローカルJSONL推定にフォールバックします。Anthropic APIデータを使用するには：
+
+```bash
+# 環境変数でトークンを設定
+export ANTHROPIC_OAUTH_TOKEN="your_token_here"
+docker-compose up -d
+```
+
 ## 設定
 
 ### 環境変数
@@ -146,7 +198,7 @@ ngrokを使用してアプリケーションをインターネットに公開し
    NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
    NGROK_OAUTH_ALLOW_DOMAIN=your-company.com
    ```
-3. **ngrokを含めて起動**: `docker-compose up -d`
+3. **ngrokを含めて起動**: `./start.sh`
 4. **アクセス**: ngrokドメインにアクセス（例: `https://your-domain.ngrok-free.app`）
 
 ユーザーはGoogleで認証するよう求められ、許可されたメールアドレス/ドメインのみアプリケーションにアクセスできます。
@@ -160,8 +212,8 @@ ngrokを使用してアプリケーションをインターネットに公開し
 echo "VIEWER_PORT=19080" >> .env
 
 # 再起動
-docker-compose down
-docker-compose up -d
+./start.sh stop
+./start.sh
 ```
 
 ## 使用方法
@@ -283,8 +335,8 @@ Claude Code hooksからの通知を受信（webhook エンドポイント）
 ```bash
 # ポートを変更
 echo "VIEWER_PORT=19080" >> .env
-docker-compose down
-docker-compose up -d
+./start.sh stop
+./start.sh
 ```
 
 #### 2. Claude Projectsが見つからない
@@ -321,6 +373,31 @@ curl -X POST http://localhost:18080/api/notifications/hook \
 # 通知ログを確認
 docker-compose logs -f backend | grep notification
 ```
+
+#### 5. トークン使用量が表示されない（Anthropic API）
+
+```bash
+# トークンリフレッシュサーバーが動作しているか確認
+pgrep -f token-refresh-server.sh
+
+# 動作していない場合、start.shで再起動
+./start.sh stop
+./start.sh
+
+# トークンリフレッシュを手動でテスト
+curl http://localhost:18081/refresh
+
+# OAuthトークンファイルが存在するか確認
+cat ./secrets/oauth-token | head -c 50
+
+# バックエンドログでトークンエラーを確認
+docker-compose logs backend | grep -i "oauth\|token"
+```
+
+**よくある原因:**
+- **トークンリフレッシュサーバーが動作していない**: `docker-compose up`ではなく`./start.sh`を使用
+- **Claude Codeがログインしていない**: まず`claude` CLIを実行してログイン
+- **macOSではない**: OAuthトークンリフレッシュにはmacOS Keychainアクセスが必要
 
 ### ログの確認
 

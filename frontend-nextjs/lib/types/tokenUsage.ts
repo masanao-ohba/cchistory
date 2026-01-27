@@ -42,6 +42,10 @@ export interface UsageMetric {
   // Hybrid display: raw and corrected values
   raw?: UsageValuePair;               // Raw calculated values
   corrected?: CorrectedValue;         // Claude Code estimated values (apply correction factor)
+
+  // Anthropic API integration
+  anthropic_utilization?: number;     // Direct API value (0-100), only when source is anthropic_api
+  anthropic_resets_at?: string;       // API reset time (ISO timestamp)
 }
 
 export interface PlanLimits {
@@ -56,13 +60,27 @@ export interface PlanLimits {
   };
 }
 
+export type UsageSource = 'anthropic_api' | 'jsonl_estimate';
+
+export interface AnthropicUsageData {
+  utilization: number;  // 0-1
+  resets_at: string;    // ISO timestamp
+}
+
+export interface AnthropicData {
+  five_hour: AnthropicUsageData;
+  seven_day: AnthropicUsageData;
+}
+
 export interface TokenUsageResponse {
   available: boolean;
+  source?: UsageSource;               // Data source: API or JSONL estimate
   plan_type?: string;                 // "pro" | "max_5x" | "max_20x"
   limits?: PlanLimits;
   current_session?: UsageMetric;
   weekly_all?: UsageMetric;
   weekly_sonnet?: UsageMetric;  // Changed from weekly_opus
+  anthropic_data?: AnthropicData;     // Raw Anthropic API data (when source is anthropic_api)
   error?: string | null;
 }
 
@@ -84,12 +102,16 @@ export interface FormattedUsageMetric {
   limitHoursSonnet?: string;
   limitHoursOpus?: string | number;
   limitNote?: string;
-  percentageUsed: number | null;  // Corrected percentage (Claude Code estimated)
+  percentageUsed: number | null;  // Display percentage (Anthropic API or corrected estimate)
   entries: number;
   // Hybrid display: raw and corrected values
   rawTokens?: number;
   rawPercentage?: number | null;
   correctionFactor?: number;
+  // Anthropic API integration
+  anthropicUtilization?: number;      // Direct API value (0-100)
+  anthropicResetsAt?: Date;           // API reset time
+  isFromApi?: boolean;                // Whether percentageUsed is from Anthropic API
 }
 
 /**
@@ -101,4 +123,5 @@ export interface FormattedTokenUsage {
   currentSession: FormattedUsageMetric;
   weeklyAll: FormattedUsageMetric;
   weeklySonnet: FormattedUsageMetric;  // Changed from weeklyOpus
+  source: UsageSource;                 // Data source: API or JSONL estimate
 }

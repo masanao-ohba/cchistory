@@ -12,6 +12,8 @@
     "assistant": "Assistant",
     "showMore": "Show More",
     "collapse": "Collapse",
+    "copyMessage": "Copy Message",
+    "copied": "Copied!",
     "loadMore": "Load More",
     "loadMoreRange": "({start}〜{end} items)",
     "loadMoreThreadRange": "({start}〜{end} items)",
@@ -126,8 +128,8 @@
     "title": "Token Usage",
     "titleWithBlock": "Token Usage (5-hour block)",
     "loading": "Loading token usage...",
-    "session": "Session",
-    "currentSession": "Current Session",
+    "session": "5-Hour",
+    "currentSession": "5-Hour Window",
     "weekAll": "Week (All)",
     "weekSonnet": "Week (Sonnet only)",
     "plan": "Plan",
@@ -144,7 +146,11 @@
     "resetIn": "Reset in",
     "used": "used",
     "showDetails": "Show Details",
-    "hideDetails": "Hide Details"
+    "hideDetails": "Hide Details",
+    "sourceApi": "Live data from Anthropic API",
+    "sourceEstimate": "Estimated from local data",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing..."
   },
   "filters": {
     "showFilters": "Show filters",

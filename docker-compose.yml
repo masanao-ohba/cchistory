@@ -1,3 +1,18 @@
+# OAuth Token Refresh Setup
+# ========================
+# The Anthropic OAuth token must be refreshed from macOS Keychain (host-only).
+# Run this script before starting Docker to update the token file:
+#
+#   ./scripts/refresh-oauth-token.sh
+#
+# For continuous refresh (recommended), run in a separate terminal:
+#
+#   ./scripts/refresh-oauth-token.sh --watch
+#
+# The token file is mounted at /secrets/oauth-token in the backend container.
+# The backend reads this file and provides /api/token-usage/refresh endpoint
+# to invalidate caches when the token is updated.
+
 services:
   backend:
     build:
@@ -9,10 +24,12 @@ services:
       - CLAUDE_PLAN=${CLAUDE_PLAN:-max_20x}
       - TIMEZONE=${TIMEZONE:-Asia/Tokyo}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ANTHROPIC_OAUTH_TOKEN=${ANTHROPIC_OAUTH_TOKEN:-}
     volumes:
       - ${CLAUDE_PROJECTS_PATH:-${HOME}/.claude/projects}:/data/projects:ro  # Includes token usage data
       - ./backend:/app:ro  # 開発時はソースコードをマウント（ホットリロード用）
       - cchistory-next-storage:/app/storage:rw  # 通知データ等の永続化用
+      - ./secrets:/secrets:ro  # OAuth token file (refreshed by host script)
     networks:
       - cchistory-network
     restart: unless-stopped

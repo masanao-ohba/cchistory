@@ -52,12 +52,20 @@ vim .env
 ### 3. Launch
 
 ```bash
-# Start with Docker Compose
-docker-compose up -d
+# Start all services (recommended)
+./start.sh
+
+# Or start in background
+./start.sh -d
 
 # Check logs
 docker-compose logs -f
+
+# Stop all services
+./start.sh stop
 ```
+
+> **Note (macOS only)**: The `start.sh` script automatically starts a token refresh server for Anthropic API integration. This enables real-time token usage display from the Anthropic API. See [Token Usage Feature](#token-usage-feature) for details.
 
 ### 4. Access
 
@@ -118,6 +126,50 @@ This application can receive real-time notifications from Claude Code hooks, all
 - Delete individual notifications
 - Mark all notifications as read
 
+## Token Usage Feature
+
+This application displays real-time token usage from the Anthropic API, showing session and weekly limits matching the official Claude Code status.
+
+### How It Works
+
+1. **Data Sources**:
+   - **Anthropic API** (preferred): Real-time usage data via OAuth token
+   - **Local JSONL files** (fallback): Estimated usage from conversation history
+
+2. **OAuth Token Refresh** (macOS only):
+   - The `start.sh` script starts a lightweight HTTP server on port 18081
+   - This server extracts the OAuth token from macOS Keychain when requested
+   - The token is stored in `./secrets/oauth-token` and mounted into Docker
+
+3. **Token Refresh Button**:
+   - If the OAuth token expires, click the "Refresh" button in the token usage panel
+   - This requests a fresh token from Keychain and updates the display
+
+### Requirements
+
+- **macOS**: Required for OAuth token access (via macOS Keychain)
+- **Claude Code CLI**: Must be logged in (token stored in Keychain)
+
+### Manual Token Refresh
+
+```bash
+# Refresh token manually
+./scripts/refresh-oauth-token.sh
+
+# Check token refresh server status
+curl http://localhost:18081/refresh
+```
+
+### Non-macOS Usage
+
+On Linux/Windows, the application falls back to local JSONL estimation. To use Anthropic API data:
+
+```bash
+# Set token via environment variable
+export ANTHROPIC_OAUTH_TOKEN="your_token_here"
+docker-compose up -d
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -146,7 +198,7 @@ You can expose this application to the internet using ngrok with Google OAuth au
    NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
    NGROK_OAUTH_ALLOW_DOMAIN=your-company.com
    ```
-3. **Start with ngrok**: `docker-compose up -d`
+3. **Start with ngrok**: `./start.sh`
 4. **Access**: Visit your ngrok domain (e.g., `https://your-domain.ngrok-free.app`)
 
 Users will be prompted to authenticate with Google, and only authorized emails/domains can access the application.
@@ -160,8 +212,8 @@ If the port conflicts with other services:
 echo "VIEWER_PORT=19080" >> .env
 
 # Restart
-docker-compose down
-docker-compose up -d
+./start.sh stop
+./start.sh
 ```
 
 ## Usage
@@ -283,8 +335,8 @@ Receive real-time updates for conversations and notifications
 ```bash
 # Change port
 echo "VIEWER_PORT=19080" >> .env
-docker-compose down
-docker-compose up -d
+./start.sh stop
+./start.sh
 ```
 
 #### 2. Claude Projects Not Found
@@ -321,6 +373,31 @@ curl -X POST http://localhost:18080/api/notifications/hook \
 # Check notification logs
 docker-compose logs -f backend | grep notification
 ```
+
+#### 5. Token Usage Not Displaying (Anthropic API)
+
+```bash
+# Check if token refresh server is running
+pgrep -f token-refresh-server.sh
+
+# If not running, restart with start.sh
+./start.sh stop
+./start.sh
+
+# Test token refresh manually
+curl http://localhost:18081/refresh
+
+# Check if OAuth token file exists
+cat ./secrets/oauth-token | head -c 50
+
+# Check backend logs for token errors
+docker-compose logs backend | grep -i "oauth\|token"
+```
+
+**Common causes:**
+- **Token refresh server not running**: Use `./start.sh` instead of `docker-compose up`
+- **Claude Code not logged in**: Run `claude` CLI and log in first
+- **Not on macOS**: OAuth token refresh requires macOS Keychain access
 
 ### Checking Logs
 

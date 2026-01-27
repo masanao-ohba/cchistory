@@ -12,6 +12,8 @@
     "assistant": "助手",
     "showMore": "显示更多",
     "collapse": "折叠",
+    "copyMessage": "复制消息",
+    "copied": "已复制！",
     "loadMore": "加载更多",
     "loadMoreRange": "（{start}～{end} 项）",
     "loadMoreThreadRange": "（{start}～{end} 项）",
@@ -124,8 +126,8 @@
     "title": "令牌使用情况",
     "titleWithBlock": "令牌使用情况（5小时区块）",
     "loading": "正在加载令牌使用情况...",
-    "session": "会话",
-    "currentSession": "当前会话",
+    "session": "5小时",
+    "currentSession": "5小时窗口",
     "weekAll": "本周（全部）",
     "weekSonnet": "本周（Sonnet）",
     "plan": "计划",
@@ -142,7 +144,11 @@
     "resetIn": "重置倒计时",
     "used": "已使用",
     "showDetails": "显示详情",
-    "hideDetails": "隐藏详情"
+    "hideDetails": "隐藏详情",
+    "sourceApi": "来自Anthropic API的实时数据",
+    "sourceEstimate": "基于本地数据的估算",
+    "refresh": "刷新",
+    "refreshing": "刷新中..."
   },
   "filters": {
     "showFilters": "显示过滤器",

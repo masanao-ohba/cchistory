@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo, useRef } from 'react';
+import { useState, useEffect, useMemo, memo, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { CheckIcon, ClipboardIcon } from './icons';
 
 interface Message {
   type: 'user' | 'assistant';
@@ -37,12 +38,13 @@ const MessageItem = memo(function MessageItem({
   const [isProcessing, setIsProcessing] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const messageContainerClasses = useMemo(() => {
-    const base = 'transition-all duration-200 hover:scale-[1.002] rounded-lg p-3 shadow-md';
+    const base = 'transition-colors duration-200 rounded-lg p-3 border-2 border-transparent';
     const variant = isUser
-      ? 'bg-gradient-to-br from-blue-100 to-blue-200 ml-0 mr-8'
-      : 'bg-gradient-to-br from-green-100 to-green-200 ml-8 mr-0';
+      ? 'bg-gradient-to-br from-blue-100 to-blue-200 ml-0 mr-8 hover:border-blue-400'
+      : 'bg-gradient-to-br from-green-100 to-green-200 ml-8 mr-0 hover:border-green-400';
     return `${base} ${variant}`;
   }, [isUser]);
 
@@ -97,6 +99,16 @@ const MessageItem = memo(function MessageItem({
     }
     return <i className="fas fa-robot text-base" />;
   };
+
+  const handleCopyMessage = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(conversation.content);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy message:', err);
+    }
+  }, [conversation.content]);
 
   // Intersection Observer to detect visibility
   useEffect(() => {
@@ -170,8 +182,22 @@ const MessageItem = memo(function MessageItem({
           </span>
         </div>
 
-        {/* Timestamp */}
-        <time className="text-xs text-gray-500">{formatTimestamp(conversation.timestamp)}</time>
+        {/* Copy button and Timestamp */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleCopyMessage}
+            className={`p-1 rounded transition-colors duration-200 ${
+              isCopied
+                ? 'text-green-600'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+            title={isCopied ? t('copied') : t('copyMessage')}
+            aria-label={t('copyMessage')}
+          >
+            {isCopied ? <CheckIcon /> : <ClipboardIcon />}
+          </button>
+          <time className="text-xs text-gray-500">{formatTimestamp(conversation.timestamp)}</time>
+        </div>
       </div>
 
       {/* Content */}

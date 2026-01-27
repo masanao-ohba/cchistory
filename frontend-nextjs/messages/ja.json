@@ -12,6 +12,8 @@
     "assistant": "アシスタント",
     "showMore": "もっと見る",
     "collapse": "折りたたむ",
+    "copyMessage": "メッセージをコピー",
+    "copied": "コピーしました！",
     "loadMore": "もっと読み込む",
     "loadMoreRange": "({start}〜{end}件)",
     "loadMoreThreadRange": "({start}〜{end}件)",
@@ -126,8 +128,8 @@
     "title": "トークン使用状況",
     "titleWithBlock": "トークン使用状況（5時間ブロック）",
     "loading": "トークン使用状況を読み込み中...",
-    "session": "セッション",
-    "currentSession": "現在のセッション",
+    "session": "5時間",
+    "currentSession": "5時間枠",
     "weekAll": "週間（全体）",
     "weekSonnet": "週間（Sonnet）",
     "plan": "プラン",
@@ -144,7 +146,11 @@
     "resetIn": "リセットまで",
     "used": "使用中",
     "showDetails": "詳細を表示",
-    "hideDetails": "詳細を隠す"
+    "hideDetails": "詳細を隠す",
+    "sourceApi": "Anthropic APIからのリアルタイムデータ",
+    "sourceEstimate": "ローカルデータからの推定値",
+    "refresh": "更新",
+    "refreshing": "更新中..."
   },
   "filters": {
     "showFilters": "フィルターを表示",

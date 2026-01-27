@@ -19,17 +19,79 @@ import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useTokenUsage } from '@/lib/hooks/useTokenUsage';
 import type { FormattedUsageMetric } from '@/lib/types/tokenUsage';
+import {
+  WarningIcon,
+  LightningBoltIcon,
+  RefreshIcon,
+  SpinnerIcon,
+  ChevronDownIcon,
+} from './icons';
 
 interface TokenUsageBarProps {
   compact?: boolean;
 }
 
+interface TokenDetailCardProps {
+  label: string;
+  value: string;
+  colorClass: string;
+  size?: 'compact' | 'normal';
+}
+
+function TokenDetailCard({ label, value, colorClass, size = 'normal' }: TokenDetailCardProps) {
+  if (size === 'compact') {
+    return (
+      <div className="bg-white rounded px-2 py-1">
+        <span className="text-gray-600">{label}:</span>
+        <span className={`ml-1 font-medium ${colorClass}`}>{value}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
+      <div className="text-xs text-gray-600 mb-1">{label}</div>
+      <div className={`text-sm font-semibold ${colorClass}`}>{value}</div>
+    </div>
+  );
+}
+
+interface SourceIndicatorProps {
+  isApi: boolean;
+  sourceApiLabel: string;
+  sourceEstimateLabel: string;
+}
+
+function SourceIndicator({ isApi, sourceApiLabel, sourceEstimateLabel }: SourceIndicatorProps) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-medium ${
+        isApi ? 'text-green-600' : 'text-gray-500'
+      }`}
+      title={isApi ? sourceApiLabel : sourceEstimateLabel}
+    >
+      {isApi ? (
+        <>
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+          <span className="hidden sm:inline">Live</span>
+        </>
+      ) : (
+        <>
+          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+          <span className="hidden sm:inline">Est.</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
   const t = useTranslations('tokenUsage');
   const locale = useLocale();
-  const { tokenUsage, isLoading, error } = useTokenUsage(true);
+  const { tokenUsage, isLoading, error, refreshOAuthToken } = useTokenUsage(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   // Set client-side flag to avoid hydration mismatch with time formatting
   useEffect(() => {
@@ -41,9 +103,48 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     console.log('[TokenUsageBar] State:', { isLoading, hasData: !!tokenUsage, error: !!error });
   }, [isLoading, tokenUsage, error]);
 
-  // Don't render if error
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setRefreshError(null);
+    const result = await refreshOAuthToken();
+    setIsRefreshing(false);
+    if (!result.success) {
+      setRefreshError(result.error || 'Refresh failed');
+    }
+  };
+
+  // Show error message with refresh button
   if (error) {
-    return null;
+    return (
+      <div className="py-2 px-4 bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-100">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 text-red-500">
+            <WarningIcon />
+          </div>
+          <div className="flex-1 text-xs text-red-700">
+            {t('title')}: {refreshError || error}
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex-shrink-0 px-3 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 disabled:bg-red-300 rounded-md transition-colors flex items-center gap-1"
+          >
+            {isRefreshing ? (
+              <>
+                <SpinnerIcon className="w-3 h-3 animate-spin" />
+                {t('refreshing') || 'Refreshing...'}
+              </>
+            ) : (
+              <>
+                <RefreshIcon className="w-3 h-3" />
+                {t('refresh') || 'Refresh'}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Show loading state
@@ -52,9 +153,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
       <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 text-indigo-400 animate-pulse">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <LightningBoltIcon />
           </div>
           <div className="flex-1 text-xs text-gray-500">{t('loading')}</div>
         </div>
@@ -148,6 +247,13 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     return 'bg-red-500';
   };
 
+  // Check if data is from Anthropic API
+  const isFromApi = tokenUsage.source === 'anthropic_api';
+
+  // Translation labels for SourceIndicator
+  const sourceApiLabel = t('sourceApi');
+  const sourceEstimateLabel = t('sourceEstimate');
+
   // Render a single usage metric row
   const renderMetricRow = (
     label: string,
@@ -159,19 +265,24 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     const percentage = hasPercentage ? Math.min(metric.percentageUsed!, 100) : 0;
     const color = getProgressColor(percentage);
 
-    // Build tooltip based on limit type
+    // Build tooltip based on limit type and data source
     let tooltipText = '';
+    const sourceLabel = metric.isFromApi ? ' (Live)' : ' (Est.)';
     if (metric.limitTokens) {
-      tooltipText = `${percentage.toFixed(1)}% used of ${formatTokens(metric.limitTokens)} token limit`;
+      tooltipText = `${percentage.toFixed(1)}% used${sourceLabel} of ${formatTokens(metric.limitTokens)} token limit`;
     } else if (metric.limitHoursSonnet) {
-      tooltipText = `${formatTokens(metric.totalTokens)} tokens used. Weekly limit: ${metric.limitHoursSonnet} hours (Sonnet)`;
+      tooltipText = `${formatTokens(metric.totalTokens)} tokens used${sourceLabel}. Weekly limit: ${metric.limitHoursSonnet} hours (Sonnet)`;
     }
 
     return (
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Label - responsive width */}
-        <div className="w-20 sm:w-28 lg:w-32 text-xs text-gray-700 font-medium flex-shrink-0">
+        <div className="w-20 sm:w-28 lg:w-32 text-xs text-gray-700 font-medium flex-shrink-0 flex items-center gap-1">
           {label}
+          {/* Show small API indicator dot for this specific metric */}
+          {metric.isFromApi && (
+            <span className="w-1 h-1 bg-green-500 rounded-full" title="Live data from Anthropic API" />
+          )}
         </div>
 
         {/* Progress bar - flexible width */}
@@ -212,9 +323,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
         <div className="flex items-center gap-3">
           {/* Token icon */}
           <div className="flex-shrink-0 text-indigo-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <LightningBoltIcon />
           </div>
 
           {/* Current session info */}
@@ -225,6 +334,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
                 ? `${tokenUsage.currentSession.percentageUsed.toFixed(0)}%`
                 : '-'}
             </span>
+            <SourceIndicator isApi={isFromApi} sourceApiLabel={sourceApiLabel} sourceEstimateLabel={sourceEstimateLabel} />
             <span className="text-xs text-gray-500">
               ↻ {formatTimeRemaining(tokenUsage.currentSession.timeRemainingMinutes)}
             </span>
@@ -236,14 +346,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
             className="flex-shrink-0 text-indigo-600 hover:text-indigo-700 transition-colors"
             aria-label={isExpanded ? t('collapse') : t('expand')}
           >
-            <svg
-              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDownIcon className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
         </div>
 
@@ -256,30 +359,30 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
 
             {/* Token breakdown */}
             <div className="mt-3 pt-2 border-t border-indigo-100 grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-white rounded px-2 py-1">
-                <span className="text-gray-600">{t('input')}:</span>
-                <span className="ml-1 font-medium text-blue-700">
-                  {formatTokens(tokenUsage.currentSession.inputTokens)}
-                </span>
-              </div>
-              <div className="bg-white rounded px-2 py-1">
-                <span className="text-gray-600">{t('output')}:</span>
-                <span className="ml-1 font-medium text-green-700">
-                  {formatTokens(tokenUsage.currentSession.outputTokens)}
-                </span>
-              </div>
-              <div className="bg-white rounded px-2 py-1">
-                <span className="text-gray-600">{t('cacheCreate')}:</span>
-                <span className="ml-1 font-medium text-orange-700">
-                  {formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
-                </span>
-              </div>
-              <div className="bg-white rounded px-2 py-1">
-                <span className="text-gray-600">{t('cacheRead')}:</span>
-                <span className="ml-1 font-medium text-purple-700">
-                  {formatTokens(tokenUsage.currentSession.cacheReadTokens)}
-                </span>
-              </div>
+              <TokenDetailCard
+                label={t('input')}
+                value={formatTokens(tokenUsage.currentSession.inputTokens)}
+                colorClass="text-blue-700"
+                size="compact"
+              />
+              <TokenDetailCard
+                label={t('output')}
+                value={formatTokens(tokenUsage.currentSession.outputTokens)}
+                colorClass="text-green-700"
+                size="compact"
+              />
+              <TokenDetailCard
+                label={t('cacheCreate')}
+                value={formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
+                colorClass="text-orange-700"
+                size="compact"
+              />
+              <TokenDetailCard
+                label={t('cacheRead')}
+                value={formatTokens(tokenUsage.currentSession.cacheReadTokens)}
+                colorClass="text-purple-700"
+                size="compact"
+              />
             </div>
 
             {/* Plan info */}
@@ -298,20 +401,19 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
       <div className="flex items-start gap-4">
         {/* Token icon */}
         <div className="flex-shrink-0 mt-1 text-indigo-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+          <LightningBoltIcon className="w-5 h-5" />
         </div>
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-800">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
               {t('title')}
-              <span className="ml-2 text-xs font-normal text-gray-600">
+              <span className="text-xs font-normal text-gray-600">
                 ({tokenUsage.planType.replace('_', ' ').toUpperCase()})
               </span>
+              <SourceIndicator isApi={isFromApi} sourceApiLabel={sourceApiLabel} sourceEstimateLabel={sourceEstimateLabel} />
             </h3>
           </div>
 
@@ -329,42 +431,31 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
               className="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors flex items-center gap-1"
             >
               {isExpanded ? t('hideDetails') : t('showDetails')}
-              <svg
-                className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDownIcon className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
             </button>
 
             {isExpanded && (
               <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
-                  <div className="text-xs text-gray-600 mb-1">{t('input')}</div>
-                  <div className="text-sm font-semibold text-blue-700">
-                    {formatTokens(tokenUsage.currentSession.inputTokens)}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
-                  <div className="text-xs text-gray-600 mb-1">{t('output')}</div>
-                  <div className="text-sm font-semibold text-green-700">
-                    {formatTokens(tokenUsage.currentSession.outputTokens)}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
-                  <div className="text-xs text-gray-600 mb-1">{t('cacheCreation')}</div>
-                  <div className="text-sm font-semibold text-orange-700">
-                    {formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2 shadow-sm">
-                  <div className="text-xs text-gray-600 mb-1">{t('cacheRead')}</div>
-                  <div className="text-sm font-semibold text-purple-700">
-                    {formatTokens(tokenUsage.currentSession.cacheReadTokens)}
-                  </div>
-                </div>
+                <TokenDetailCard
+                  label={t('input')}
+                  value={formatTokens(tokenUsage.currentSession.inputTokens)}
+                  colorClass="text-blue-700"
+                />
+                <TokenDetailCard
+                  label={t('output')}
+                  value={formatTokens(tokenUsage.currentSession.outputTokens)}
+                  colorClass="text-green-700"
+                />
+                <TokenDetailCard
+                  label={t('cacheCreation')}
+                  value={formatTokens(tokenUsage.currentSession.cacheCreationTokens)}
+                  colorClass="text-orange-700"
+                />
+                <TokenDetailCard
+                  label={t('cacheRead')}
+                  value={formatTokens(tokenUsage.currentSession.cacheReadTokens)}
+                  colorClass="text-purple-700"
+                />
               </div>
             )}
           </div>

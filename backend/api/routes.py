@@ -279,3 +279,36 @@ async def get_token_usage():
     except Exception as e:
         logger.error(f"Error getting token usage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/token-usage/refresh")
+async def refresh_token_usage():
+    """
+    Refresh OAuth token cache and re-fetch usage data.
+
+    This endpoint:
+    1. Invalidates the cached Anthropic API usage data
+    2. Re-reads the token from the mounted token file
+    3. Fetches fresh usage data from Anthropic API
+
+    The token file is updated by the host-side script (refresh-oauth-token.sh)
+    which extracts the token from macOS Keychain.
+
+    Returns:
+        Success status and refreshed usage data
+    """
+    try:
+        # Invalidate all caches to force fresh fetch
+        # token_usage_service.invalidate_cache() handles both UsageCalculator and AnthropicUsageService
+        token_usage_service.invalidate_cache()
+
+        # Fetch fresh data
+        usage = await token_usage_service.get_current_usage()
+
+        return {
+            "success": True,
+            "message": "Token cache invalidated and usage data refreshed",
+            "usage": usage
+        }
+    except Exception as e:
+        logger.error(f"Error refreshing token usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
