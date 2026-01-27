@@ -46,6 +46,11 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
     displayPercentage = metric.percentage_used;
   }
 
+  // Use Anthropic API reset time when available (more accurate than calculated end_time)
+  const endTime = metric.anthropic_resets_at
+    ? new Date(metric.anthropic_resets_at)
+    : new Date(metric.end_time);
+
   return {
     totalTokens: metric.usage.total_tokens,
     inputTokens: metric.usage.input_tokens,
@@ -53,7 +58,7 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
     cacheCreationTokens: metric.usage.cache_creation_tokens,
     cacheReadTokens: metric.usage.cache_read_tokens,
     startTime: new Date(metric.start_time),
-    endTime: new Date(metric.end_time),
+    endTime,
     timeRemainingMinutes: metric.time_remaining_minutes,
     limitTokens: metric.limit_tokens,
     limitHoursSonnet: metric.limit_hours_sonnet,
