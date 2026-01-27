@@ -1,6 +1,6 @@
 /**
- * React Query hook for Claude Code token usage data with auto-refresh
- * Supports three usage metrics matching official Claude Code status
+ * React Query hook for Claude Code token usage data (API-only fast mode)
+ * Fetches utilization percentages from Anthropic OAuth API
  */
 'use client';
 
@@ -25,55 +25,23 @@ const getRefreshInterval = (): number => {
 };
 
 /**
+ * Calculate time remaining until reset
+ */
+const calculateTimeRemaining = (resetsAt: Date): number => {
+  const now = new Date();
+  const diffMs = resetsAt.getTime() - now.getTime();
+  return Math.max(0, Math.floor(diffMs / 60000)); // minutes
+};
+
+/**
  * Format a single usage metric into UI-friendly data
- *
- * Priority for display percentage:
- * 1. Anthropic API value (anthropic_utilization) - most accurate
- * 2. Corrected estimate (corrected.percentage) - estimated from JSONL
- * 3. Raw percentage (percentage_used) - fallback
  */
 const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
-  // Priority: Anthropic API > Corrected estimate > Raw percentage
-  let displayPercentage: number | null;
-  let isFromApi = false;
-
-  if (metric.anthropic_utilization !== undefined) {
-    displayPercentage = metric.anthropic_utilization;
-    isFromApi = true;
-  } else if (metric.corrected?.percentage !== undefined) {
-    displayPercentage = metric.corrected.percentage;
-  } else {
-    displayPercentage = metric.percentage_used;
-  }
-
-  // Use Anthropic API reset time when available (more accurate than calculated end_time)
-  const endTime = metric.anthropic_resets_at
-    ? new Date(metric.anthropic_resets_at)
-    : new Date(metric.end_time);
-
+  const resetsAt = new Date(metric.resets_at);
   return {
-    totalTokens: metric.usage.total_tokens,
-    inputTokens: metric.usage.input_tokens,
-    outputTokens: metric.usage.output_tokens,
-    cacheCreationTokens: metric.usage.cache_creation_tokens,
-    cacheReadTokens: metric.usage.cache_read_tokens,
-    startTime: new Date(metric.start_time),
-    endTime,
-    timeRemainingMinutes: metric.time_remaining_minutes,
-    limitTokens: metric.limit_tokens,
-    limitHoursSonnet: metric.limit_hours_sonnet,
-    limitHoursOpus: metric.limit_hours_opus,
-    limitNote: metric.limit_note,
-    percentageUsed: displayPercentage,
-    entries: metric.entries,
-    // Hybrid display: keep raw values for transparency
-    rawTokens: metric.raw?.tokens,
-    rawPercentage: metric.raw?.percentage ?? metric.percentage_used,
-    correctionFactor: metric.corrected?.factor,
-    // Anthropic API integration
-    anthropicUtilization: metric.anthropic_utilization,
-    anthropicResetsAt: metric.anthropic_resets_at ? new Date(metric.anthropic_resets_at) : undefined,
-    isFromApi,
+    utilization: metric.utilization,
+    resetsAt,
+    timeRemainingMinutes: calculateTimeRemaining(resetsAt),
   };
 };
 
@@ -81,17 +49,13 @@ const formatUsageMetric = (metric: UsageMetric): FormattedUsageMetric => {
  * Format raw token usage response into UI-friendly data
  */
 const formatTokenUsage = (data: TokenUsageResponse): FormattedTokenUsage | null => {
-  if (!data.available || !data.current_session || !data.weekly_all || !data.weekly_sonnet) {
+  if (!data.available || !data.current_session || !data.weekly) {
     return null;
   }
 
   return {
-    planType: data.plan_type || 'unknown',
-    limits: data.limits!,
     currentSession: formatUsageMetric(data.current_session),
-    weeklyAll: formatUsageMetric(data.weekly_all),
-    weeklySonnet: formatUsageMetric(data.weekly_sonnet),
-    source: data.source || 'jsonl_estimate',
+    weekly: formatUsageMetric(data.weekly),
   };
 };
 
@@ -122,17 +86,14 @@ export const useTokenUsage = (enabled: boolean = true) => {
   const refreshOAuthToken = async () => {
     try {
       // Call the host-side token refresh server
-      // This extracts fresh token from Keychain and updates the token file
       const response = await fetch('http://localhost:18081/refresh');
       const result = await response.json();
       if (result.success) {
-        // Token file updated, now refetch the usage data
         await query.refetch();
         return { success: true };
       }
       return { success: false, error: result.error };
-    } catch (err) {
-      // Token server not running
+    } catch {
       return {
         success: false,
         error: 'Token refresh server not running. Start with: ./start.sh'

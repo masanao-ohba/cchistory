@@ -129,6 +129,7 @@
     "titleWithBlock": "Token Usage (5-hour block)",
     "loading": "Loading token usage...",
     "session": "5-Hour",
+    "weekly": "7-Day",
     "currentSession": "5-Hour Window",
     "weekAll": "Week (All)",
     "weekSonnet": "Week (Sonnet only)",

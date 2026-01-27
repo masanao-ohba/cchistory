@@ -1,86 +1,24 @@
 /**
- * Token usage types for Claude Code usage tracking
- * Matches official Claude Code status display with:
- * - Current session (5-hour block)
- * - Current week (all models)
- * - Current week (Opus only)
+ * Token usage types for Claude Code usage tracking (API-only fast mode)
+ * Shows utilization percentages from Anthropic OAuth API
  */
-
-export interface TokenCounts {
-  input_tokens: number;
-  output_tokens: number;
-  cache_creation_tokens: number;
-  cache_read_tokens: number;
-  total_tokens: number;
-}
-
-/**
- * Raw/Corrected value pair for hybrid display
- */
-export interface UsageValuePair {
-  tokens: number;
-  percentage: number;
-}
-
-export interface CorrectedValue extends UsageValuePair {
-  factor: number;  // Correction factor applied (e.g., 0.24)
-}
 
 export interface UsageMetric {
-  start_time: string;                 // ISO timestamp
-  end_time: string;                   // ISO timestamp
-  time_remaining_minutes: number;
-  usage: TokenCounts;
-  // Session limits are token-based
-  limit_tokens?: number;
-  // Weekly limits are hour-based (cannot be converted to tokens)
-  limit_hours_sonnet?: string;        // e.g., "240-480"
-  limit_hours_opus?: string | number; // e.g., "24-40" or 0
-  limit_note?: string;
-  percentage_used: number | null;     // 0-100 or null (legacy, use corrected for display)
-  entries: number;                    // Number of usage entries
-  // Hybrid display: raw and corrected values
-  raw?: UsageValuePair;               // Raw calculated values
-  corrected?: CorrectedValue;         // Claude Code estimated values (apply correction factor)
-
-  // Anthropic API integration
-  anthropic_utilization?: number;     // Direct API value (0-100), only when source is anthropic_api
-  anthropic_resets_at?: string;       // API reset time (ISO timestamp)
-}
-
-export interface PlanLimits {
-  session: {
-    tokens: number;
-    equivalent_prompts: string;
-  };
-  weekly_all: {
-    hours_sonnet: string;          // e.g., "240-480"
-    hours_opus: string | number;   // e.g., "24-40" or 0
-    note: string;
-  };
-}
-
-export type UsageSource = 'anthropic_api' | 'jsonl_estimate';
-
-export interface AnthropicUsageData {
-  utilization: number;  // 0-1
-  resets_at: string;    // ISO timestamp
+  utilization: number;    // 0-100 percentage
+  resets_at: string;      // ISO timestamp
 }
 
 export interface AnthropicData {
-  five_hour: AnthropicUsageData;
-  seven_day: AnthropicUsageData;
+  five_hour: UsageMetric;
+  seven_day: UsageMetric;
 }
 
 export interface TokenUsageResponse {
   available: boolean;
-  source?: UsageSource;               // Data source: API or JSONL estimate
-  plan_type?: string;                 // "pro" | "max_5x" | "max_20x"
-  limits?: PlanLimits;
+  source?: 'anthropic_api';
   current_session?: UsageMetric;
-  weekly_all?: UsageMetric;
-  weekly_sonnet?: UsageMetric;  // Changed from weekly_opus
-  anthropic_data?: AnthropicData;     // Raw Anthropic API data (when source is anthropic_api)
+  weekly?: UsageMetric;
+  anthropic_data?: AnthropicData;
   error?: string | null;
 }
 
@@ -88,40 +26,15 @@ export interface TokenUsageResponse {
  * UI-friendly formatted data for a single usage metric
  */
 export interface FormattedUsageMetric {
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  startTime: Date;
-  endTime: Date;
-  timeRemainingMinutes: number;
-  // Token-based limits (for session)
-  limitTokens?: number;
-  // Hour-based limits (for weekly)
-  limitHoursSonnet?: string;
-  limitHoursOpus?: string | number;
-  limitNote?: string;
-  percentageUsed: number | null;  // Display percentage (Anthropic API or corrected estimate)
-  entries: number;
-  // Hybrid display: raw and corrected values
-  rawTokens?: number;
-  rawPercentage?: number | null;
-  correctionFactor?: number;
-  // Anthropic API integration
-  anthropicUtilization?: number;      // Direct API value (0-100)
-  anthropicResetsAt?: Date;           // API reset time
-  isFromApi?: boolean;                // Whether percentageUsed is from Anthropic API
+  utilization: number;           // 0-100 percentage
+  resetsAt: Date;                // Reset time
+  timeRemainingMinutes: number;  // Minutes until reset
 }
 
 /**
  * UI-friendly formatted data derived from TokenUsageResponse
  */
 export interface FormattedTokenUsage {
-  planType: string;
-  limits: PlanLimits;
   currentSession: FormattedUsageMetric;
-  weeklyAll: FormattedUsageMetric;
-  weeklySonnet: FormattedUsageMetric;  // Changed from weeklyOpus
-  source: UsageSource;                 // Data source: API or JSONL estimate
+  weekly: FormattedUsageMetric;
 }
