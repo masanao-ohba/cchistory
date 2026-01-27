@@ -349,14 +349,6 @@ app.add_middleware(
 # APIルーターを追加
 app.include_router(api_router, prefix=Config.API_PREFIX)
 
-# Test lazy loading router (temporary for debugging)
-try:
-    from api.test_lazy import router as test_lazy_router
-    app.include_router(test_lazy_router, prefix="/api/test")
-    logger.info("Test lazy router loaded for debugging")
-except ImportError:
-    pass
-
 # WebSocketエンドポイント
 @app.websocket("/ws/updates")
 async def websocket_endpoint(websocket: WebSocket):
