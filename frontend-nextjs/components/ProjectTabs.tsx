@@ -9,6 +9,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { tabButtonStyles, tabBadgeStyles, newMessageIndicator } from '@/lib/styles';
 
 export interface ProjectTab {
   id: string;
@@ -84,20 +85,7 @@ export default function ProjectTabs({
                     aria-controls={`tabpanel-${tab.id}`}
                     onClick={() => onTabChange(tab.id)}
                     disabled={loading}
-                    className={`
-                      flex items-center gap-2 px-4 py-3
-                      text-sm font-medium whitespace-nowrap
-                      transition-all duration-200
-                      min-w-[100px]
-                      border-b-4
-                      ${isSelected
-                        ? 'text-blue-600 border-blue-600'
-                        : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300'
-                      }
-                      ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      ${isAllTab ? 'font-semibold' : ''}
-                      focus:outline-none
-                    `}
+                    className={tabButtonStyles({ isSelected, isLoading: loading, isAllTab })}
                   >
                     {/* タブラベル */}
                     <span className="truncate max-w-[200px]" title={tab.displayName}>
@@ -106,22 +94,14 @@ export default function ProjectTabs({
 
                     {/* メッセージカウント（オプション） */}
                     {tab.messageCount !== undefined && tab.messageCount > 0 && (
-                      <span className={`
-                        inline-flex items-center justify-center
-                        px-2 py-0.5 text-xs rounded-full
-                        ${isSelected
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-700'
-                        }
-                      `}>
+                      <span className={tabBadgeStyles(isSelected)}>
                         {tab.messageCount > 999 ? '999+' : tab.messageCount}
                       </span>
                     )}
 
                     {/* 新着インジケーター（今後の拡張用） */}
                     {tab.lastMessageTime && isNewMessage(tab.lastMessageTime) && !isSelected && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"
-                            aria-label={t('newMessage')} />
+                      <span className={newMessageIndicator} aria-label={t('newMessage')} />
                     )}
                   </button>
                 );
@@ -132,7 +112,7 @@ export default function ProjectTabs({
       {/* スクロールインジケーター（タブが多い場合） */}
       {tabs.length > 5 && (
         <div className="flex-shrink-0 pl-2">
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-gray-400 dark:text-gray-500">
             {t('scrollHint')}
           </div>
         </div>
@@ -140,8 +120,8 @@ export default function ProjectTabs({
 
       {/* ローディング状態 */}
       {loading && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+        <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400" />
         </div>
       )}
     </div>

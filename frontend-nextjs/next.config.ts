@@ -5,11 +5,8 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  // Toggle dev indicators based on NODE_ENV
-  devIndicators: {
-    buildActivity: process.env.SHOW_DEV_INDICATORS === 'true',
-    buildActivityPosition: 'bottom-right',
-  },
+  // Disable dev indicators (Next.js 15+)
+  devIndicators: false,
   async rewrites() {
     return [
       {

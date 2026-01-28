@@ -297,8 +297,7 @@ async def refresh_token_usage():
         Success status and refreshed usage data
     """
     try:
-        # Invalidate all caches to force fresh fetch
-        # token_usage_service.invalidate_cache() handles both UsageCalculator and AnthropicUsageService
+        # Invalidate cache to force fresh fetch from Anthropic API
         token_usage_service.invalidate_cache()
 
         # Fetch fresh data

@@ -16,8 +16,8 @@ export default function FilteringHeader({
   const t = useTranslations('conversations');
 
   return (
-    <div className="bg-slate-50/50 px-4 py-3 border border-gray-200/60 rounded-lg">
-      <p className="text-xs text-gray-600">
+    <div className="bg-slate-50/50 dark:bg-gray-800/50 px-4 py-3 border border-gray-200/60 dark:border-gray-700/60 rounded-lg">
+      <p className="text-xs text-gray-600 dark:text-gray-400">
         {totalThreads > actualThreads
           ? t('showingThreadsFiltered', {
               threads: actualThreads.toLocaleString(),

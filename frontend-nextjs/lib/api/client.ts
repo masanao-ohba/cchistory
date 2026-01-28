@@ -17,40 +17,23 @@ class ApiClient {
     options?: RequestInit
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const startTime = performance.now();
 
-    try {
-      const fetchStart = performance.now();
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-      });
-      const fetchEnd = performance.now();
-      console.log(`[API] Fetch ${endpoint}: ${(fetchEnd - fetchStart).toFixed(0)}ms`);
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
 
-      if (!response.ok) {
-        throw {
-          message: `HTTP error! status: ${response.status}`,
-          status: response.status,
-        } as ApiError;
-      }
-
-      const jsonStart = performance.now();
-      const data = await response.json();
-      const jsonEnd = performance.now();
-      console.log(`[API] JSON parse ${endpoint}: ${(jsonEnd - jsonStart).toFixed(0)}ms`);
-
-      const totalTime = performance.now() - startTime;
-      console.log(`[API] Total ${endpoint}: ${totalTime.toFixed(0)}ms`);
-
-      return data;
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+    if (!response.ok) {
+      throw {
+        message: `HTTP error! status: ${response.status}`,
+        status: response.status,
+      } as ApiError;
     }
+
+    return response.json();
   }
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {

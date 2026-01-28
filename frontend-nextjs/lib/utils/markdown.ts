@@ -60,17 +60,17 @@ const defaultTableRenderer =
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 md.renderer.rules.table_open = function (_tokens, _idx, _options, _env, _self) {
-  return '<table class="w-full border-collapse border border-gray-300 mb-3">';
+  return '<table class="w-full border-collapse border border-gray-300 dark:border-gray-600 mb-3">';
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 md.renderer.rules.th_open = function (_tokens, _idx, _options, _env, _self) {
-  return '<th class="border border-gray-300 px-3 py-2 text-left bg-gray-50 font-semibold">';
+  return '<th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold">';
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 md.renderer.rules.td_open = function (_tokens, _idx, _options, _env, _self) {
-  return '<td class="border border-gray-300 px-3 py-2 text-left">';
+  return '<td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left">';
 };
 
 /**

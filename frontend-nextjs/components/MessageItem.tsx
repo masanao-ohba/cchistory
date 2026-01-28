@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo, useRef, useCallback } from 'react';
+import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { CheckIcon, ClipboardIcon } from './icons';
-
-interface Message {
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  uuid?: string;
-  is_search_match?: boolean;
-  search_keyword?: string;
-}
+import { Message } from '@/lib/types/message';
+import {
+  messageContainerStyles,
+  indicatorStyles,
+  contentStyles,
+  toggleButtonStyles,
+  copyButtonStyles,
+  avatarStyles,
+  roleLabelStyles,
+  timestampStyles,
+} from '@/lib/styles';
 
 interface MessageItemProps {
   conversation: Message;
@@ -20,7 +22,40 @@ interface MessageItemProps {
   handleCodeCopy: (event: React.MouseEvent) => void;
   shouldShowToggleButton: (content: string) => boolean;
   onToggleExpand: (index: number) => void;
+  isHighlighted?: boolean;
+  onHover?: (isHovered: boolean) => void;
+  /** If true, renders only the content box without header (for GitHub PR style layout) */
+  contentOnly?: boolean;
 }
+
+// Avatar component with initials - exported for use in ConversationItem
+export const Avatar = memo(function Avatar({
+  isUser,
+  size = 'md'
+}: {
+  isUser: boolean;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div className={avatarStyles(isUser, size)}>
+      {isUser ? 'U' : 'A'}
+    </div>
+  );
+});
+
+// Timestamp formatter - exported for use in ConversationItem
+export const formatTimestamp = (timestamp: string) => {
+  const date = new Date(timestamp);
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Tokyo',
+  }).format(date);
+};
 
 const MessageItem = memo(function MessageItem({
   conversation,
@@ -29,6 +64,9 @@ const MessageItem = memo(function MessageItem({
   handleCodeCopy,
   shouldShowToggleButton,
   onToggleExpand,
+  isHighlighted = false,
+  onHover,
+  contentOnly = false,
 }: MessageItemProps) {
   const t = useTranslations('conversations');
   const isUser = conversation.type === 'user';
@@ -40,65 +78,12 @@ const MessageItem = memo(function MessageItem({
   const [isVisible, setIsVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const messageContainerClasses = useMemo(() => {
-    const base = 'transition-colors duration-200 rounded-lg p-3 border-2 border-transparent';
-    const variant = isUser
-      ? 'bg-gradient-to-br from-blue-100 to-blue-200 ml-0 mr-8 hover:border-blue-400'
-      : 'bg-gradient-to-br from-green-100 to-green-200 ml-8 mr-0 hover:border-green-400';
-    return `${base} ${variant}`;
-  }, [isUser]);
-
-  const avatarClasses = useMemo(() => {
-    const base = 'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold';
-    const color = isUser ? 'bg-blue-500' : 'bg-green-500';
-    return `${base} ${color}`;
-  }, [isUser]);
-
-  const typeLabelClasses = useMemo(() => {
-    const base = 'text-sm font-medium';
-    const color = isUser ? 'text-blue-700' : 'text-green-700';
-    return `${base} ${color}`;
-  }, [isUser]);
-
-  const contentClasses = useMemo(() => {
-    const base = [
-      'prose prose-sm max-w-none break-words rounded-md p-3 text-gray-900 shadow-sm border overflow-x-auto',
-      'prose-headings:text-gray-900 prose-p:text-gray-800 prose-code:bg-gray-100 prose-pre:bg-gray-100',
-      'prose-table:border-gray-300 prose-th:border-gray-300 prose-td:border-gray-300',
-    ].join(' ');
-    const variant = isUser ? 'bg-blue-50 border-blue-300' : 'bg-green-50 border-green-300';
-    const clamp = !isExpanded ? 'line-clamp-3' : '';
-    return `${base} ${variant} ${clamp}`;
-  }, [isUser, isExpanded]);
-
-  const toggleButtonClasses = useMemo(() => {
-    const base = 'mt-2 text-sm font-medium hover:underline cursor-pointer';
-    const color = isUser
-      ? 'text-blue-600 hover:text-blue-800'
-      : 'text-green-600 hover:text-green-800';
-    return `${base} ${color}`;
-  }, [isUser]);
-
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return new Intl.DateTimeFormat('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZone: 'Asia/Tokyo',
-    }).format(date);
-  };
-
-  const getMessageIcon = () => {
-    if (isUser) {
-      return <i className="fas fa-user text-base" />;
-    }
-    return <i className="fas fa-robot text-base" />;
-  };
+  // Use centralized style utilities
+  const containerClasses = messageContainerStyles({ isHighlighted, contentOnly });
+  const indicatorClasses = indicatorStyles(isUser);
+  const contentClasses = contentStyles(isExpanded);
+  const toggleClasses = toggleButtonStyles(isUser);
+  const copyClasses = copyButtonStyles(isCopied);
 
   const handleCopyMessage = useCallback(async () => {
     try {
@@ -122,7 +107,7 @@ const MessageItem = memo(function MessageItem({
           }
         });
       },
-      { rootMargin: '200px' } // Start processing 200px before visible
+      { rootMargin: '200px' }
     );
 
     observer.observe(containerRef.current);
@@ -134,7 +119,6 @@ const MessageItem = memo(function MessageItem({
   useEffect(() => {
     if (!isVisible) return;
 
-    // Create worker on first visibility
     if (typeof window !== 'undefined' && !workerRef.current) {
       workerRef.current = new Worker(new URL('@/lib/workers/markdown.worker', import.meta.url));
 
@@ -148,7 +132,7 @@ const MessageItem = memo(function MessageItem({
 
       workerRef.current.onerror = (error) => {
         console.error('Worker error:', error);
-        setRenderedContent(`<p class="text-red-500">Error processing markdown</p>`);
+        setRenderedContent(`<p class="text-red-500 dark:text-red-400">Error processing markdown</p>`);
         setIsProcessing(false);
       };
     }
@@ -168,55 +152,92 @@ const MessageItem = memo(function MessageItem({
     };
   }, [isVisible, conversation.content, conversation.uuid, conversation.is_search_match, conversation.search_keyword, index]);
 
-  return (
-    <div ref={containerRef} className={messageContainerClasses}>
-      {/* Meta information */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          {/* Avatar icon */}
-          <div className={avatarClasses}>{getMessageIcon()}</div>
+  // GitHub PR style: content only mode
+  if (contentOnly) {
+    return (
+      <div
+        ref={containerRef}
+        className={containerClasses}
+        onMouseEnter={() => onHover?.(true)}
+        onMouseLeave={() => onHover?.(false)}
+      >
+        <div className="p-3">
+          {/* Content */}
+          <div
+            className={contentClasses}
+            dangerouslySetInnerHTML={{
+              __html: isProcessing
+                ? `<pre class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+                : renderedContent
+            }}
+            onClick={handleCodeCopy}
+          />
 
-          {/* Type label */}
-          <span className={typeLabelClasses}>
-            {isUser ? t('user') : t('assistant')}
-          </span>
-        </div>
-
-        {/* Copy button and Timestamp */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleCopyMessage}
-            className={`p-1 rounded transition-colors duration-200 cursor-pointer ${
-              isCopied
-                ? 'text-green-600'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-            title={isCopied ? t('copied') : t('copyMessage')}
-            aria-label={t('copyMessage')}
-          >
-            {isCopied ? <CheckIcon /> : <ClipboardIcon />}
-          </button>
-          <time className="text-xs text-gray-500">{formatTimestamp(conversation.timestamp)}</time>
+          {/* Expand/Collapse button */}
+          {shouldShowToggleButton(conversation.content) && (
+            <button onClick={() => onToggleExpand(index)} className={toggleClasses}>
+              {isExpanded ? t('collapse') : t('showMore')}
+            </button>
+          )}
         </div>
       </div>
+    );
+  }
 
-      {/* Content */}
-      <div
-        className={contentClasses}
-        dangerouslySetInnerHTML={{
-          __html: isProcessing
-            ? `<pre class="whitespace-pre-wrap text-gray-700">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
-            : renderedContent
-        }}
-        onClick={handleCodeCopy}
-      />
+  // Original full card style
+  return (
+    <div
+      ref={containerRef}
+      className={containerClasses}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+    >
+      {/* Left side indicator bar */}
+      <div className={indicatorClasses} />
 
-      {/* Expand/Collapse button */}
-      {shouldShowToggleButton(conversation.content) && (
-        <button onClick={() => onToggleExpand(index)} className={toggleButtonClasses}>
-          {isExpanded ? t('collapse') : t('showMore')}
-        </button>
-      )}
+      {/* Main content area */}
+      <div className="flex-1 p-4">
+        {/* Meta information */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Avatar isUser={isUser} />
+            <span className={roleLabelStyles(isUser)}>
+              {isUser ? t('user') : t('assistant')}
+            </span>
+          </div>
+
+          {/* Copy button and Timestamp */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyMessage}
+              className={copyClasses}
+              title={isCopied ? t('copied') : t('copyMessage')}
+              aria-label={t('copyMessage')}
+            >
+              {isCopied ? <CheckIcon /> : <ClipboardIcon />}
+            </button>
+            <time className={timestampStyles}>{formatTimestamp(conversation.timestamp)}</time>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div
+          className={contentClasses}
+          dangerouslySetInnerHTML={{
+            __html: isProcessing
+              ? `<pre class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+              : renderedContent
+          }}
+          onClick={handleCodeCopy}
+        />
+
+        {/* Expand/Collapse button */}
+        {shouldShowToggleButton(conversation.content) && (
+          <button onClick={() => onToggleExpand(index)} className={toggleClasses}>
+            {isExpanded ? t('collapse') : t('showMore')}
+          </button>
+        )}
+      </div>
     </div>
   );
 });

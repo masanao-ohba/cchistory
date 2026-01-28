@@ -14,14 +14,32 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
+// Script to apply theme before React hydrates to prevent flash
+const themeScript = `
+  (function() {
+    try {
+      var stored = localStorage.getItem('theme');
+      var parsed = stored ? JSON.parse(stored) : null;
+      var theme = parsed && parsed.state && parsed.state.theme ? parsed.state.theme : 'system';
+      var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"

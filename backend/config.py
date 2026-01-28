@@ -2,96 +2,9 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
-from enum import Enum
+from typing import List
 
 logger = logging.getLogger(__name__)
-
-
-class ClaudePlanType(Enum):
-    """Claude subscription plan types"""
-    PRO = "pro"
-    MAX_5X = "max_5x"
-    MAX_20X = "max_20x"
-
-
-class ClaudePlanLimits:
-    """
-    Claude plan usage limits configuration
-
-    Based on official Claude Code documentation (as of January 2026):
-    - Session limits: 5-hour rolling window, token-based
-    - Weekly limits: 7-day rolling window, hour-based (measured in usage hours, not tokens)
-    - Opus limits: Separate weekly caps for Opus 4.5 usage
-    - Session resets: Every 5 hours (timezone-specific display in /status)
-    - Weekly resets: Every 7 days (timezone-specific display in /status)
-
-    Official token limits (session) and hour limits (weekly):
-    - Session limits are in actual tokens per 5-hour window
-    - Weekly limits are measured in "usage hours" (not directly convertible to tokens)
-    - Usage is shared across Claude.ai and Claude Code
-
-    Sources:
-    - https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan
-    - https://support.claude.com/en/articles/11014257-about-claude-s-max-plan-usage
-    """
-
-    # Plan-specific limits
-    # Session limits: actual tokens per 5-hour window (official)
-    # Weekly limits: usage hours per 7-day window (official)
-    LIMITS = {
-        ClaudePlanType.PRO: {
-            "session": {
-                "tokens": 44_000,  # Official: ~44,000 tokens per 5-hour session
-                "equivalent_prompts": "10-40",  # Approximate prompts per session
-            },
-            "weekly_all": {
-                "hours_sonnet": "40-80",  # Official: 40-80 hours Sonnet per week
-                "hours_opus": 0,  # Pro doesn't have Opus access
-                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
-            },
-        },
-        ClaudePlanType.MAX_5X: {
-            "session": {
-                "tokens": 88_000,  # Official: ~88,000 tokens per 5-hour session
-                "equivalent_prompts": "50-200",  # Approximate prompts per session
-            },
-            "weekly_all": {
-                "hours_sonnet": "140-280",  # Official: 140-280 hours Sonnet per week
-                "hours_opus": "15-35",  # Official: 15-35 hours Opus per week
-                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
-            },
-        },
-        ClaudePlanType.MAX_20X: {
-            "session": {
-                "tokens": 220_000,  # Official: ~220,000 tokens per 5-hour session
-                "equivalent_prompts": "200-800",  # Approximate prompts per session
-            },
-            "weekly_all": {
-                "hours_sonnet": "240-480",  # Official: 240-480 hours Sonnet per week
-                "hours_opus": "24-40",  # Official: 24-40 hours Opus per week (as of late 2025)
-                "note": "Weekly limits are hour-based and measured by actual usage time, not tokens. Token-to-percentage conversion is an estimate only and may have significant variance (±10-20%).",
-            },
-        },
-    }
-
-    @classmethod
-    def get_plan_from_env(cls) -> ClaudePlanType:
-        """Get Claude plan type from environment variable"""
-        plan_str = os.getenv("CLAUDE_PLAN", "max_20x").lower()
-        try:
-            return ClaudePlanType(plan_str)
-        except ValueError:
-            logger.warning(f"Invalid CLAUDE_PLAN '{plan_str}', defaulting to max_20x")
-            return ClaudePlanType.MAX_20X
-
-    @classmethod
-    def get_limits(cls, plan_type: ClaudePlanType = None) -> Dict[str, Any]:
-        """Get usage limits for the specified plan (or from environment)"""
-        if plan_type is None:
-            plan_type = cls.get_plan_from_env()
-
-        return cls.LIMITS.get(plan_type, cls.LIMITS[ClaudePlanType.MAX_20X])
 
 
 class Config:
@@ -100,16 +13,6 @@ class Config:
     CLAUDE_PROJECTS = os.getenv("CLAUDE_PROJECTS", "")  # カンマ区切りまたはJSON配列形式のプロジェクト名
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Tokyo")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-
-    # Claude Code補正係数（Claude Codeの内部最適化に対応するための経験的補正）
-    # これらの係数は、生のトークン数からClaude Code /statusに近い推定値を計算するために使用
-    # 詳細: Claude Codeは非公開の最適化を行っているため、完全一致は不可能
-    # ユーザーは自身の使用パターンに基づいて、環境変数で補正係数を調整できる
-    CORRECTION_FACTORS = {
-        "session": float(os.getenv("CORRECTION_FACTOR_SESSION", "0.24")),  # デフォルト: 0.24 (4.17xの逆数)
-        "weekly_all": float(os.getenv("CORRECTION_FACTOR_WEEKLY_ALL", "0.20")),  # デフォルト: 0.20 (5.00xの逆数)
-        "weekly_sonnet": float(os.getenv("CORRECTION_FACTOR_WEEKLY_SONNET", "0.18"))  # デフォルト: 0.18 (5.57xの逆数)
-    }
 
     # APIの設定
     API_PREFIX = "/api"

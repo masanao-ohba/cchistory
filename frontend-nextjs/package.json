@@ -9,10 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@types/markdown-it": "^14.1.2",
+    "clsx": "^2.1.1",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "next": "15.5.6",

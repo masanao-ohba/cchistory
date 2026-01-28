@@ -40,15 +40,15 @@ md.renderer.rules.code_block = md.renderer.rules.fence;
 
 // Custom table renderers
 md.renderer.rules.table_open = function () {
-  return '<table class="w-full border-collapse border border-gray-300 mb-3">';
+  return '<table class="w-full border-collapse border border-gray-300 dark:border-gray-600 mb-3">';
 };
 
 md.renderer.rules.th_open = function () {
-  return '<th class="border border-gray-300 px-3 py-2 text-left bg-gray-50 font-semibold">';
+  return '<th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold">';
 };
 
 md.renderer.rules.td_open = function () {
-  return '<td class="border border-gray-300 px-3 py-2 text-left">';
+  return '<td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left">';
 };
 
 interface MessageData {
@@ -132,10 +132,20 @@ function highlightKeyword(html: string, keyword: string): string {
 }
 
 /**
+ * Remove existing <mark> tags from content to prevent unwanted highlighting
+ * (Claude Code output sometimes contains <mark> tags)
+ */
+function stripExistingMarkTags(content: string): string {
+  return content.replace(/<\/?mark[^>]*>/gi, '');
+}
+
+/**
  * Process markdown content
  */
 function processMarkdown(content: string, searchKeyword: string | null): string {
-  let html = md.render(content);
+  // Strip existing <mark> tags before rendering
+  const cleanContent = stripExistingMarkTags(content);
+  let html = md.render(cleanContent);
 
   if (searchKeyword && searchKeyword.trim()) {
     html = highlightKeyword(html, searchKeyword);

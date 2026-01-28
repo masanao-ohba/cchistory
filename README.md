@@ -1,178 +1,144 @@
 # Claude Conversations History Viewer
 
-A modern web application for viewing and searching Claude Code conversation history.
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
 
-## Features
-
-- 🚀 **Lightweight & Fast** - Dockerized microservice architecture
-- 📱 **Responsive Design** - Modern UI for comfortable browsing experience
-- 🔍 **Flexible Search** - Filter by date, project, and keywords
-- ⚡ **Real-time Updates** - Automatic updates via WebSocket
-- 🎯 **Multi-project Support** - Integrated display of multiple Claude projects
-- 🔔 **Claude Code Hooks Integration** - Real-time notifications from Claude Code hooks
-- 📊 **Token Usage Tracking** - Monitor session and weekly usage
-- 🔧 **Configurable** - Flexible configuration through environment variables
-
-## Screenshots
+A web-based viewer for browsing and searching your Claude Code conversation history with real-time sync, multi-project support, and powerful filtering.
 
 ![Claude Conversations History Viewer](screenshot.png)
 
-*Main interface showing conversation history with search and filtering capabilities*
+*Main interface showing conversation history with search and filtering capabilities (dark mode)*
 
-## Requirements
+## Table of Contents
 
-- Docker & Docker Compose
-- Claude Code CLI (with data in `~/.claude/projects`)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Configuration](#configuration)
+- [Hooks Integration](#hooks-integration)
+- [Token Usage](#token-usage)
+- [API Reference](#api-reference)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [License](#license)
 
 ## Quick Start
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/masanao-ohba/cchistory.git
-cd cchistory
-```
-
-### 2. Configuration
-
-```bash
-# Copy the configuration file
-cp .env.example .env
-
-# Edit the configuration as needed
-vim .env
-```
-
-### 3. Launch
-
-```bash
-# Start all services (recommended)
-./start.sh
-
-# Or start in background
-./start.sh -d
-
-# Check logs
-docker-compose logs -f
-
-# Stop all services
-./start.sh stop
-```
-
-> **Note (macOS only)**: The `start.sh` script automatically starts a token refresh server for Anthropic API integration. This enables real-time token usage display from the Anthropic API. See [Token Usage Feature](#token-usage-feature) for details.
-
-### 4. Access
-
-Open your browser and navigate to http://localhost:18080
-
-## Claude Code Hooks Integration
-
-This application can receive real-time notifications from Claude Code hooks, allowing you to monitor Claude Code activity across multiple projects.
-
-### Setup Hooks
-
-1. **Install hooks for a project** (run from cchistory directory):
+1. **Clone and configure**
    ```bash
-   # Navigate to the cchistory directory
-   cd /path/to/cchistory
-
-   # Run the hooks installer with target project path
-   ./scripts/install-hooks.sh --target-project-path /path/to/your/claude/project
+   git clone https://github.com/masanao-ohba/cchistory.git
+   cd cchistory
+   cp .env.example .env
    ```
 
-2. **Automatic setup** - The script will:
-   - Read port settings from this project's `.env` file
-   - Configure webhook URL automatically
-   - Install hooks to the target project's `.claude/settings.local.json`
+2. **Start the application**
+   ```bash
+   ./start.sh
+   ```
 
-3. **Restart Claude Code** to apply the changes
+3. **Open in browser**
+   ```
+   http://localhost:18080
+   ```
 
-### Advanced Hook Configuration
+## Features
 
-```bash
-# Basic usage
-./scripts/install-hooks.sh --target-project-path ~/myproject
+- **Lightweight & Fast** - Dockerized microservice architecture with Turbopack for instant hot reloading
+- **Responsive Design** - Modern UI built with Tailwind CSS v4 for comfortable browsing experience
+- **Dark/Light Mode** - Theme switcher with system preference support (toggle in bottom-right corner)
+- **Multi-language Support** - Full internationalization with English, Japanese, Chinese, and Korean
+- **Flexible Search** - Filter by date, project, and keywords with quick filter buttons
+- **Real-time Updates** - Automatic updates via WebSocket with streaming Server Components
+- **Multi-project Support** - Integrated display of multiple Claude projects with project tabs
+- **Claude Code Hooks Integration** - Real-time notifications from Claude Code hooks
+- **Token Usage Tracking** - Monitor session and weekly usage via OAuth API integration
+- **Configurable** - Flexible configuration through environment variables
 
-# Specify custom notification receiver path
-./scripts/install-hooks.sh --target-project-path ~/myproject --notification-receiver-path ~/cchistory
+## How It Works
 
-# Use custom port
-./scripts/install-hooks.sh --target-project-path ~/myproject --port 8080
-
-# Preview changes without applying
-./scripts/install-hooks.sh --target-project-path ~/myproject --dry-run
-
-# Get help
-./scripts/install-hooks.sh --help
+**Docker Container Structure:**
+```
+                        +-----------------------+
+                        |    Nginx (Port 80)    |
+                        |  - Reverse Proxy      |
+                        |  - Static Files       |
+                        +-----------+-----------+
+                                    |
+              +---------------------+---------------------+
+              |                                           |
++-------------v-------------+             +---------------v---------------+
+|  Next.js Frontend (3000)  |             |   FastAPI Backend (8000)      |
+|  - React 19 + App Router  |             |   - REST API                  |
+|  - TanStack React Query   |             |   - WebSocket                 |
+|  - Zustand State          |             |   - File Watcher              |
+|  - Tailwind CSS v4        |             +---------------+---------------+
++---------------------------+                             |
+                                                          | Volume Mount
+                                                          | (Read-Only)
+                                                          v
+                                          +-------------------------------+
+                                          |   Host: ~/.claude/projects/   |
+                                          |   - project1/session1.jsonl   |
+                                          |   - project2/session2.jsonl   |
+                                          +-------------------------------+
 ```
 
-### Supported Notification Types
+<details>
+<summary><strong>Technology Stack</strong></summary>
 
-- **Permission Requests** - When Claude Code requests permissions
-- **Tool Usage** - When Claude Code uses tools like file operations
-- **General Notifications** - Other Claude Code activity
+**Frontend:**
+- Next.js 15.5 with Turbopack (React framework with App Router, Server Components, Suspense streaming)
+- React 19.1 (Latest React with concurrent features)
+- TypeScript 5 (Type-safe JavaScript)
+- Tailwind CSS v4 (Modern utility-first CSS framework)
+- TanStack React Query v5 (Server state management)
+- Zustand (Client state management)
+- next-intl (Internationalization - EN, JA, ZH, KO)
 
-### Viewing Notifications
+**Backend:**
+- FastAPI (High-performance Python web framework)
+- uvicorn (ASGI server)
+- watchdog (File monitoring)
+- WebSocket (Real-time communication)
+- Pydantic (Data validation)
 
-- Click the notification bell icon in the top-right corner
-- Real-time notifications appear immediately
-- Mark notifications as read/unread
-- Delete individual notifications
-- Mark all notifications as read
+**Infrastructure:**
+- Docker & Docker Compose
+- Nginx (Reverse proxy)
+- Alpine Linux (Lightweight container images)
 
-## Token Usage Feature
-
-This application displays real-time token usage from the Anthropic API, showing session and weekly limits matching the official Claude Code status.
-
-### How It Works
-
-1. **Data Sources**:
-   - **Anthropic API** (preferred): Real-time usage data via OAuth token
-   - **Local JSONL files** (fallback): Estimated usage from conversation history
-
-2. **OAuth Token Refresh** (macOS only):
-   - The `start.sh` script starts a lightweight HTTP server on port 18081
-   - This server extracts the OAuth token from macOS Keychain when requested
-   - The token is stored in `./secrets/oauth-token` and mounted into Docker
-
-3. **Token Refresh Button**:
-   - If the OAuth token expires, click the "Refresh" button in the token usage panel
-   - This requests a fresh token from Keychain and updates the display
-
-### Requirements
-
-- **macOS**: Required for OAuth token access (via macOS Keychain)
-- **Claude Code CLI**: Must be logged in (token stored in Keychain)
-
-### Manual Token Refresh
-
-```bash
-# Refresh token manually
-./scripts/refresh-oauth-token.sh
-
-# Check token refresh server status
-curl http://localhost:18081/refresh
-```
-
-### Non-macOS Usage
-
-On Linux/Windows, the application falls back to local JSONL estimation. To use Anthropic API data:
-
-```bash
-# Set token via environment variable
-export ANTHROPIC_OAUTH_TOKEN="your_token_here"
-docker-compose up -d
-```
+</details>
 
 ## Configuration
 
-### Environment Variables
+Configure the application using environment variables in `.env`.
+
+### Changing Port
+
+```bash
+echo "VIEWER_PORT=19080" >> .env
+./start.sh stop && ./start.sh
+```
+
+### ngrok Public Access with OAuth
+
+Expose the application to the internet with Google OAuth authentication:
+
+1. Get ngrok credentials at [ngrok.com](https://ngrok.com)
+2. Configure `.env`:
+   ```bash
+   NGROK_AUTHTOKEN=your_authtoken_here
+   NGROK_DOMAIN=your-domain.ngrok-free.app
+   NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
+   ```
+3. Start with `./start.sh`
+4. Access via your ngrok domain
+
+<details>
+<summary><strong>Environment Variables Reference</strong></summary>
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -186,238 +152,250 @@ docker-compose up -d
 | `NGROK_OAUTH_ALLOW_EMAIL` | - | Allowed email address for OAuth |
 | `NGROK_OAUTH_ALLOW_DOMAIN` | - | Allowed email domain for OAuth |
 
-### ngrok Public Access with OAuth
+</details>
 
-You can expose this application to the internet using ngrok with Google OAuth authentication:
+## Hooks Integration
 
-1. **Get ngrok credentials**: Sign up at [ngrok.com](https://ngrok.com) and get your authtoken and domain
-2. **Configure `.env`**:
-   ```bash
-   NGROK_AUTHTOKEN=your_authtoken_here
-   NGROK_DOMAIN=your-domain.ngrok-free.app
-   NGROK_OAUTH_ALLOW_EMAIL=your-email@gmail.com
-   NGROK_OAUTH_ALLOW_DOMAIN=your-company.com
-   ```
-3. **Start with ngrok**: `./start.sh`
-4. **Access**: Visit your ngrok domain (e.g., `https://your-domain.ngrok-free.app`)
+Receive real-time notifications from Claude Code hooks across multiple projects.
 
-Users will be prompted to authenticate with Google, and only authorized emails/domains can access the application.
-
-### Changing Port
-
-If the port conflicts with other services:
+### Setup
 
 ```bash
-# Edit .env file
-echo "VIEWER_PORT=19080" >> .env
+# Install hooks for a project
+./scripts/install-hooks.sh --target-project-path /path/to/your/project
 
-# Restart
-./start.sh stop
-./start.sh
+# Preview changes without applying
+./scripts/install-hooks.sh --target-project-path ~/myproject --dry-run
 ```
 
-## Usage
+The script automatically reads port settings from `.env` and configures the webhook URL.
 
-### Basic Operations
+### Supported Notification Types
 
-1. **View All**: Initially displays all conversations
-2. **Date Filter**: Search by date range using start and end dates
-3. **Project Filter**: Display only specific projects
-4. **Keyword Search**: Search within conversation content
-5. **Quick Filters**: Convenient buttons for Today, Yesterday, Past 7 days, Past 30 days
-6. **Notifications**: Real-time Claude Code hooks notifications via bell icon
+- **Permission Requests** - When Claude Code requests permissions
+- **Tool Usage** - When Claude Code uses tools like file operations
+- **General Notifications** - Other Claude Code activity
 
-### Real-time Updates
+### Viewing Notifications
 
-- WebSocket automatically reflects new conversations
-- Connection status indicator in the bottom right corner
+Click the notification bell icon in the top-right corner to view real-time notifications. You can mark them as read/unread or delete them individually.
 
-### Performance
+<details>
+<summary><strong>Advanced Hook Configuration</strong></summary>
 
-- Pagination for handling large amounts of data
-- Initial display of 100 items, load more on demand
-- Fast operation through file monitoring and caching
+#### Manual Hook Installation
 
-## Architecture
+If you prefer to configure hooks manually, add the following to your project's `.claude/settings.local.json`:
 
-**Docker Container Structure:**
-```
-├── Nginx (Port 80)
-│   ├── Reverse Proxy
-│   └── Static File Serving
-├── Next.js Frontend (Port 3000)
-│   ├── React 19 with App Router
-│   ├── TanStack React Query
-│   ├── Zustand State Management
-│   └── Tailwind CSS v4
-└── FastAPI Backend (Port 8000)
-    ├── REST API
-    ├── WebSocket
-    └── File Watcher
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:18080/api/notifications/hook -H 'Content-Type: application/json' -d '{\"type\":\"PreToolUse\",\"tool\":\"'\"$TOOL_NAME\"'\",\"project_id\":\"'\"$(basename $(pwd))\"'\"}'"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-**↑ Volume Mount (Read-Only)**
-
-**Host: ~/.claude/projects/**
-```
-├── project1/
-│   ├── session1.jsonl
-│   └── session2.jsonl
-└── project2/
-    └── session3.jsonl
-```
-
-### Technology Stack
-
-**Backend:**
-- FastAPI (High-performance Python web framework)
-- uvicorn (ASGI server)
-- watchdog (File monitoring)
-- WebSocket (Real-time communication)
-- Pydantic (Data validation)
-
-**Frontend:**
-- Next.js 15 (React framework with App Router)
-- React 19 (UI library)
-- TypeScript 5 (Type-safe JavaScript)
-- TanStack React Query v5 (Server state management)
-- Zustand (Client state management)
-- Tailwind CSS v4 (Utility-first CSS)
-- next-intl (Internationalization)
-
-**Infrastructure:**
-- Docker & Docker Compose
-- Nginx (Reverse proxy)
-- Alpine Linux (Lightweight container images)
-
-## API Specification
-
-### Endpoints
-
-#### GET `/api/conversations`
-
-Retrieve conversation history
-
-**Parameters:**
-- `start_date` (optional): Start date (YYYY-MM-DD)
-- `end_date` (optional): End date (YYYY-MM-DD)
-- `project[]` (optional): Project IDs (multiple allowed)
-- `keyword` (optional): Search keyword
-- `offset` (optional): Offset (default: 0)
-- `limit` (optional): Number of items (default: 100, max: 1000)
-
-#### GET `/api/projects`
-
-Get list of available projects
-
-#### GET `/api/token-usage`
-
-Get token usage statistics for session and weekly limits
-
-#### POST `/api/notifications/hook`
-
-Receive Claude Code hooks notifications (webhook endpoint)
-
-#### GET `/api/notifications`
-
-Get notification history
-
-#### WebSocket `/ws/updates`
-
-Receive real-time updates for conversations and notifications
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. Port Already in Use
+#### Testing Webhook Endpoint
 
 ```bash
-# Change port
-echo "VIEWER_PORT=19080" >> .env
-./start.sh stop
-./start.sh
-```
-
-#### 2. Claude Projects Not Found
-
-```bash
-# Check path
-ls -la ~/.claude/projects
-
-# Set custom path
-echo "CLAUDE_PROJECTS_PATH=/path/to/claude/projects" >> .env
-```
-
-#### 3. Data Not Displayed
-
-```bash
-# Check logs
-docker-compose logs backend
-
-# Check container status
-docker-compose ps
-```
-
-#### 4. Claude Code Hooks Not Working
-
-```bash
-# Check if hooks are properly installed
-cat .claude/settings.local.json
-
-# Verify webhook URL is accessible
 curl -X POST http://localhost:18080/api/notifications/hook \
   -H "Content-Type: application/json" \
   -d '{"type":"test","project_id":"test","notification":"test","timestamp":"2024-01-01T00:00:00Z"}'
-
-# Check notification logs
-docker-compose logs -f backend | grep notification
 ```
 
-#### 5. Token Usage Not Displaying (Anthropic API)
+</details>
+
+## Token Usage
+
+Display real-time token usage from the Anthropic API, showing session and weekly limits matching the official Claude Code status.
+
+### Data Sources
+
+1. **Anthropic API** (preferred): Real-time usage data via OAuth token
+2. **Local JSONL files** (fallback): Estimated usage from conversation history
+
+### OAuth Token Refresh (macOS only)
+
+The `start.sh` script starts a lightweight HTTP server on port 18081 that extracts the OAuth token from macOS Keychain. If the token expires, click the "Refresh" button in the token usage panel.
+
+```bash
+# Refresh token manually
+./scripts/refresh-oauth-token.sh
+
+# Check token refresh server status
+curl http://localhost:18081/refresh
+```
+
+<details>
+<summary><strong>How Token Tracking Works</strong></summary>
+
+#### OAuth API Integration
+
+When available, the application fetches real-time usage data from the Anthropic API using the OAuth token stored in macOS Keychain. This provides accurate session and weekly usage matching the official Claude Code interface.
+
+#### Local JSONL Estimation
+
+On non-macOS systems or when OAuth is unavailable, the application estimates token usage by analyzing local conversation JSONL files. This method counts tokens from conversation history but may not match the exact API usage.
+
+#### Non-macOS Usage
+
+On Linux/Windows, the application falls back to local JSONL estimation:
+
+```bash
+export ANTHROPIC_OAUTH_TOKEN="your_token_here"
+docker compose up -d
+```
+
+</details>
+
+## API Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/conversations` | GET | Retrieve conversation history |
+| `/api/projects` | GET | Get list of available projects |
+| `/api/token-usage` | GET | Get token usage statistics |
+| `/api/notifications/hook` | POST | Receive Claude Code hooks notifications |
+| `/api/notifications` | GET | Get notification history |
+| `/ws/updates` | WebSocket | Real-time updates |
+
+<details>
+<summary><strong>Endpoint Parameters</strong></summary>
+
+### GET `/api/conversations`
+
+| Parameter | Description |
+|-----------|-------------|
+| `start_date` | Start date (YYYY-MM-DD) |
+| `end_date` | End date (YYYY-MM-DD) |
+| `project[]` | Project IDs (multiple allowed) |
+| `keyword` | Search keyword |
+| `offset` | Offset (default: 0) |
+| `limit` | Number of items (default: 100, max: 1000) |
+
+### GET `/api/projects`
+
+No parameters required. Returns a list of available projects with their IDs and names.
+
+### GET `/api/token-usage`
+
+No parameters required. Returns current session and weekly token usage statistics.
+
+### POST `/api/notifications/hook`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Notification type (e.g., "PreToolUse", "PostToolUse") |
+| `project_id` | string | Project identifier |
+| `tool` | string | Tool name (optional) |
+| `notification` | string | Notification message (optional) |
+| `timestamp` | string | ISO 8601 timestamp |
+
+### WebSocket `/ws/updates`
+
+Connects to receive real-time updates for:
+- New conversations
+- Updated conversations
+- New notifications
+
+</details>
+
+## Troubleshooting
+
+<details>
+<summary><strong>Port Already in Use</strong></summary>
+
+```bash
+echo "VIEWER_PORT=19080" >> .env
+./start.sh stop && ./start.sh
+```
+
+</details>
+
+<details>
+<summary><strong>Claude Projects Not Found</strong></summary>
+
+```bash
+ls -la ~/.claude/projects
+echo "CLAUDE_PROJECTS_PATH=/path/to/claude/projects" >> .env
+```
+
+</details>
+
+<details>
+<summary><strong>Data Not Displayed</strong></summary>
+
+```bash
+docker compose logs backend
+docker compose ps
+```
+
+</details>
+
+<details>
+<summary><strong>Claude Code Hooks Not Working</strong></summary>
+
+```bash
+# Check hooks installation
+cat .claude/settings.local.json
+
+# Test webhook endpoint
+curl -X POST http://localhost:18080/api/notifications/hook \
+  -H "Content-Type: application/json" \
+  -d '{"type":"test","project_id":"test","notification":"test","timestamp":"2024-01-01T00:00:00Z"}'
+```
+
+</details>
+
+<details>
+<summary><strong>Token Usage Not Displaying</strong></summary>
 
 ```bash
 # Check if token refresh server is running
 pgrep -f token-refresh-server.sh
 
-# If not running, restart with start.sh
-./start.sh stop
-./start.sh
+# Restart with start.sh
+./start.sh stop && ./start.sh
 
-# Test token refresh manually
-curl http://localhost:18081/refresh
-
-# Check if OAuth token file exists
+# Check OAuth token file
 cat ./secrets/oauth-token | head -c 50
-
-# Check backend logs for token errors
-docker-compose logs backend | grep -i "oauth\|token"
 ```
 
 **Common causes:**
-- **Token refresh server not running**: Use `./start.sh` instead of `docker-compose up`
-- **Claude Code not logged in**: Run `claude` CLI and log in first
-- **Not on macOS**: OAuth token refresh requires macOS Keychain access
+- Token refresh server not running (use `./start.sh` instead of `docker compose up`)
+- Claude Code not logged in (run `claude` CLI and log in first)
+- Not on macOS (OAuth token refresh requires macOS Keychain access)
 
-### Checking Logs
+</details>
+
+<details>
+<summary><strong>Checking Logs</strong></summary>
 
 ```bash
-# All service logs
-docker-compose logs -f
-
-# Specific service logs
-docker-compose logs -f backend
-docker-compose logs -f frontend-nextjs
-docker-compose logs -f nginx
+docker compose logs -f              # All services
+docker compose logs -f backend      # Backend only
+docker compose logs -f frontend-nextjs  # Frontend only
 ```
+
+</details>
 
 ## Development
 
-### Development Environment Setup
+### Local Development Setup
 
 ```bash
 # Start with hot reload
-docker-compose up --build
+docker compose up --build
 
 # Frontend development
 cd frontend-nextjs
@@ -432,7 +410,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### Contributing
+## Contributing
 
 1. Fork and create a development branch
 2. Implement your changes
@@ -449,5 +427,4 @@ Masanao Ohba
 
 ## Support
 
-If you encounter any issues or have questions:
-- Create an issue on [GitHub Issues](https://github.com/masanao-ohba/cchistory/issues)
+If you encounter any issues or have questions, please create an issue on [GitHub Issues](https://github.com/masanao-ohba/cchistory/issues).

@@ -16,13 +16,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useTokenUsage } from '@/lib/hooks/useTokenUsage';
+import { liveIndicatorDot, cn } from '@/lib/styles';
 import type { FormattedUsageMetric } from '@/lib/types/tokenUsage';
 import {
   WarningIcon,
   LightningBoltIcon,
   RefreshIcon,
   SpinnerIcon,
-  ChevronDownIcon,
 } from './icons';
 
 interface TokenUsageBarProps {
@@ -33,7 +33,6 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
   const t = useTranslations('tokenUsage');
   const locale = useLocale();
   const { tokenUsage, isLoading, error, refreshOAuthToken } = useTokenUsage(true);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -57,18 +56,18 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
   // Show error message with refresh button
   if (error) {
     return (
-      <div className="py-2 px-4 bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-100">
+      <div className="py-2 px-4 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/30 dark:to-orange-900/30 border-b border-red-100 dark:border-red-800">
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 text-red-500">
+          <div className="flex-shrink-0 text-red-500 dark:text-red-400">
             <WarningIcon />
           </div>
-          <div className="flex-1 text-xs text-red-700">
+          <div className="flex-1 text-xs text-red-700 dark:text-red-300">
             {t('title')}: {refreshError || error}
           </div>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex-shrink-0 px-3 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 disabled:bg-red-300 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+            className="flex-shrink-0 px-3 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 disabled:bg-red-300 dark:disabled:bg-red-800 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
           >
             {isRefreshing ? (
               <>
@@ -90,12 +89,12 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
   // Show loading state
   if (isLoading || !tokenUsage) {
     return (
-      <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+      <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-indigo-100 dark:border-indigo-800">
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 text-indigo-400 animate-pulse">
+          <div className="flex-shrink-0 text-indigo-400 dark:text-indigo-300 animate-pulse">
             <LightningBoltIcon />
           </div>
-          <div className="flex-1 text-xs text-gray-500">{t('loading')}</div>
+          <div className="flex-1 text-xs text-gray-500 dark:text-gray-400">{t('loading')}</div>
         </div>
       </div>
     );
@@ -148,10 +147,10 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
 
   // Get progress bar color based on percentage
   const getProgressColor = (percentage: number): string => {
-    if (percentage < 50) return 'bg-blue-500';
-    if (percentage < 75) return 'bg-indigo-500';
-    if (percentage < 90) return 'bg-orange-500';
-    return 'bg-red-500';
+    if (percentage < 50) return 'bg-blue-500 dark:bg-blue-400';
+    if (percentage < 75) return 'bg-indigo-500 dark:bg-indigo-400';
+    if (percentage < 90) return 'bg-orange-500 dark:bg-orange-400';
+    return 'bg-red-500 dark:bg-red-400';
   };
 
   // Render a single usage metric row
@@ -162,14 +161,14 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     return (
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Label */}
-        <div className="w-16 sm:w-20 text-xs text-gray-700 font-medium flex-shrink-0 flex items-center gap-1">
+        <div className="w-16 sm:w-20 text-xs text-gray-700 dark:text-gray-300 font-medium flex-shrink-0 flex items-center gap-1">
           {label}
-          <span className="w-1 h-1 bg-green-500 rounded-full" title="Live data" />
+          <span className={cn(liveIndicatorDot, 'w-1 h-1 animate-none')} title="Live data" />
         </div>
 
         {/* Progress bar */}
         <div className="flex-1 min-w-0">
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className={`h-full ${color} transition-all duration-300`}
               style={{ width: `${percentage}%` }}
@@ -179,12 +178,12 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
         </div>
 
         {/* Percentage */}
-        <div className="flex-shrink-0 text-xs font-semibold text-gray-800 w-10 text-right">
+        <div className="flex-shrink-0 text-xs font-semibold text-gray-800 dark:text-gray-200 w-10 text-right">
           {percentage.toFixed(0)}%
         </div>
 
         {/* Reset time */}
-        <div className="flex-shrink-0 text-xs text-gray-600 w-20 sm:w-28 text-right truncate">
+        <div className="flex-shrink-0 text-xs text-gray-600 dark:text-gray-400 w-20 sm:w-28 text-right truncate">
           {isClient ? formatResetTime(metric.resetsAt) : '--:--'}
         </div>
       </div>
@@ -197,7 +196,7 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
     const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
 
     return (
-      <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-12 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={`h-full ${color} transition-all duration-300`}
           style={{ width: `${clampedPercentage}%` }}
@@ -212,10 +211,10 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
 
     return (
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-gray-600 font-medium">{label}</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{label}</span>
         {renderMiniProgressBar(percentage)}
-        <span className="text-xs font-bold text-gray-800 w-8">{percentage.toFixed(0)}%</span>
-        <span className="text-xs text-gray-500">↻{formatTimeRemaining(metric.timeRemainingMinutes)}</span>
+        <span className="text-xs font-bold text-gray-800 dark:text-gray-200 w-8">{percentage.toFixed(0)}%</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">↻{formatTimeRemaining(metric.timeRemainingMinutes)}</span>
       </div>
     );
   };
@@ -223,10 +222,10 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
   if (compact) {
     // Compact mode: Show both 5-hour and 7-day in single line with mini progress bars
     return (
-      <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+      <div className="py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-indigo-100 dark:border-indigo-800">
         <div className="flex items-center gap-3">
           {/* Icon */}
-          <div className="flex-shrink-0 text-indigo-600">
+          <div className="flex-shrink-0 text-indigo-600 dark:text-indigo-400">
             <LightningBoltIcon />
           </div>
 
@@ -236,14 +235,14 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
             {renderCompactMetric(t('session'), tokenUsage.currentSession)}
 
             {/* Separator */}
-            <span className="text-gray-300">│</span>
+            <span className="text-gray-300 dark:text-gray-600">│</span>
 
             {/* 7-day metric */}
             {renderCompactMetric(t('weekly'), tokenUsage.weekly)}
 
             {/* Live indicator */}
-            <span className="flex items-center gap-1 text-xs text-green-600">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <span className={cn(liveIndicatorDot, 'w-1.5 h-1.5')} />
               <span className="hidden sm:inline">Live</span>
             </span>
           </div>
@@ -254,10 +253,10 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
 
   // Full mode: Show both metrics
   return (
-    <div className="py-3 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+    <div className="py-3 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-indigo-100 dark:border-indigo-800">
       <div className="flex items-start gap-4">
         {/* Icon */}
-        <div className="flex-shrink-0 mt-1 text-indigo-600">
+        <div className="flex-shrink-0 mt-1 text-indigo-600 dark:text-indigo-400">
           <LightningBoltIcon className="w-5 h-5" />
         </div>
 
@@ -265,10 +264,10 @@ export default function TokenUsageBar({ compact = false }: TokenUsageBarProps) {
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
               {t('title')}
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                <span className={cn(liveIndicatorDot, 'w-1.5 h-1.5')} />
                 <span className="hidden sm:inline">Live</span>
               </span>
             </h3>

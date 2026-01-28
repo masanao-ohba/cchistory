@@ -1,0 +1,86 @@
+/* Search highlight */
+.prose mark {
+  @apply bg-yellow-200 px-1 py-0.5 rounded-sm border border-blue-300;
+  font-weight: inherit;
+  font-style: inherit;
+  font-size: inherit;
+}
+
+.dark .prose mark {
+  @apply bg-yellow-800/50 border-blue-600;
+}
+
+/* Custom code block styling (with copy functionality) */
+.prose .code-block-container {
+  @apply relative my-1 rounded-lg overflow-hidden border border-gray-300;
+}
+
+.prose .code-block-header {
+  @apply flex items-center justify-between bg-gray-50 px-3 py-1 border-b border-gray-200;
+}
+
+.prose .code-language {
+  @apply text-xs font-medium text-gray-600;
+}
+
+.prose .copy-button {
+  @apply flex items-center justify-center w-6 h-6 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200 cursor-pointer;
+}
+
+.prose .copy-button svg {
+  @apply text-gray-600;
+}
+
+.prose .copy-button:hover svg {
+  @apply text-gray-800;
+}
+
+.prose .code-block-content {
+  @apply m-0 bg-gray-100;
+}
+
+.prose .code-block-content code {
+  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre overflow-x-auto;
+}
+
+/* Dark mode code block styling */
+.dark .prose .code-block-container {
+  @apply border-gray-700;
+}
+
+.dark .prose .code-block-header {
+  @apply bg-gray-800 border-gray-700;
+}
+
+.dark .prose .code-language {
+  @apply text-gray-400;
+}
+
+.dark .prose .copy-button {
+  @apply bg-gray-700 border-gray-600 hover:bg-gray-600;
+}
+
+.dark .prose .copy-button svg {
+  @apply text-gray-400;
+}
+
+.dark .prose .copy-button:hover svg {
+  @apply text-gray-200;
+}
+
+.dark .prose .code-block-content {
+  @apply bg-gray-900;
+}
+
+/* Table and code block horizontal scroll support */
+.prose pre {
+  @apply overflow-x-auto;
+}
+
+.prose table {
+  @apply min-w-full overflow-x-auto;
+}
+
+.prose .code-block-container {
+  @apply overflow-x-auto;
+}

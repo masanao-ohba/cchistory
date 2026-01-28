@@ -1,33 +1,63 @@
 /**
  * LanguageSwitcher Component
  *
- * Compact language switcher optimized for footer placement.
- * Shows current language code and cycles through available languages on click.
+ * Language switcher with hover popup menu.
+ * Shows current language and displays all options on hover.
  */
 'use client';
 
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { locales, type Locale } from '@/i18n/request';
+import { dropdownItemStyles, popupCard, cn, languageSwitcherButton } from '@/lib/styles';
+import { GlobeIcon } from '@/components/icons';
 
 export default function LanguageSwitcher() {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Language labels for display
-  const languageLabels: Record<Locale, string> = {
-    en: 'EN',
-    ja: 'JA',
-    zh: 'ZH',
-    ko: 'KO',
+  const languageLabels: Record<Locale, { short: string; full: string }> = {
+    en: { short: 'EN', full: 'English' },
+    ja: { short: 'JA', full: '日本語' },
+    zh: { short: 'ZH', full: '中文' },
+    ko: { short: 'KO', full: '한국어' },
   };
 
-  const handleLanguageChange = () => {
-    // Cycle to next language
-    const currentIndex = locales.indexOf(locale);
-    const nextIndex = (currentIndex + 1) % locales.length;
-    const newLocale = locales[nextIndex];
+  // Debounced hover handler to prevent flickering
+  const handleMouseEnter = useCallback(() => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    setIsOpen(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    hideTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+      hideTimeoutRef.current = null;
+    }, 150);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleLanguageChange = (newLocale: Locale) => {
+    if (newLocale === locale) {
+      setIsOpen(false);
+      return;
+    }
 
     // Save to localStorage
     if (typeof window !== 'undefined') {
@@ -50,42 +80,49 @@ export default function LanguageSwitcher() {
       newPath = pathname === '/' ? `/${newLocale}` : `/${newLocale}${pathname}`;
     }
 
+    setIsOpen(false);
     router.push(newPath);
   };
 
   return (
-    <button
-      onClick={handleLanguageChange}
-      className="
-        inline-flex items-center gap-1
-        px-2.5 py-1.5
-        text-sm font-medium
-        text-gray-600 hover:text-gray-900
-        bg-white hover:bg-gray-50
-        transition-all duration-200
-        cursor-pointer
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-        rounded-md
-        border border-gray-300
-      "
-      aria-label="Change language"
-      title={`Language: ${languageLabels[locale]}. Click to change.`}
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <svg
-        className="w-3.5 h-3.5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
+      {/* Current language button */}
+      <button
+        className={languageSwitcherButton}
+        aria-label="Change language"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-        />
-      </svg>
-      <span className="font-semibold uppercase">{languageLabels[locale]}</span>
-    </button>
+        <GlobeIcon className="w-3.5 h-3.5" />
+        <span className="font-semibold uppercase">{languageLabels[locale].short}</span>
+      </button>
+
+      {/* Popup menu */}
+      <div
+        className={cn(
+          popupCard,
+          'absolute bottom-full right-0 mb-1 transition-all duration-200',
+          isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-1'
+        )}
+        role="menu"
+        aria-orientation="vertical"
+      >
+        {locales.map((loc) => (
+          <button
+            key={loc}
+            onClick={() => handleLanguageChange(loc)}
+            className={dropdownItemStyles(loc === locale)}
+            role="menuitem"
+          >
+            <span>{languageLabels[loc].full}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 uppercase">{languageLabels[loc].short}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

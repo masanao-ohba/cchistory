@@ -2,6 +2,17 @@
 
 import { useState } from 'react';
 import { useNotificationStore, Notification } from '@/lib/stores/notificationStore';
+import {
+  cn,
+  notificationItemStyles,
+  notificationDetailsPanel,
+  unreadIndicatorBar,
+  statusBadgeStyles,
+  unreadDot,
+  textLinkButtonStyles,
+  iconActionButton,
+  dangerIconButton,
+} from '@/lib/styles';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -30,19 +41,19 @@ const notificationConfig = {
   },
   colors: {
     yellow: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-800',
-      icon: 'text-yellow-600',
+      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+      text: 'text-yellow-800 dark:text-yellow-200',
+      icon: 'text-yellow-600 dark:text-yellow-400',
     },
     blue: {
-      bg: 'bg-blue-50',
-      text: 'text-blue-800',
-      icon: 'text-blue-600',
+      bg: 'bg-blue-50 dark:bg-blue-900/30',
+      text: 'text-blue-800 dark:text-blue-200',
+      icon: 'text-blue-600 dark:text-blue-400',
     },
     green: {
-      bg: 'bg-green-50',
-      text: 'text-green-800',
-      icon: 'text-green-600',
+      bg: 'bg-green-50 dark:bg-green-900/30',
+      text: 'text-green-800 dark:text-green-200',
+      icon: 'text-green-600 dark:text-green-400',
     },
   },
 };
@@ -130,15 +141,13 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
 
   return (
     <div
-      className={`notification-item relative border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
-        !notification.read ? 'bg-blue-50 border-blue-100' : 'bg-white'
-      }`}
+      className={cn('notification-item', notificationItemStyles(!notification.read))}
       data-notification-id={notification.id}
       onClick={() => onClick?.(notification)}
     >
       {/* Unread indicator (left border) */}
       {!notification.read && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-700" />
+        <div className={unreadIndicatorBar} />
       )}
 
       <div className="p-4">
@@ -158,23 +167,23 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center space-x-2">
                 {/* Project Name */}
-                <span className="text-sm font-medium text-purple-600 truncate">
+                <span className="text-sm font-medium text-purple-600 dark:text-purple-400 truncate">
                   {getProjectDisplayName(notification.project_id)}
                 </span>
 
                 {/* Type Badge */}
-                <span className={`text-xs px-2 py-1 rounded-full ${colorConfig.bg} ${colorConfig.text}`}>
+                <span className={statusBadgeStyles(typeConfig.color as 'yellow' | 'blue' | 'green')}>
                   {typeConfig.label}
                 </span>
 
                 {/* Unread Dot */}
                 {!notification.read && (
-                  <span className="w-2 h-2 bg-blue-500 rounded-full unread-indicator" title="Unread" />
+                  <span className={cn(unreadDot, 'unread-indicator')} title="Unread" />
                 )}
               </div>
 
               {/* Timestamp */}
-              <span className="text-xs text-gray-500 flex-shrink-0">
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                 {formatTime(notification.timestamp)}
               </span>
             </div>
@@ -183,15 +192,15 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
             <div className="mb-2">
               {/* Notification or Permission Request */}
               {notification.notification && (
-                <p className="text-sm text-gray-700 line-clamp-2">{notification.notification}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{notification.notification}</p>
               )}
 
               {/* Tool Use */}
               {notification.type === 'tool_use' && !notification.notification && (
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
                   <p className="font-medium">{notification.tool_name}</p>
                   {notification.tool_input && (
-                    <p className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded mt-1 line-clamp-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded mt-1 line-clamp-1">
                       {notification.tool_input}
                     </p>
                   )}
@@ -207,7 +216,7 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
                       e.stopPropagation();
                       setShowDetails(!showDetails);
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                    className={cn(textLinkButtonStyles('blue'), 'flex items-center space-x-1')}
                   >
                     <svg
                       className={`w-4 h-4 transition-transform duration-200 ${
@@ -227,15 +236,15 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
 
                   {/* Details Content */}
                   {showDetails && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className={notificationDetailsPanel}>
                       {/* Options/Choices */}
                       {detailOptions.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-xs font-medium text-gray-600 mb-2">Available Options:</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Available Options:</p>
                           {detailOptions.map((option: any, index: number) => (
                             <div key={index} className="flex items-start space-x-2">
-                              <span className="text-xs font-mono text-blue-600">{index + 1}.</span>
-                              <span className="text-xs text-gray-700 flex-1">{option}</span>
+                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{index + 1}.</span>
+                              <span className="text-xs text-gray-700 dark:text-gray-300 flex-1">{option}</span>
                             </div>
                           ))}
                         </div>
@@ -244,8 +253,8 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
                       {/* Other Details */}
                       {otherDetails && (
                         <div className={detailOptions.length > 0 ? 'mt-3 space-y-1' : 'space-y-1'}>
-                          <p className="text-xs font-medium text-gray-600 mb-1">Additional Information:</p>
-                          <pre className="text-xs text-gray-600 font-mono bg-white p-2 rounded border border-gray-200 overflow-x-auto">
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Additional Information:</p>
+                          <pre className="text-xs text-gray-600 dark:text-gray-300 font-mono bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600 overflow-x-auto">
                             {JSON.stringify(otherDetails, null, 2)}
                           </pre>
                         </div>
@@ -253,8 +262,8 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
 
                       {/* Session ID */}
                       {notification.details?.session_id && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <p className="text-xs text-gray-500">
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             <span className="font-medium">Session:</span> {notification.details.session_id}
                           </p>
                         </div>
@@ -271,11 +280,11 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
                 {/* Mark as Read/Unread */}
                 <button
                   onClick={handleToggleRead}
-                  className="p-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded flex items-center space-x-1"
+                  className={cn(iconActionButton, 'flex items-center space-x-1')}
                   title={notification.read ? 'Mark as unread' : 'Mark as read'}
                 >
                   <svg
-                    className={`w-4 h-4 ${!notification.read ? 'text-blue-500' : ''}`}
+                    className={`w-4 h-4 ${!notification.read ? 'text-blue-500 dark:text-blue-400' : ''}`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -307,7 +316,7 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
                   e.stopPropagation();
                   onDelete?.(notification.id);
                 }}
-                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className={dangerIconButton}
                 title="Delete notification"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

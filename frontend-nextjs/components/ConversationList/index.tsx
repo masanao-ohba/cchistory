@@ -2,25 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useFloatingUserMessage } from '@/lib/hooks/useFloatingUserMessage';
-import { ChatBubbleIcon, ArrowDownIcon } from '@/components/icons';
+import { ChatBubbleIcon, ArrowToTopIcon, ArrowToBottomIcon } from '@/components/icons';
 import { useTranslations } from 'next-intl';
 import FilteringHeader from './FilteringHeader';
 import LoadingState from './LoadingState';
 import EmptyState from './EmptyState';
 import LoadMoreButton from './LoadMoreButton';
 import ConversationItem from './ConversationItem';
-
-interface Message {
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  uuid?: string;
-  session_id?: string;
-  is_search_match?: boolean;
-  search_keyword?: string;
-  is_continuation_session?: boolean;
-  parent_session_id?: string;
-}
+import { Message } from '@/lib/types/message';
 
 interface NewMessageManager {
   getDisplayMessages: (group: Message[], groupIndex: number) => Message[];
@@ -49,7 +38,6 @@ interface ConversationListProps {
   onShowNewMessages?: (params: { group: Message[]; groupIndex: number }) => void;
 }
 
-const CONTEXT_BAR_HEIGHT = 80;
 const LOAD_MORE_NOTIFICATION_DELAY = 500;
 const LOAD_MORE_NOTIFICATION_DURATION = 3000;
 
@@ -74,6 +62,35 @@ export default function ConversationList({
   const t = useTranslations('conversations');
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [lastLoadedCount, setLastLoadedCount] = useState(0);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced hover handler to prevent flickering
+  const handleMessageHover = useCallback((messageId: string | null) => {
+    if (messageId) {
+      // Immediately show highlight, cancel any pending hide
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+      setHighlightedMessageId(messageId);
+    } else {
+      // Delay hiding to allow smooth transition between messages
+      hideTimeoutRef.current = setTimeout(() => {
+        setHighlightedMessageId(null);
+        hideTimeoutRef.current = null;
+      }, 150);
+    }
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Use external refs if provided, otherwise create internal ones
   const internalGroupRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -95,14 +112,18 @@ export default function ConversationList({
     userMessageRefs
   );
 
-  const scrollToElement = useCallback((element: HTMLDivElement, additionalOffset: number = 0) => {
+  const scrollToElement = useCallback((element: HTMLDivElement) => {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const toggleExpand = useCallback((index: number) => {
     setExpandedItems((prev) => {
       const newSet = new Set(prev);
-      newSet.has(index) ? newSet.delete(index) : newSet.add(index);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
       return newSet;
     });
   }, []);
@@ -173,45 +194,67 @@ export default function ConversationList({
       clearTimeout(timeoutId);
       window.removeEventListener('resize', checkGroupHeights);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations, getDisplayMessages, setTallGroups, headerHeight]);
 
   return (
-    <div className="bg-gray-100 rounded-lg overflow-hidden">
+    <div className="bg-[#FAFAFA] dark:bg-gray-900 rounded-lg overflow-hidden relative">
+      {/* Overlay for message highlight */}
+      <div
+        className={`fixed inset-0 bg-black/10 z-40 pointer-events-none transition-opacity duration-200 ${
+          highlightedMessageId ? 'opacity-100' : 'opacity-0'
+        }`}
+        aria-hidden="true"
+      />
       {/* Floating user message - Fixed position relative to viewport */}
       {floatingUserMessage && (
-        <div className="fixed left-0 right-0 z-40 px-4 animate-fade-in" style={{ top: `${headerHeight}px` }}>
+        <div className="fixed left-0 right-0 z-[60] px-4 animate-fadeIn" style={{ top: `${headerHeight}px` }}>
           <div className="max-w-7xl mx-auto">
-            <div
-              onClick={() => {
-                const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
-                if (element) scrollToElement(element);
-              }}
-              className="relative w-full bg-gradient-to-r from-blue-100 via-indigo-100 to-blue-100 border-y-2 border-blue-300 hover:border-blue-500 px-5 py-3 transition-all shadow-context-bar hover:shadow-context-bar-hover group backdrop-blur-sm cursor-pointer"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 text-blue-600">
-                  <ChatBubbleIcon />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-blue-600 font-medium mb-0.5">{t('respondingTo')}</p>
-                  <p className="text-sm text-gray-700 line-clamp-2 group-hover:text-gray-900">
-                    {floatingUserMessage.message.content}
-                  </p>
-                </div>
-                <div className="flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const element = lastAssistantMessageRefs.current.get(floatingUserMessage.groupIndex);
-                      if (element) scrollToElement(element, CONTEXT_BAR_HEIGHT);
-                    }}
-                    className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-xs font-medium"
-                    title={t('jumpToLatest')}
-                  >
-                    <ArrowDownIcon className="w-4 h-4" />
-                    {t('jumpToLatest')}
-                  </button>
-                </div>
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg pl-1 pr-2 py-2 flex items-center gap-2 transition-all hover:shadow-xl overflow-hidden">
+              {/* Blue left border indicator */}
+              <div className="flex-shrink-0 w-1 self-stretch bg-blue-500 rounded-full" />
+
+              <div className="flex-shrink-0 text-blue-600">
+                <ChatBubbleIcon />
+              </div>
+
+              <div
+                className="flex-1 min-w-0 cursor-pointer overflow-hidden"
+                onClick={() => {
+                  const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
+                  if (element) scrollToElement(element);
+                }}
+              >
+                <p className="text-xs font-medium text-blue-600 mb-0.5">{t('respondingTo')}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                  {floatingUserMessage.message.content}
+                </p>
+              </div>
+
+              {/* Navigation buttons - icon only for compact display */}
+              <div className="flex-shrink-0 flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
+                    if (element) scrollToElement(element);
+                  }}
+                  className="flex items-center justify-center w-8 h-8 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors cursor-pointer"
+                  title={t('backToQuestion')}
+                  aria-label={t('backToQuestion')}
+                >
+                  <ArrowToTopIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    const element = lastAssistantMessageRefs.current.get(floatingUserMessage.groupIndex);
+                    if (element) scrollToElement(element);
+                  }}
+                  className="flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-pointer"
+                  title={t('jumpToLatest')}
+                  aria-label={t('jumpToLatest')}
+                >
+                  <ArrowToBottomIcon className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -256,6 +299,8 @@ export default function ConversationList({
                   showNewMessageButton={shouldShowNewMessageButton(threadGroup, threadIndex)}
                   unreadCount={getUnreadMessageCount(threadGroup, threadIndex)}
                   onShowNewMessages={() => onShowNewMessages?.({ group: threadGroup, groupIndex: threadIndex })}
+                  highlightedMessageId={highlightedMessageId}
+                  onMessageHover={handleMessageHover}
                 />
               </div>
             ))}

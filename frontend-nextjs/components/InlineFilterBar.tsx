@@ -4,7 +4,16 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { CalendarIcon, ArrowUpIcon, ArrowDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ArrowUpIcon, ArrowDownIcon, XMarkIcon } from '@/components/icons';
+import { toLocalDateString } from '@/lib/utils/date';
+import {
+  iconButton,
+  resetButton,
+  sortToggleButton,
+  resetButtonFull,
+  datePickerContainer,
+  datePickerContainerCompact,
+} from '@/lib/styles';
 
 interface InlineFilterBarProps {
   startDate: string;
@@ -15,8 +24,6 @@ interface InlineFilterBarProps {
   onSortOrderChange: (order: 'asc' | 'desc') => void;
   onReset: () => void;
   compact?: boolean;
-  keyword?: string;
-  activeProjectTab?: string;
 }
 
 const InlineFilterBar = memo(function InlineFilterBar({
@@ -28,8 +35,6 @@ const InlineFilterBar = memo(function InlineFilterBar({
   onSortOrderChange,
   onReset,
   compact = false,
-  keyword = '',
-  activeProjectTab = 'all',
 }: InlineFilterBarProps) {
   const t = useTranslations('filters');
 
@@ -44,36 +49,12 @@ const InlineFilterBar = memo(function InlineFilterBar({
 
   // Handle date changes
   const handleStartDateChange = useCallback((date: Date | null) => {
-    if (date) {
-      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-      onStartDateChange(localDate.toISOString().split('T')[0]);
-    } else {
-      onStartDateChange('');
-    }
+    onStartDateChange(date ? toLocalDateString(date) : '');
   }, [onStartDateChange]);
 
   const handleEndDateChange = useCallback((date: Date | null) => {
-    if (date) {
-      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-      onEndDateChange(localDate.toISOString().split('T')[0]);
-    } else {
-      onEndDateChange('');
-    }
+    onEndDateChange(date ? toLocalDateString(date) : '');
   }, [onEndDateChange]);
-
-  // Check if any filters are active - Simplified for debugging
-  const hasActiveFilters = true; // Always show for debugging
-
-  // Debug logging
-  console.log('InlineFilterBar - Debug:', {
-    startDate,
-    endDate,
-    sortOrder,
-    keyword,
-    activeProjectTab,
-    compact,
-    hasActiveFilters: true
-  });
 
   // Toggle sort order
   const handleSortToggle = useCallback(() => {
@@ -85,8 +66,8 @@ const InlineFilterBar = memo(function InlineFilterBar({
     return (
       <div className="flex items-center gap-2">
         {/* Date Range Picker - Compact */}
-        <div className="flex items-center gap-1 bg-white rounded-md border border-gray-300 px-2 py-1">
-          <CalendarIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+        <div className={datePickerContainerCompact}>
+          <CalendarIcon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div className="flex items-center gap-0.5">
             <DatePicker
               selected={startDateObj}
@@ -96,11 +77,11 @@ const InlineFilterBar = memo(function InlineFilterBar({
               endDate={endDateObj}
               dateFormat="MM/dd"
               placeholderText="From"
-              className="w-16 text-xs border-none outline-none focus:ring-0 p-0 bg-transparent placeholder:text-gray-400"
+              className="w-16 text-xs border-none outline-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
               isClearable
               autoComplete="off"
             />
-            <span className="text-gray-400 text-xs">-</span>
+            <span className="text-gray-400 dark:text-gray-500 text-xs">-</span>
             <DatePicker
               selected={endDateObj}
               onChange={handleEndDateChange}
@@ -110,7 +91,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
               minDate={startDateObj || undefined}
               dateFormat="MM/dd"
               placeholderText="To"
-              className="w-16 text-xs border-none outline-none focus:ring-0 p-0 bg-transparent placeholder:text-gray-400"
+              className="w-16 text-xs border-none outline-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
               isClearable
               autoComplete="off"
             />
@@ -120,38 +101,36 @@ const InlineFilterBar = memo(function InlineFilterBar({
         {/* Sort Order Toggle - Icon only in compact mode */}
         <button
           onClick={handleSortToggle}
-          className="p-1.5 bg-white rounded-md border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer"
+          className={iconButton}
           title={t(sortOrder === 'desc' ? 'sortNewestFirst' : 'sortOldestFirst')}
         >
           {sortOrder === 'desc' ? (
-            <ArrowDownIcon className="h-4 w-4 text-gray-600" />
+            <ArrowDownIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           ) : (
-            <ArrowUpIcon className="h-4 w-4 text-gray-600" />
+            <ArrowUpIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           )}
         </button>
 
-        {/* Reset Button - Icon only in compact mode */}
-        {hasActiveFilters && (
-          <button
-            onClick={onReset}
-            className="p-1.5 bg-red-50 rounded-md border border-red-200 hover:bg-red-100 transition-colors cursor-pointer"
-            title={t('resetFilters')}
-          >
-            <XMarkIcon className="h-4 w-4 text-red-600" />
-          </button>
-        )}
+        {/* Reset Button */}
+        <button
+          onClick={onReset}
+          className={resetButton}
+          title={t('resetFilters')}
+        >
+          <XMarkIcon className="h-4 w-4" />
+        </button>
       </div>
     );
   }
 
   // Original full-width version
   return (
-    <div className="border-b border-gray-200 bg-gray-50">
+    <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-2">
         <div className="flex flex-wrap items-center gap-2">
           {/* Date Range Picker - Combined Start and End */}
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-300 px-3 py-1.5">
-            <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <div className={datePickerContainer}>
+            <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <div className="flex items-center gap-1">
               <DatePicker
                 selected={startDateObj}
@@ -161,11 +140,11 @@ const InlineFilterBar = memo(function InlineFilterBar({
                 endDate={endDateObj}
                 dateFormat="yyyy-MM-dd"
                 placeholderText={t('startDate')}
-                className="w-24 text-sm border-none outline-none focus:ring-0 p-0 bg-transparent"
+                className="w-24 text-sm border-none outline-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-gray-100"
                 isClearable
                 autoComplete="off"
               />
-              <span className="text-gray-400">-</span>
+              <span className="text-gray-400 dark:text-gray-500">-</span>
               <DatePicker
                 selected={endDateObj}
                 onChange={handleEndDateChange}
@@ -175,7 +154,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
                 minDate={startDateObj || undefined}
                 dateFormat="yyyy-MM-dd"
                 placeholderText={t('endDate')}
-                className="w-24 text-sm border-none outline-none focus:ring-0 p-0 bg-transparent"
+                className="w-24 text-sm border-none outline-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-gray-100"
                 isClearable
                 autoComplete="off"
               />
@@ -185,7 +164,7 @@ const InlineFilterBar = memo(function InlineFilterBar({
           {/* Sort Order Toggle */}
           <button
             onClick={handleSortToggle}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-sm cursor-pointer"
+            className={sortToggleButton}
             title={t(sortOrder === 'desc' ? 'sortNewestFirst' : 'sortOldestFirst')}
           >
             {sortOrder === 'desc' ? (
@@ -198,17 +177,15 @@ const InlineFilterBar = memo(function InlineFilterBar({
             </span>
           </button>
 
-          {/* Reset Button - Only show if filters are active */}
-          {hasActiveFilters && (
-            <button
-              onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100 transition-colors text-sm cursor-pointer"
-              title={t('resetFilters')}
-            >
-              <XMarkIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('reset')}</span>
-            </button>
-          )}
+          {/* Reset Button */}
+          <button
+            onClick={onReset}
+            className={resetButtonFull}
+            title={t('resetFilters')}
+          >
+            <XMarkIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('reset')}</span>
+          </button>
         </div>
       </div>
     </div>

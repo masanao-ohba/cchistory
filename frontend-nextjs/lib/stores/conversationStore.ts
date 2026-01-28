@@ -32,7 +32,7 @@ const initialFilters: Filters = {
   startDate: null,
   endDate: null,
   keyword: '',
-  showRelatedThreads: false,
+  showRelatedThreads: true,  // Show entire thread when keyword matches
   sortOrder: 'desc',
   threadMode: 'grouped',
   offset: 0,
@@ -55,7 +55,22 @@ export const useConversationStore = create<ConversationState>()(
     }),
     {
       name: 'conversation-storage',
-      partialize: (state) => ({ currentFilters: state.currentFilters }),
+      version: 2, // Bump version to clear old stored keyword
+      // Exclude keyword from persistence - it's a temporary search state
+      partialize: (state) => ({
+        currentFilters: {
+          ...state.currentFilters,
+          keyword: '',  // Don't persist keyword
+        },
+      }),
+      // Migration: clear keyword from old storage versions
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2 && persistedState?.currentFilters) {
+          persistedState.currentFilters.keyword = '';
+          persistedState.currentFilters.showRelatedThreads = true;
+        }
+        return persistedState;
+      },
     }
   )
 );

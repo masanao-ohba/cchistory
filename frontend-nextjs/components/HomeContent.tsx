@@ -17,7 +17,9 @@ import TokenUsageBar from '@/components/TokenUsageBar';
 import BackToTopButton from '@/components/BackToTopButton';
 import ProjectTabs, { ProjectTab } from '@/components/ProjectTabs';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import ThemeToggle from '@/components/ThemeToggle';
 import Container from '@/components/layout/Container';
+import { extractProjectId } from '@/lib/utils/project';
 
 export interface HomeContentProps {
   initialNotificationCount?: number;
@@ -55,30 +57,8 @@ export default function HomeContent({}: HomeContentProps = {}) {
   // Use isPending for initial load state (better than isLoading for our use case)
   const { data: conversationsData, isPending: conversationsLoading } = useConversations(effectiveFilters);
 
-  // Fetch all conversations data (without filters) for project tab statistics
-  const { data: allConversationsData } = useConversations({
-    startDate: null,
-    endDate: null,
-    projects: [],
-    keyword: '',
-    showRelatedThreads: false,
-    sortOrder: 'desc',
-    threadMode: 'grouped',
-    offset: 0,
-    limit: 1000, // Get enough data for statistics
-  });
-
   const { data: projectsData } = useProjects();
   const newMessageManager = useNewMessageManager();
-
-  // Debug logging for loading state
-  useEffect(() => {
-    console.log('[HomeContent] Loading state:', {
-      isPending: conversationsLoading,
-      hasData: !!conversationsData,
-      dataLength: conversationsData?.conversations?.length || 0,
-    });
-  }, [conversationsLoading, conversationsData]);
 
   // Use stats from conversationsData (already filtered) instead of separate stats endpoint
   const [hasMore, setHasMore] = useState(false);
@@ -120,13 +100,8 @@ export default function HomeContent({}: HomeContentProps = {}) {
     }
   }, [handleFileChange, handleNotificationMessage]);
 
-  const handleWSOpen = useCallback(() => {
-    console.log('WebSocket connected');
-  }, []);
-
-  const handleWSClose = useCallback(() => {
-    console.log('WebSocket disconnected');
-  }, []);
+  const handleWSOpen = useCallback(() => {}, []);
+  const handleWSClose = useCallback(() => {}, []);
 
   // WebSocket connection
   useWebSocket('/ws/updates', {
@@ -171,20 +146,7 @@ export default function HomeContent({}: HomeContentProps = {}) {
     accumulatedConversations.forEach((group: any[], index: number) => {
       if (group.length > 0) {
         const firstMessage = group[0];
-        // Extract project ID - handle both string and object formats
-        let projectId: string;
-        if (typeof firstMessage.project_path === 'string') {
-          projectId = firstMessage.project_path;
-        } else if (typeof firstMessage.project === 'string') {
-          projectId = firstMessage.project;
-        } else if (firstMessage.project_path?.id) {
-          projectId = firstMessage.project_path.id;
-        } else if (firstMessage.project?.id) {
-          projectId = firstMessage.project.id;
-        } else {
-          // Fallback: try to get id property
-          projectId = firstMessage.project_path?.id || firstMessage.project?.id || 'unknown';
-        }
+        const projectId = extractProjectId(firstMessage) ?? 'unknown';
 
         if (projectId && projectStats.has(projectId)) {
           const stats = projectStats.get(projectId)!;
@@ -200,13 +162,6 @@ export default function HomeContent({}: HomeContentProps = {}) {
             stats.lastTime = messageTime;
           }
         }
-      }
-    });
-
-    // Log unread counts for debugging
-    projectStats.forEach((stats, projectId) => {
-      if (stats.unreadCount > 0) {
-        console.log(`[ProjectTabs] ${projectId}: ${stats.unreadCount} unread messages`);
       }
     });
 
@@ -254,32 +209,45 @@ export default function HomeContent({}: HomeContentProps = {}) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Measure header height dynamically
+  // Measure header height dynamically using ResizeObserver
   useEffect(() => {
-    const measureHeader = () => {
-      if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
+    const headerElement = headerRef.current;
+    if (!headerElement) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
         setHeaderHeight(height);
       }
+    });
+
+    resizeObserver.observe(headerElement);
+    // Initial measurement
+    setHeaderHeight(headerElement.offsetHeight);
+
+    return () => {
+      resizeObserver.disconnect();
     };
+  }, []); // Only run once on mount
 
-    measureHeader();
-    window.addEventListener('resize', measureHeader);
-    return () => window.removeEventListener('resize', measureHeader);
-  }, [isScrolled]); // Re-measure when header size changes
+  // Scroll tracking for main container with hysteresis
+  // Collapse at 100px, expand only when back to top (< 20px)
+  const COLLAPSE_THRESHOLD = 100;
+  const EXPAND_THRESHOLD = 20;
 
-  // Scroll tracking for main container
   useEffect(() => {
     const mainElement = mainRef.current;
     if (!mainElement) return;
 
     const handleScroll = () => {
       const scrollTop = mainElement.scrollTop;
-      const threshold = 150;
-      const shouldBeScrolled = scrollTop > threshold;
 
-      if (isScrolled !== shouldBeScrolled) {
-        setIsScrolled(shouldBeScrolled);
+      if (!isScrolled && scrollTop > COLLAPSE_THRESHOLD) {
+        // Collapse when scrolling down past threshold
+        setIsScrolled(true);
+      } else if (isScrolled && scrollTop < EXPAND_THRESHOLD) {
+        // Expand only when near the top
+        setIsScrolled(false);
       }
     };
 
@@ -411,9 +379,9 @@ export default function HomeContent({}: HomeContentProps = {}) {
   }, [setActiveProjectTab, setFilters]);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className="h-screen flex flex-col bg-[#FAFAFA] dark:bg-gray-900">
       {/* Sticky Header Area */}
-      <header ref={headerRef} className="sticky top-0 z-50 flex-shrink-0 bg-white shadow-md">
+      <header ref={headerRef} className="sticky top-0 z-50 flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         {/* Token Usage Bar */}
         <TokenUsageBar compact={isScrolled} />
 
@@ -433,37 +401,42 @@ export default function HomeContent({}: HomeContentProps = {}) {
           </div>
         </Container>
 
-        {/* Filter Controls Row */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <Container>
-            <div className="flex items-center gap-2 py-2">
-              <div className="flex-1 min-w-0">
-                <SearchBox
-                  ref={searchBoxRef}
-                  onSearch={handleSearch}
-                  onClear={handleClearSearch}
-                  compact={true}
-                />
-              </div>
-              <InlineFilterBar
-                startDate={currentFilters.startDate || ''}
-                endDate={currentFilters.endDate || ''}
-                sortOrder={currentFilters.sortOrder}
-                onStartDateChange={handleStartDateChange}
-                onEndDateChange={handleEndDateChange}
-                onSortOrderChange={handleSortOrderChange}
-                onReset={handleResetFilters}
-                compact={true}
-                keyword={currentFilters.keyword}
-                activeProjectTab={activeProjectTab}
-              />
+        {/* Filter Controls Row - Collapses on scroll using CSS grid */}
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+          style={{ gridTemplateRows: isScrolled ? '0fr' : '1fr' }}
+        >
+          <div className="overflow-hidden">
+            <div className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <Container>
+                <div className="flex items-center gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <SearchBox
+                      ref={searchBoxRef}
+                      onSearch={handleSearch}
+                      onClear={handleClearSearch}
+                      compact={true}
+                    />
+                  </div>
+                  <InlineFilterBar
+                    startDate={currentFilters.startDate || ''}
+                    endDate={currentFilters.endDate || ''}
+                    sortOrder={currentFilters.sortOrder}
+                    onStartDateChange={handleStartDateChange}
+                    onEndDateChange={handleEndDateChange}
+                    onSortOrderChange={handleSortOrderChange}
+                    onReset={handleResetFilters}
+                    compact={true}
+                  />
+                </div>
+              </Container>
             </div>
-          </Container>
+          </div>
         </div>
       </header>
 
       {/* Main Content - Scrollable area */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#FAFAFA] dark:bg-gray-900">
         <Container>
           {/* Conversations */}
           <ConversationList
@@ -488,10 +461,10 @@ export default function HomeContent({}: HomeContentProps = {}) {
         </Container>
 
         {/* Footer - Only visible when scrolled to bottom */}
-        <footer className="border-t border-gray-200 bg-white py-4 mt-8">
+        <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-4 mt-8">
           <Container>
             <div className="flex items-center justify-center">
-              <div className="text-gray-500 text-sm">
+              <div className="text-gray-500 dark:text-gray-400 text-sm">
                 {t('footer')}
               </div>
             </div>
@@ -501,6 +474,14 @@ export default function HomeContent({}: HomeContentProps = {}) {
 
       {/* Back to Top Button */}
       {isScrolled && <BackToTopButton onClick={scrollToTop} />}
+
+      {/* Language Switcher - Fixed bottom right, above ThemeToggle, z-[60] to stay above highlighted messages (z-50) */}
+      <div className="fixed bottom-16 right-4 z-[60]">
+        <LanguageSwitcher />
+      </div>
+
+      {/* Theme Toggle - Fixed bottom right */}
+      <ThemeToggle />
     </div>
   );
 }

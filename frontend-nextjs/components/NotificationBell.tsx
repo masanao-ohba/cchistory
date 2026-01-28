@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useNotificationStore } from '@/lib/stores/notificationStore';
 import NotificationPopup from './NotificationPopup';
+import { unreadBadge, cn } from '@/lib/styles';
 
 export default function NotificationBell() {
   const { notifications, unreadCount, showPopup, togglePopup, fetchNotifications, fetchStats } = useNotificationStore();
@@ -54,8 +55,8 @@ export default function NotificationBell() {
       {/* Bell Icon Button */}
       <button
         onClick={handleToggle}
-        className={`relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 rounded-lg hover:bg-gray-100 cursor-pointer ${
-          showPopup ? 'text-purple-600 bg-purple-50' : ''
+        className={`relative p-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${
+          showPopup ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30' : ''
         }`}
         aria-label="Notifications"
       >
@@ -75,9 +76,11 @@ export default function NotificationBell() {
         {/* Unread Count Badge (red, animated) */}
         {unreadCount > 0 && (
           <span
-            className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium animate-pulse ${
+            className={cn(
+              unreadBadge,
+              'animate-pulse',
               unreadCount <= 9 ? 'px-1' : 'px-2'
-            }`}
+            )}
             style={{
               boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.2)',
             }}
@@ -89,7 +92,7 @@ export default function NotificationBell() {
         {/* Total Count Badge (gray, bottom-right) */}
         {unreadCount === 0 && totalNotifications > 0 && (
           <span
-            className={`absolute -bottom-1 -right-1 bg-gray-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center font-medium text-[10px] ${
+            className={`absolute -bottom-1 -right-1 bg-gray-500 dark:bg-gray-600 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center font-medium text-[10px] ${
               totalNotifications <= 9 ? 'px-1' : 'px-1.5'
             }`}
             title="Total notifications"

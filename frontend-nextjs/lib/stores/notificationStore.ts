@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { buildSearchParams } from '../utils/params';
 
 export interface Notification {
   id: string;
@@ -109,12 +110,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const params = new URLSearchParams();
-      if (project_id) params.append('project_id', project_id);
-      if (type) params.append('type', type);
-      if (unread_only) params.append('unread_only', 'true');
-      params.append('limit', limit.toString());
-      params.append('offset', offset.toString());
+      const params = buildSearchParams({
+        project_id,
+        type,
+        unread_only: unread_only ? 'true' : null,
+        limit,
+        offset,
+      });
 
       const response = await fetch(`/api/notifications?${params}`);
       if (!response.ok) {

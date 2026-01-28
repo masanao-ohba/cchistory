@@ -69,6 +69,10 @@ class StreamingThreadGrouper:
                 keyword_filter,
                 show_related_threads
             )
+        else:
+            # No keyword search: create clean copies without search fields
+            # This ensures cached objects aren't returned with stale search data
+            all_thread_groups = self._clean_search_fields(all_thread_groups)
 
         # Paginate
         thread_groups = all_thread_groups[offset:offset + limit]
@@ -130,22 +134,46 @@ class StreamingThreadGrouper:
         If show_related_threads=False:
             - Filter out threads with no matches
             - Mark matching messages
+
+        IMPORTANT: Creates copies of conversations to avoid mutating cached data.
         """
         keyword_lower = keyword.lower()
         filtered_groups = []
 
         for thread_group in thread_groups:
+            # Create a deep copy to avoid mutating cached objects
+            thread_copy = [{**conv} for conv in thread_group]
+
             has_match_in_thread = self._mark_keyword_matches(
-                thread_group,
+                thread_copy,
                 keyword,
                 keyword_lower
             )
 
             # Only include threads that have at least one matching message
             if has_match_in_thread:
-                filtered_groups.append(thread_group)
+                filtered_groups.append(thread_copy)
 
         return filtered_groups
+
+    def _clean_search_fields(
+        self,
+        thread_groups: list[list[dict]]
+    ) -> list[list[dict]]:
+        """
+        Create clean copies of thread groups without search-related fields.
+        This prevents stale search data from cached objects being returned.
+        """
+        cleaned_groups = []
+        for thread_group in thread_groups:
+            cleaned_thread = []
+            for conv in thread_group:
+                # Create a copy and remove search fields
+                clean_conv = {k: v for k, v in conv.items()
+                             if k not in ('is_search_match', 'search_keyword')}
+                cleaned_thread.append(clean_conv)
+            cleaned_groups.append(cleaned_thread)
+        return cleaned_groups
 
     def _mark_keyword_matches(
         self,
