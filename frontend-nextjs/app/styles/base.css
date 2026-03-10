@@ -26,6 +26,25 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Custom scrollbar for dark theme */
+.dark .dark-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.dark .dark-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark .dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+}
+
+.dark .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
 /* Line clamp utility */
 .line-clamp-3 {
   display: -webkit-box;

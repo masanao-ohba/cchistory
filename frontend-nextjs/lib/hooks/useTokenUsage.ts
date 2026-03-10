@@ -85,18 +85,28 @@ export const useTokenUsage = (enabled: boolean = true) => {
   // Function to refresh OAuth token and refetch data
   const refreshOAuthToken = async () => {
     try {
-      // Call the host-side token refresh server
-      const response = await fetch('http://localhost:18081/refresh');
+      // Step 1: Try to refresh OAuth token from Keychain (host-side server)
+      const tokenResponse = await fetch('http://localhost:18081/refresh');
+      await tokenResponse.json(); // Just ensure it completes, result not needed
+
+      // Step 2: Always call backend to invalidate cache and refetch from Anthropic API
+      const response = await fetch('/api/token-usage/refresh', { method: 'POST' });
       const result = await response.json();
+
       if (result.success) {
+        // Invalidate React Query cache and refetch
         await query.refetch();
         return { success: true };
       }
-      return { success: false, error: result.error };
-    } catch {
+
       return {
         success: false,
-        error: 'Token refresh server not running. Start with: ./start.sh'
+        error: result.usage?.error || result.error || 'Failed to refresh token usage'
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Failed to refresh token usage'
       };
     }
   };

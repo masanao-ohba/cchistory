@@ -70,7 +70,7 @@ export default function ProjectTabs({
   return (
     <div className="flex items-center min-w-0">
       {/* タブスクロールコンテナ */}
-      <div className="flex-1 overflow-x-auto min-w-0">
+      <div className="flex-1 overflow-x-auto min-w-0 dark-scrollbar">
         <div className="flex gap-1 w-max" role="tablist">
               {tabs.map((tab) => {
                 const isSelected = tab.id === selectedTabId;

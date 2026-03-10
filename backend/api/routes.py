@@ -303,11 +303,20 @@ async def refresh_token_usage():
         # Fetch fresh data
         usage = await token_usage_service.get_current_usage()
 
-        return {
-            "success": True,
-            "message": "Token cache invalidated and usage data refreshed",
-            "usage": usage
-        }
+        # Return success based on whether usage data is available
+        if usage.get('available'):
+            return {
+                "success": True,
+                "message": "Token cache invalidated and usage data refreshed",
+                "usage": usage
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to refresh usage data",
+                "error": usage.get('error', 'Unknown error'),
+                "usage": usage
+            }
     except Exception as e:
         logger.error(f"Error refreshing token usage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
