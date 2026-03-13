@@ -4,16 +4,32 @@ import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { CheckIcon, ClipboardIcon } from './icons';
 import { Message } from '@/lib/types/message';
+import { markdownWorkerPool } from '@/lib/workers/markdownWorkerPool';
+import { isWorkerCancellation } from '@/lib/utils/workerErrors';
+import { VIEWPORT_PRERENDER_MARGIN_PX, COPY_CONFIRM_DURATION_MS } from '@/lib/constants/ui';
+import { Avatar, formatTimestamp } from '@/lib/utils/messageDisplay';
 import {
   messageContainerStyles,
   indicatorStyles,
   contentStyles,
   toggleButtonStyles,
   copyButtonStyles,
-  avatarStyles,
   roleLabelStyles,
   timestampStyles,
 } from '@/lib/styles';
+
+const renderCallbacks = new WeakMap<Element, () => void>();
+const renderObserver =
+  typeof window !== 'undefined'
+    ? new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) renderCallbacks.get(entry.target)?.();
+          }
+        },
+        { rootMargin: `${VIEWPORT_PRERENDER_MARGIN_PX}px` }
+      )
+    : null;
 
 interface MessageItemProps {
   conversation: Message;
@@ -24,38 +40,12 @@ interface MessageItemProps {
   onToggleExpand: (index: number) => void;
   isHighlighted?: boolean;
   onHover?: (isHovered: boolean) => void;
-  /** If true, renders only the content box without header (for GitHub PR style layout) */
   contentOnly?: boolean;
 }
 
-// Avatar component with initials - exported for use in ConversationItem
-export const Avatar = memo(function Avatar({
-  isUser,
-  size = 'md'
-}: {
-  isUser: boolean;
-  size?: 'sm' | 'md';
-}) {
-  return (
-    <div className={avatarStyles(isUser, size)}>
-      {isUser ? 'U' : 'A'}
-    </div>
-  );
-});
-
-// Timestamp formatter - exported for use in ConversationItem
-export const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: 'Asia/Tokyo',
-  }).format(date);
-};
+/** Escape HTML for safe inline display of raw content */
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const MessageItem = memo(function MessageItem({
   conversation,
@@ -71,133 +61,118 @@ const MessageItem = memo(function MessageItem({
   const t = useTranslations('conversations');
   const isUser = conversation.type === 'user';
   const isExpanded = expandedItems.has(index);
-  const workerRef = useRef<Worker | null>(null);
   const [renderedContent, setRenderedContent] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isNearViewport, setIsNearViewport] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const mountedRef = useRef(true);
 
-  // Use centralized style utilities
   const containerClasses = messageContainerStyles({ isHighlighted, contentOnly });
-  const indicatorClasses = indicatorStyles(isUser);
   const contentClasses = contentStyles(isExpanded);
   const toggleClasses = toggleButtonStyles(isUser);
-  const copyClasses = copyButtonStyles(isCopied);
+
+  const messageId = conversation.uuid || `${index}-fallback`;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      markdownWorkerPool.cancel(messageId);
+    };
+  }, [messageId]);
 
   const handleCopyMessage = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(conversation.content);
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      setTimeout(() => setIsCopied(false), COPY_CONFIRM_DURATION_MS);
     } catch (err) {
       console.error('Failed to copy message:', err);
     }
   }, [conversation.content]);
 
-  // Intersection Observer to detect visibility
+  // IntersectionObserver: one-way render trigger (200px ahead of viewport)
+  // Once rendered, content stays — clearing would cause height collapse and scroll instability
   useEffect(() => {
-    if (typeof window === 'undefined' || !containerRef.current) return;
+    const el = containerRef.current;
+    if (!renderObserver || !el) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !isVisible) {
-            setIsVisible(true);
-          }
-        });
-      },
-      { rootMargin: '200px' }
-    );
+    renderCallbacks.set(el, () => setIsNearViewport(true));
+    renderObserver.observe(el);
 
-    observer.observe(containerRef.current);
+    return () => {
+      renderCallbacks.delete(el);
+      renderObserver.unobserve(el);
+    };
+  }, []);
 
-    return () => observer.disconnect();
-  }, [isVisible]);
-
-  // Use Web Worker for markdown processing (only when visible)
+  // Worker Pool markdown processing (only when near viewport)
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isNearViewport) return;
+    setIsProcessing(true);
 
-    if (typeof window !== 'undefined' && !workerRef.current) {
-      workerRef.current = new Worker(new URL('@/lib/workers/markdown.worker', import.meta.url));
-
-      workerRef.current.onmessage = (e: MessageEvent) => {
-        const { id, html } = e.data;
-        if (id === conversation.uuid || id === `${index}-fallback`) {
+    markdownWorkerPool
+      .process(
+        messageId,
+        conversation.content,
+        conversation.is_search_match ? (conversation.search_keyword ?? null) : null
+      )
+      .then((html) => {
+        if (mountedRef.current) {
           setRenderedContent(html);
           setIsProcessing(false);
         }
-      };
-
-      workerRef.current.onerror = (error) => {
-        console.error('Worker error:', error);
-        setRenderedContent(`<p class="text-red-500 dark:text-red-400">Error processing markdown</p>`);
-        setIsProcessing(false);
-      };
-    }
-
-    if (workerRef.current) {
-      setIsProcessing(true);
-      workerRef.current.postMessage({
-        id: conversation.uuid || `${index}-fallback`,
-        content: conversation.content,
-        searchKeyword: conversation.is_search_match ? conversation.search_keyword : null
+      })
+      .catch((error) => {
+        if (isWorkerCancellation(error)) return;
+        console.error('Worker pool error:', error);
+        if (mountedRef.current) {
+          setRenderedContent(`<p class="text-red-500 dark:text-red-400">Error processing markdown</p>`);
+          setIsProcessing(false);
+        }
       });
-    }
+  }, [isNearViewport, conversation.content, messageId, conversation.is_search_match, conversation.search_keyword]);
 
-    return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, [isVisible, conversation.content, conversation.uuid, conversation.is_search_match, conversation.search_keyword, index]);
+  // --- Shared rendering fragments ---
+  const contentHtml = isProcessing
+    ? `<pre class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">${escapeHtml(conversation.content)}</pre>`
+    : renderedContent;
 
-  // GitHub PR style: content only mode
+  const contentBlock = (
+    <div
+      className={contentClasses}
+      dangerouslySetInnerHTML={{ __html: contentHtml }}
+      onClick={handleCodeCopy}
+    />
+  );
+
+  const toggleButton = shouldShowToggleButton(conversation.content) ? (
+    <button onClick={() => onToggleExpand(index)} className={toggleClasses}>
+      {isExpanded ? t('collapse') : t('showMore')}
+    </button>
+  ) : null;
+
+  const hoverHandlers = {
+    onMouseEnter: () => onHover?.(true),
+    onMouseLeave: () => onHover?.(false),
+  };
+
   if (contentOnly) {
     return (
-      <div
-        ref={containerRef}
-        className={containerClasses}
-        onMouseEnter={() => onHover?.(true)}
-        onMouseLeave={() => onHover?.(false)}
-      >
+      <div ref={containerRef} className={containerClasses} {...hoverHandlers}>
         <div className="p-3">
-          {/* Content */}
-          <div
-            className={contentClasses}
-            dangerouslySetInnerHTML={{
-              __html: isProcessing
-                ? `<pre class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
-                : renderedContent
-            }}
-            onClick={handleCodeCopy}
-          />
-
-          {/* Expand/Collapse button */}
-          {shouldShowToggleButton(conversation.content) && (
-            <button onClick={() => onToggleExpand(index)} className={toggleClasses}>
-              {isExpanded ? t('collapse') : t('showMore')}
-            </button>
-          )}
+          {contentBlock}
+          {toggleButton}
         </div>
       </div>
     );
   }
 
-  // Original full card style
   return (
-    <div
-      ref={containerRef}
-      className={containerClasses}
-      onMouseEnter={() => onHover?.(true)}
-      onMouseLeave={() => onHover?.(false)}
-    >
-      {/* Left side indicator bar */}
-      <div className={indicatorClasses} />
-
-      {/* Main content area */}
+    <div ref={containerRef} className={containerClasses} {...hoverHandlers}>
+      <div className={indicatorStyles(isUser)} />
       <div className="flex-1 p-4">
-        {/* Meta information */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <Avatar isUser={isUser} />
@@ -205,12 +180,10 @@ const MessageItem = memo(function MessageItem({
               {isUser ? t('user') : t('assistant')}
             </span>
           </div>
-
-          {/* Copy button and Timestamp */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyMessage}
-              className={copyClasses}
+              className={copyButtonStyles(isCopied)}
               title={isCopied ? t('copied') : t('copyMessage')}
               aria-label={t('copyMessage')}
             >
@@ -219,24 +192,8 @@ const MessageItem = memo(function MessageItem({
             <time className={timestampStyles}>{formatTimestamp(conversation.timestamp)}</time>
           </div>
         </div>
-
-        {/* Content */}
-        <div
-          className={contentClasses}
-          dangerouslySetInnerHTML={{
-            __html: isProcessing
-              ? `<pre class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">${conversation.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
-              : renderedContent
-          }}
-          onClick={handleCodeCopy}
-        />
-
-        {/* Expand/Collapse button */}
-        {shouldShowToggleButton(conversation.content) && (
-          <button onClick={() => onToggleExpand(index)} className={toggleClasses}>
-            {isExpanded ? t('collapse') : t('showMore')}
-          </button>
-        )}
+        {contentBlock}
+        {toggleButton}
       </div>
     </div>
   );

@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
-import MessageItem, { Avatar, formatTimestamp } from '@/components/MessageItem';
+import MessageItem from '@/components/MessageItem';
+import { Avatar, formatTimestamp } from '@/lib/utils/messageDisplay';
 import { copyToClipboard } from '@/lib/utils/markdown';
 import { CheckIcon, ClipboardIcon, LinkIcon } from '@/components/icons';
 import { Message } from '@/lib/types/message';

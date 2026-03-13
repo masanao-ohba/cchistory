@@ -10,6 +10,7 @@ export interface Message {
   session_id?: string;
   is_search_match?: boolean;
   search_keyword?: string;
+  created?: string;
   is_continuation_session?: boolean;
   parent_session_id?: string;
   project?: Project;

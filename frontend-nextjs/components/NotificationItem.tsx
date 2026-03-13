@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useNotificationStore, Notification } from '@/lib/stores/notificationStore';
+import { Notification } from '@/lib/stores/notificationStore';
 import {
   cn,
   notificationItemStyles,
@@ -16,8 +16,11 @@ import {
 
 interface NotificationItemProps {
   notification: Notification;
+  projects?: Array<{ id: string; display_name: string; path: string }>;
   onClick?: (notification: Notification) => void;
   onDelete?: (notificationId: string) => void;
+  onMarkAsRead?: (notificationId: string) => Promise<void>;
+  isAutoReading?: boolean;
 }
 
 // Notification type configuration
@@ -58,9 +61,8 @@ const notificationConfig = {
   },
 };
 
-export default function NotificationItem({ notification, onClick, onDelete }: NotificationItemProps) {
+export default function NotificationItem({ notification, projects = [], onClick, onDelete, onMarkAsRead, isAutoReading }: NotificationItemProps) {
   const [showDetails, setShowDetails] = useState(false);
-  const { markAsRead, projects } = useNotificationStore();
 
   // Get type configuration
   const typeConfig = notificationConfig.types[notification.type] || {
@@ -121,18 +123,18 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
   const otherDetails = (() => {
     if (!notification.details) return null;
     const detailsCopy = { ...notification.details };
-    delete (detailsCopy as any).options;
-    delete (detailsCopy as any).choices;
-    delete (detailsCopy as any).hook_event_name;
+    delete detailsCopy.options;
+    delete detailsCopy.choices;
+    delete detailsCopy.hook_event_name;
     return Object.keys(detailsCopy).length > 0 ? detailsCopy : null;
   })();
 
   // Toggle read status
   const handleToggleRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!notification.read) {
+    if (!notification.read && onMarkAsRead) {
       try {
-        await markAsRead(notification.id);
+        await onMarkAsRead(notification.id);
       } catch (err) {
         console.error('Failed to mark as read:', err);
       }
@@ -141,8 +143,9 @@ export default function NotificationItem({ notification, onClick, onDelete }: No
 
   return (
     <div
-      className={cn('notification-item', notificationItemStyles(!notification.read))}
+      className={cn('notification-item', notificationItemStyles(!notification.read), isAutoReading && 'auto-reading')}
       data-notification-id={notification.id}
+      data-notification-read={String(notification.read)}
       onClick={() => onClick?.(notification)}
     >
       {/* Unread indicator (left border) */}

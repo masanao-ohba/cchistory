@@ -26,19 +26,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Custom scrollbar for dark theme */
-.dark .dark-scrollbar::-webkit-scrollbar {
+/* Custom scrollbar — thin, subtle in light and dark modes */
+.dark-scrollbar::-webkit-scrollbar {
   height: 6px;
   width: 6px;
 }
 
-.dark .dark-scrollbar::-webkit-scrollbar-track {
+.dark-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .dark .dark-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(156, 163, 175, 0.3);
-  border-radius: 3px;
 }
 
 .dark .dark-scrollbar::-webkit-scrollbar-thumb:hover {

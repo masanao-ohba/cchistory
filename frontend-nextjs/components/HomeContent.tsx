@@ -2,11 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { useConversations, useProjects } from '@/lib/hooks/useConversations';
+import { Message } from '@/lib/types/message';
 import { useConversationStore } from '@/lib/stores/conversationStore';
 import { useNotificationStore } from '@/lib/stores/notificationStore';
 import { useNewMessageManager } from '@/lib/hooks/useNewMessageManager';
+import { useAccumulatedConversations } from '@/lib/hooks/useAccumulatedConversations';
+import { useProjectTabs } from '@/lib/hooks/useProjectTabs';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
 import { useUrlSync } from '@/lib/hooks/useUrlSync';
+import { HEADER_HEIGHT_DEFAULT_PX, SCROLL_COLLAPSE_THRESHOLD_PX, SCROLL_EXPAND_THRESHOLD_PX } from '@/lib/constants/ui';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import ConversationList from '@/components/ConversationList';
@@ -15,11 +19,10 @@ import SearchBox, { SearchBoxHandle } from '@/components/SearchBox';
 import NotificationBell from '@/components/NotificationBell';
 import TokenUsageBar from '@/components/TokenUsageBar';
 import BackToTopButton from '@/components/BackToTopButton';
-import ProjectTabs, { ProjectTab } from '@/components/ProjectTabs';
+import ProjectTabs from '@/components/ProjectTabs';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 import Container from '@/components/layout/Container';
-import { extractProjectId } from '@/lib/utils/project';
 
 export interface HomeContentProps {
   initialNotificationCount?: number;
@@ -59,13 +62,20 @@ export default function HomeContent({}: HomeContentProps = {}) {
 
   const { data: projectsData } = useProjects();
   const newMessageManager = useNewMessageManager();
+  const { accumulatedConversations, hasMore, resetAccumulation } = useAccumulatedConversations(
+    conversationsData,
+    currentFilters.offset,
+    newMessageManager
+  );
+  const { projectTabs, totalAllProjectsUnreadCount } = useProjectTabs(
+    accumulatedConversations,
+    projectsData,
+    newMessageManager,
+    conversationsLoading
+  );
 
-  // Use stats from conversationsData (already filtered) instead of separate stats endpoint
-  const [hasMore, setHasMore] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [accumulatedConversations, setAccumulatedConversations] = useState<any[][]>([]);
-  const [headerHeight, setHeaderHeight] = useState(220); // Default header height
-  const [, forceUpdate] = useState({});
+  const [headerHeight, setHeaderHeight] = useState(HEADER_HEIGHT_DEFAULT_PX);
   const searchBoxRef = useRef<SearchBoxHandle>(null);
   const mainRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -119,84 +129,6 @@ export default function HomeContent({}: HomeContentProps = {}) {
   // Note: Read state initialization is now handled by useNewMessageManager
   // All existing messages are set as 'read' on initial load via setInitialMessages()
 
-  // Calculate project statistics and create ProjectTab data with unread counts
-  const projectTabs = useMemo((): ProjectTab[] => {
-    if (!projectsData?.projects) {
-      return [];
-    }
-
-    const projectStats = new Map<string, {
-      totalCount: number;
-      unreadCount: number;
-      lastTime: string | null;
-    }>();
-
-    // Initialize stats for all projects
-    projectsData.projects.forEach((project: any) => {
-      const projectId = typeof project === 'string' ? project : project.id;
-      projectStats.set(projectId, {
-        totalCount: 0,
-        unreadCount: 0,
-        lastTime: null,
-      });
-    });
-
-    // Calculate statistics from currently displayed conversations
-    // This ensures we're checking the same data that newMessageManager is managing
-    accumulatedConversations.forEach((group: any[], index: number) => {
-      if (group.length > 0) {
-        const firstMessage = group[0];
-        const projectId = extractProjectId(firstMessage) ?? 'unknown';
-
-        if (projectId && projectStats.has(projectId)) {
-          const stats = projectStats.get(projectId)!;
-          stats.totalCount += group.length;
-
-          // Count unread messages in this group
-          const unreadCount = newMessageManager.getUnreadCount(group, index);
-          stats.unreadCount += unreadCount;
-
-          // Update last message time if this is more recent
-          const messageTime = firstMessage.created || firstMessage.timestamp;
-          if (!stats.lastTime || (messageTime && new Date(messageTime) > new Date(stats.lastTime))) {
-            stats.lastTime = messageTime;
-          }
-        }
-      }
-    });
-
-    // Create ProjectTab array with unread counts
-    return Array.from(projectStats.entries()).map(([projectId, stats]) => {
-      const project = projectsData.projects.find((p: any) =>
-        (typeof p === 'string' ? p : p.id) === projectId
-      );
-      const displayName = typeof project === 'string' ? projectId : (project?.display_name || projectId);
-
-      return {
-        id: projectId,
-        displayName,
-        messageCount: stats.unreadCount, // Show unread count from newMessageManager
-        lastMessageTime: stats.lastTime || undefined,
-      };
-    }).sort((a, b) => {
-      // Sort by last message time (most recent first)
-      if (!a.lastMessageTime && !b.lastMessageTime) return 0;
-      if (!a.lastMessageTime) return 1;
-      if (!b.lastMessageTime) return -1;
-      return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
-    });
-  }, [accumulatedConversations, projectsData?.projects, newMessageManager]);
-
-  // Calculate total unread message count as sum of individual project unread counts
-  const totalAllProjectsUnreadCount = useMemo(() => {
-    // During initial loading, return 0 to avoid showing "999+"
-    if (!projectTabs || projectTabs.length === 0 || conversationsLoading) return 0;
-    // Sum up unread counts from all individual project tabs
-    return projectTabs.reduce((total, tab) => {
-      return total + (tab.messageCount || 0);
-    }, 0);
-  }, [projectTabs, conversationsLoading]);
-
   // Auto-select the project with the most recent message on initial load
   useEffect(() => {
     if (activeProjectTab === 'all' && projectTabs.length > 0 && !currentFilters.keyword) {
@@ -231,10 +163,6 @@ export default function HomeContent({}: HomeContentProps = {}) {
   }, []); // Only run once on mount
 
   // Scroll tracking for main container with hysteresis
-  // Collapse at 100px, expand only when back to top (< 20px)
-  const COLLAPSE_THRESHOLD = 100;
-  const EXPAND_THRESHOLD = 20;
-
   useEffect(() => {
     const mainElement = mainRef.current;
     if (!mainElement) return;
@@ -242,11 +170,9 @@ export default function HomeContent({}: HomeContentProps = {}) {
     const handleScroll = () => {
       const scrollTop = mainElement.scrollTop;
 
-      if (!isScrolled && scrollTop > COLLAPSE_THRESHOLD) {
-        // Collapse when scrolling down past threshold
+      if (!isScrolled && scrollTop > SCROLL_COLLAPSE_THRESHOLD_PX) {
         setIsScrolled(true);
-      } else if (isScrolled && scrollTop < EXPAND_THRESHOLD) {
-        // Expand only when near the top
+      } else if (isScrolled && scrollTop < SCROLL_EXPAND_THRESHOLD_PX) {
         setIsScrolled(false);
       }
     };
@@ -255,41 +181,6 @@ export default function HomeContent({}: HomeContentProps = {}) {
     return () => mainElement.removeEventListener('scroll', handleScroll);
   }, [isScrolled]);
 
-  // Track if this is the first load
-  const isFirstLoadRef = useRef(true);
-
-  useEffect(() => {
-    if (conversationsData?.conversations) {
-      // If offset is 0, it's a fresh load (reset accumulated conversations)
-      if (currentFilters.offset === 0) {
-        setAccumulatedConversations(conversationsData.conversations);
-      } else {
-        // Append new conversations to accumulated list
-        setAccumulatedConversations((prev) => [...prev, ...conversationsData.conversations]);
-      }
-
-      const allConversations = currentFilters.offset === 0
-        ? conversationsData.conversations
-        : [...accumulatedConversations, ...conversationsData.conversations];
-
-      // On first load: set all messages as read
-      // On subsequent updates: add new messages as unread
-      if (isFirstLoadRef.current) {
-        newMessageManager.setInitialMessages(allConversations);
-        isFirstLoadRef.current = false;
-      } else {
-        newMessageManager.addNewMessages(allConversations);
-      }
-
-      // Update hasMore state - compare total with accumulated count
-      const currentCount = currentFilters.offset === 0
-        ? conversationsData.actual_threads
-        : accumulatedConversations.length + conversationsData.actual_threads;
-      setHasMore((conversationsData.total_threads || 0) > currentCount);
-    }
-  }, [conversationsData?.conversations, conversationsData?.total_threads, conversationsData?.actual_threads, currentFilters.offset]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
   const handleLoadMore = useCallback(() => {
     // Increment offset by limit to load next batch
     setFilters({
@@ -297,10 +188,8 @@ export default function HomeContent({}: HomeContentProps = {}) {
     });
   }, [currentFilters.offset, currentFilters.limit, setFilters]);
 
-  const handleShowNewMessages = ({ group, groupIndex }: { group: any[]; groupIndex: number }) => {
-    newMessageManager.showNewMessages(group, groupIndex);
-    // Force re-render to reflect the updated messages
-    forceUpdate({});
+  const handleShowNewMessages = ({ group }: { group: Message[]; groupIndex: number }) => {
+    newMessageManager.showNewMessages(group);
   };
 
   const handleSearch = useCallback(({ keyword, showRelatedThreads }: { keyword: string; showRelatedThreads: boolean }) => {
@@ -360,7 +249,7 @@ export default function HomeContent({}: HomeContentProps = {}) {
 
   const handleResetFilters = useCallback(async () => {
     // Clear accumulated conversations immediately
-    setAccumulatedConversations([]);
+    resetAccumulation();
 
     // Invalidate React Query cache to force fresh fetch
     await queryClient.invalidateQueries({ queryKey: ['conversations'] });
@@ -369,7 +258,7 @@ export default function HomeContent({}: HomeContentProps = {}) {
     resetFilters();
     // Also reset project tab
     setActiveProjectTab('all');
-  }, [resetFilters, queryClient, setActiveProjectTab]);
+  }, [resetAccumulation, resetFilters, queryClient, setActiveProjectTab]);
 
   // Handle project tab change
   const handleTabChange = useCallback((projectId: string) => {
@@ -436,7 +325,7 @@ export default function HomeContent({}: HomeContentProps = {}) {
       </header>
 
       {/* Main Content - Scrollable area */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#FAFAFA] dark:bg-gray-900">
+      <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#FAFAFA] dark:bg-gray-900 dark-scrollbar">
         <Container>
           {/* Conversations */}
           <ConversationList

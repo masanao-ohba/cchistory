@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { buildSearchParams } from '../utils/params';
+import { MIN_NOTIFICATIONS_BEFORE_AUTOLOAD } from '../constants/ui';
 
 export interface Notification {
   id: string;
@@ -25,7 +26,7 @@ interface Project {
 interface NotificationState {
   // State
   notifications: Notification[];
-  unreadCount: number;
+  serverUnreadCount: number;
   totalCount: number;
   isLoading: boolean;
   error: string | null;
@@ -64,10 +65,23 @@ interface NotificationState {
   reset: () => void;
 }
 
+/** Derived unread count from client-side notification state */
+export const selectUnreadCount = (state: NotificationState) =>
+  state.notifications.filter((n) => !n.read).length;
+
+const MAX_NOTIFICATIONS = 200;
+
+/** Shared error handler: set store error and log */
+function handleStoreError(set: (partial: Partial<NotificationState>) => void, message: string, err: unknown) {
+  const errMsg = err instanceof Error ? err.message : String(err);
+  set({ error: errMsg });
+  console.error(message, err);
+}
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   // Initial State
   notifications: [],
-  unreadCount: 0,
+  serverUnreadCount: 0,
   totalCount: 0,
   isLoading: false,
   error: null,
@@ -78,20 +92,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   // Basic Actions
   setNotifications: (notifications) =>
-    set({
-      notifications,
-      unreadCount: notifications.filter((n) => !n.read).length,
-    }),
+    set({ notifications }),
 
   addNotification: (notification) =>
-    set((state) => {
-      const newNotifications = [notification, ...state.notifications];
-      return {
-        notifications: newNotifications,
-        unreadCount: newNotifications.filter((n) => !n.read).length,
-        totalCount: state.totalCount + 1,
-      };
-    }),
+    set((state) => ({
+      notifications: [notification, ...state.notifications],
+      totalCount: state.totalCount + 1,
+    })),
 
   setShowPopup: (show) => set({ showPopup: show }),
 
@@ -119,6 +126,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       });
 
       const response = await fetch(`/api/notifications?${params}`);
+
+      // 404 = no notifications; handle before generic error check
+      if (response.status === 404) {
+        set((state) => ({
+          notifications: offset === 0 ? [] : state.notifications,
+          totalCount: offset === 0 ? 0 : state.notifications.length,
+          hasMoreNotifications: false,
+          isLoading: false,
+        }));
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -126,40 +145,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const data = await response.json();
 
       set((state) => {
-        const newNotifications = offset === 0
-          ? data.notifications || []
-          : [...state.notifications, ...(data.notifications || [])];
+        const newNotifications = (offset === 0
+          ? data.notifications ?? []
+          : [...state.notifications, ...(data.notifications ?? [])]
+        ).slice(0, MAX_NOTIFICATIONS);
 
         const newOffset = offset === 0
-          ? (data.notifications?.length || 0)
-          : state.currentOffset + (data.notifications?.length || 0);
+          ? (data.notifications?.length ?? 0)
+          : state.currentOffset + (data.notifications?.length ?? 0);
 
         return {
           notifications: newNotifications,
-          totalCount: data.total || 0,
-          unreadCount: data.unread_count || 0,
-          hasMoreNotifications: newOffset < (data.total || 0),
+          totalCount: data.total ?? 0,
+          serverUnreadCount: data.unread_count ?? 0,
+          hasMoreNotifications: newOffset < (data.total ?? 0),
           currentOffset: newOffset,
           isLoading: false,
         };
       });
 
       return data;
-    } catch (err: any) {
-      // 404 means no notifications, not an error
-      if (err.message.includes('404')) {
-        set((state) => ({
-          notifications: offset === 0 ? [] : state.notifications,
-          totalCount: offset === 0 ? 0 : state.notifications.length,
-          unreadCount: offset === 0 ? 0 : state.notifications.filter((n) => !n.read).length,
-          hasMoreNotifications: false,
-          isLoading: false,
-        }));
-      } else {
-        set({ error: err.message, isLoading: false });
-        console.error('Failed to fetch notifications:', err);
-        throw err;
-      }
+    } catch (err) {
+      handleStoreError(set, 'Failed to fetch notifications:', err);
+      set({ isLoading: false });
+      throw err;
     }
   },
 
@@ -173,24 +182,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state
-      set((state) => {
-        const notifications = state.notifications.map((n) =>
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
           n.id === notificationId ? { ...n, read: true } : n
-        );
-        const notification = state.notifications.find((n) => n.id === notificationId);
-        const unreadDecrement = notification && !notification.read ? 1 : 0;
-
-        return {
-          notifications,
-          unreadCount: Math.max(0, state.unreadCount - unreadDecrement),
-        };
-      });
+        ),
+      }));
 
       return true;
-    } catch (err: any) {
-      set({ error: err.message });
-      console.error('Failed to mark notification as read:', err);
+    } catch (err) {
+      handleStoreError(set, 'Failed to mark notification as read:', err);
       throw err;
     }
   },
@@ -210,28 +210,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       const data = await response.json();
 
-      // Update local state
-      set((state) => {
-        const notifications = state.notifications.map((notification) =>
+      set((state) => ({
+        notifications: state.notifications.map((notification) =>
           !projectId || notification.project_id === projectId
             ? { ...notification, read: true }
             : notification
-        );
-
-        const unreadCount = projectId
-          ? notifications.filter((n) => !n.read).length
-          : 0;
-
-        return {
-          notifications,
-          unreadCount,
-        };
-      });
+        ),
+      }));
 
       return data;
-    } catch (err: any) {
-      set({ error: err.message });
-      console.error('Failed to mark all notifications as read:', err);
+    } catch (err) {
+      handleStoreError(set, 'Failed to mark all notifications as read:', err);
       throw err;
     }
   },
@@ -246,20 +235,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update local state
       set((state) => {
         const index = state.notifications.findIndex((n) => n.id === notificationId);
         if (index === -1) return state;
 
-        const notification = state.notifications[index];
         const newNotifications = [...state.notifications];
         newNotifications.splice(index, 1);
 
-        const unreadDecrement = !notification.read ? 1 : 0;
-
         return {
           notifications: newNotifications,
-          unreadCount: Math.max(0, state.unreadCount - unreadDecrement),
           totalCount: Math.max(0, state.totalCount - 1),
           currentOffset: Math.max(0, state.currentOffset - 1),
         };
@@ -267,23 +251,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       // Auto-load more if list is short
       const state = get();
-      if (
-        state.notifications.length < 10 &&
-        state.hasMoreNotifications &&
-        !state.isLoading
-      ) {
+      if (state.notifications.length < MIN_NOTIFICATIONS_BEFORE_AUTOLOAD && state.hasMoreNotifications && !state.isLoading) {
         state.fetchNotifications({
-          limit: 10 - state.notifications.length,
+          limit: MIN_NOTIFICATIONS_BEFORE_AUTOLOAD - state.notifications.length,
           offset: state.currentOffset,
-        }).catch(() => {
-          // Ignore errors for auto-load
+        }).catch((err) => {
+          console.error('Failed to auto-load notifications after delete:', err);
         });
       }
 
       return true;
-    } catch (err: any) {
-      set({ error: err.message });
-      console.error('Failed to delete notification:', err);
+    } catch (err) {
+      handleStoreError(set, 'Failed to delete notification:', err);
       throw err;
     }
   },
@@ -303,58 +282,40 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       const data = await response.json();
 
-      // Update local state
       set((state) => {
         if (!projectId) {
-          // Delete all
           return {
             notifications: [],
-            unreadCount: 0,
             totalCount: 0,
             currentOffset: 0,
             hasMoreNotifications: false,
           };
-        } else {
-          // Delete by project
-          const beforeCount = state.notifications.length;
-          const newNotifications = state.notifications.filter(
-            (n) => n.project_id !== projectId
-          );
-          const deletedCount = beforeCount - newNotifications.length;
-
-          return {
-            notifications: newNotifications,
-            unreadCount: newNotifications.filter((n) => !n.read).length,
-            totalCount: Math.max(0, state.totalCount - deletedCount),
-            currentOffset: Math.max(0, state.currentOffset - deletedCount),
-          };
         }
+        const newNotifications = state.notifications.filter((n) => n.project_id !== projectId);
+        const deletedCount = state.notifications.length - newNotifications.length;
+        return {
+          notifications: newNotifications,
+          totalCount: Math.max(0, state.totalCount - deletedCount),
+          currentOffset: Math.max(0, state.currentOffset - deletedCount),
+        };
       });
 
       return data;
-    } catch (err: any) {
-      set({ error: err.message });
-      console.error('Failed to delete all notifications:', err);
+    } catch (err) {
+      handleStoreError(set, 'Failed to delete all notifications:', err);
       throw err;
     }
   },
 
   loadMoreNotifications: async (count = 10) => {
     const state = get();
-    if (!state.hasMoreNotifications || state.isLoading) {
-      return false;
-    }
+    if (!state.hasMoreNotifications || state.isLoading) return false;
 
-    try {
-      await state.fetchNotifications({
-        limit: count,
-        offset: state.currentOffset,
-      });
-      return true;
-    } catch (err) {
-      console.error('Failed to load more notifications:', err);
-      return false;
-    }
+    await state.fetchNotifications({
+      limit: count,
+      offset: state.currentOffset,
+    });
+    return true;
   },
 
   fetchStats: async () => {
@@ -365,16 +326,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }
 
       const stats = await response.json();
-
       set({
         totalCount: stats.total_notifications,
-        unreadCount: stats.unread_count,
+        serverUnreadCount: stats.unread_count,
       });
-
       return stats;
-    } catch (err: any) {
-      set({ error: err.message });
-      console.error('Failed to fetch notification stats:', err);
+    } catch (err) {
+      handleStoreError(set, 'Failed to fetch notification stats:', err);
       throw err;
     }
   },
@@ -385,11 +343,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
       const data = await response.json();
-      set({ projects: data.projects || [] });
+      set({ projects: data.projects ?? [] });
     } catch (err) {
-      console.error('Failed to fetch projects:', err);
+      handleStoreError(set, 'Failed to fetch projects:', err);
     }
   },
 
@@ -397,50 +354,34 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   handleWebSocketMessage: (data: any) => {
     switch (data.type) {
       case 'new_notification':
-        if (data.data) {
-          set((state) => {
-            const newNotifications = [data.data, ...state.notifications];
-            const unreadIncrement = !data.data.read ? 1 : 0;
-            return {
-              notifications: newNotifications,
-              unreadCount: state.unreadCount + unreadIncrement,
-              totalCount: state.totalCount + 1,
-            };
-          });
-        }
+        if (!data.data) return;
+        set((state) => ({
+          notifications: [data.data, ...state.notifications].slice(0, MAX_NOTIFICATIONS),
+          totalCount: state.totalCount + 1,
+        }));
         break;
 
-      case 'notification_read':
-        if (data.data?.notification_id) {
-          set((state) => {
-            const notification = state.notifications.find(
-              (n) => n.id === data.data.notification_id
-            );
-            if (notification && !notification.read) {
-              const notifications = state.notifications.map((n) =>
-                n.id === data.data.notification_id ? { ...n, read: true } : n
-              );
-              return {
-                notifications,
-                unreadCount: Math.max(0, state.unreadCount - 1),
-              };
-            }
-            return state;
-          });
-        }
+      case 'notification_read': {
+        const notifId = data.data?.notification_id;
+        if (!notifId) return;
+        set((state) => {
+          const notification = state.notifications.find((n) => n.id === notifId);
+          if (!notification || notification.read) return state;
+          return {
+            notifications: state.notifications.map((n) =>
+              n.id === notifId ? { ...n, read: true } : n
+            ),
+          };
+        });
         break;
+      }
 
       case 'stats_update':
-        if (data.data) {
-          set((state) => ({
-            totalCount: data.data.total_notifications || state.totalCount,
-            unreadCount: data.data.unread_count || state.unreadCount,
-          }));
-        }
-        break;
-
-      default:
-        // Unknown message type
+        if (!data.data) return;
+        set((state) => ({
+          totalCount: data.data.total_notifications ?? state.totalCount,
+          serverUnreadCount: data.data.unread_count ?? state.serverUnreadCount,
+        }));
         break;
     }
   },
@@ -449,7 +390,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   reset: () =>
     set({
       notifications: [],
-      unreadCount: 0,
+      serverUnreadCount: 0,
       totalCount: 0,
       isLoading: false,
       error: null,

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useNotificationStore } from '@/lib/stores/notificationStore';
+import { useNotificationStore, selectUnreadCount } from '@/lib/stores/notificationStore';
 import NotificationPopup from './NotificationPopup';
 import { unreadBadge, cn } from '@/lib/styles';
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, showPopup, togglePopup, fetchNotifications, fetchStats } = useNotificationStore();
+  const { notifications, showPopup, togglePopup, fetchNotifications, fetchStats } = useNotificationStore();
+  const unreadCount = useNotificationStore(selectUnreadCount);
   const bellRef = useRef<HTMLDivElement>(null);
 
   // Total notifications count

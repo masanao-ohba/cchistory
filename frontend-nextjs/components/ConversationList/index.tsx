@@ -10,13 +10,14 @@ import EmptyState from './EmptyState';
 import LoadMoreButton from './LoadMoreButton';
 import ConversationItem from './ConversationItem';
 import { Message } from '@/lib/types/message';
-
-interface NewMessageManager {
-  getDisplayMessages: (group: Message[], groupIndex: number) => Message[];
-  hasUnreadMessages: (group: Message[], groupIndex: number) => boolean;
-  getUnreadCount: (group: Message[], groupIndex: number) => number;
-  showNewMessages: (group: Message[], groupIndex: number) => void;
-}
+import { NewMessageManager } from '@/lib/types/newMessageManager';
+import {
+  HEADER_HEIGHT_DEFAULT_PX,
+  TALL_GROUP_ASSISTANT_COUNT,
+  MESSAGE_HOVER_HIDE_DELAY_MS,
+  LOAD_MORE_NOTIFICATION_DELAY_MS,
+  LOAD_MORE_NOTIFICATION_DURATION_MS,
+} from '@/lib/constants/ui';
 
 interface ConversationListProps {
   conversations: Message[][];
@@ -38,8 +39,6 @@ interface ConversationListProps {
   onShowNewMessages?: (params: { group: Message[]; groupIndex: number }) => void;
 }
 
-const LOAD_MORE_NOTIFICATION_DELAY = 500;
-const LOAD_MORE_NOTIFICATION_DURATION = 3000;
 
 export default function ConversationList({
   conversations = [],
@@ -49,7 +48,7 @@ export default function ConversationList({
   actualThreads = 0,
   actualMessages = 0,
   newMessageManager = null,
-  headerHeight = 220,
+  headerHeight = HEADER_HEIGHT_DEFAULT_PX,
   isFiltering = false,
   groupRefs: externalGroupRefs,
   userMessageRefs: externalUserMessageRefs,
@@ -65,30 +64,24 @@ export default function ConversationList({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced hover handler to prevent flickering
   const handleMessageHover = useCallback((messageId: string | null) => {
     if (messageId) {
-      // Immediately show highlight, cancel any pending hide
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
         hideTimeoutRef.current = null;
       }
       setHighlightedMessageId(messageId);
     } else {
-      // Delay hiding to allow smooth transition between messages
       hideTimeoutRef.current = setTimeout(() => {
         setHighlightedMessageId(null);
         hideTimeoutRef.current = null;
-      }, 150);
+      }, MESSAGE_HOVER_HIDE_DELAY_MS);
     }
   }, []);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, []);
 
@@ -112,6 +105,16 @@ export default function ConversationList({
     userMessageRefs
   );
 
+  // Clean up stale DOM references when conversations shrink
+  useEffect(() => {
+    const length = conversations.length;
+    [groupRefs, userMessageRefs, lastAssistantMessageRefs].forEach((refMap) => {
+      refMap.current.forEach((_, key) => {
+        if (key >= length) refMap.current.delete(key);
+      });
+    });
+  }, [conversations, groupRefs, userMessageRefs, lastAssistantMessageRefs]);
+
   const scrollToElement = useCallback((element: HTMLDivElement) => {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
@@ -119,47 +122,31 @@ export default function ConversationList({
   const toggleExpand = useCallback((index: number) => {
     setExpandedItems((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
+      if (newSet.has(index)) newSet.delete(index);
+      else newSet.add(index);
       return newSet;
     });
   }, []);
 
+  // Simplified delegation — trust TypeScript types, no redundant Array.isArray guards
   const getDisplayMessages = useCallback(
-    (group: Message[], groupIndex: number): Message[] => {
-      if (!newMessageManager || !Array.isArray(group)) return Array.isArray(group) ? group : [];
-      return newMessageManager.getDisplayMessages(group, groupIndex);
-    },
+    (group: Message[]): Message[] =>
+      newMessageManager ? newMessageManager.getDisplayMessages(group) : group,
     [newMessageManager]
   );
 
-  const shouldShowNewMessageButton = useCallback(
-    (group: Message[], groupIndex: number): boolean => {
-      if (!newMessageManager || !Array.isArray(group)) return false;
-      return newMessageManager.hasUnreadMessages(group, groupIndex);
-    },
-    [newMessageManager]
-  );
-
-  const getUnreadMessageCount = useCallback(
-    (group: Message[], groupIndex: number): number => {
-      if (!newMessageManager || !Array.isArray(group)) return 0;
-      return newMessageManager.getUnreadCount(group, groupIndex);
-    },
-    [newMessageManager]
-  );
+  // Ref to track actualThreads for stale-closure-safe reads in setTimeout
+  const actualThreadsRef = useRef(actualThreads);
+  actualThreadsRef.current = actualThreads;
 
   const handleLoadMore = useCallback(() => {
-    const prevCount = actualThreads;
+    const prevCount = actualThreadsRef.current;
     onLoadMore?.();
     setTimeout(() => {
-      setLastLoadedCount(actualThreads - prevCount);
-      setTimeout(() => setLastLoadedCount(0), LOAD_MORE_NOTIFICATION_DURATION);
-    }, LOAD_MORE_NOTIFICATION_DELAY);
-  }, [actualThreads, onLoadMore]);
+      setLastLoadedCount(actualThreadsRef.current - prevCount);
+      setTimeout(() => setLastLoadedCount(0), LOAD_MORE_NOTIFICATION_DURATION_MS);
+    }, LOAD_MORE_NOTIFICATION_DELAY_MS);
+  }, [onLoadMore]);
 
   useEffect(() => {
     const checkGroupHeights = () => {
@@ -167,19 +154,12 @@ export default function ConversationList({
       const newTallGroups = new Set<number>();
 
       groupRefs.current.forEach((element, index) => {
-        if (element && conversations[index]) {
-          const groupHeight = element.offsetHeight;
-          const group = conversations[index];
-          const displayMessages = getDisplayMessages(group, index);
-          const assistantMessageCount = displayMessages.filter(msg => msg.type === 'assistant').length;
-
-          const isTallByHeight = headerHeight + groupHeight > viewportHeight;
-          const isTallByMessageCount = assistantMessageCount >= 4;
-
-          if (isTallByHeight || isTallByMessageCount) {
-            newTallGroups.add(index);
-          }
-        }
+        if (!element || !conversations[index]) return;
+        const displayMessages = getDisplayMessages(conversations[index]);
+        const isTall =
+          headerHeight + element.offsetHeight > viewportHeight ||
+          displayMessages.filter(msg => msg.type === 'assistant').length >= TALL_GROUP_ASSISTANT_COUNT;
+        if (isTall) newTallGroups.add(index);
       });
 
       setTallGroups(newTallGroups);
@@ -206,23 +186,20 @@ export default function ConversationList({
         }`}
         aria-hidden="true"
       />
-      {/* Floating user message - Fixed position relative to viewport */}
+      {/* Floating user message */}
       {floatingUserMessage && (
         <div className="fixed left-0 right-0 z-[60] px-4 animate-fadeIn" style={{ top: `${headerHeight}px` }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg pl-1 pr-2 py-2 flex items-center gap-2 transition-all hover:shadow-xl overflow-hidden">
-              {/* Blue left border indicator */}
               <div className="flex-shrink-0 w-1 self-stretch bg-blue-500 rounded-full" />
-
               <div className="flex-shrink-0 text-blue-600">
                 <ChatBubbleIcon />
               </div>
-
               <div
                 className="flex-1 min-w-0 cursor-pointer overflow-hidden"
                 onClick={() => {
-                  const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
-                  if (element) scrollToElement(element);
+                  const el = userMessageRefs.current.get(floatingUserMessage.groupIndex);
+                  if (el) scrollToElement(el);
                 }}
               >
                 <p className="text-xs font-medium text-blue-600 mb-0.5">{t('respondingTo')}</p>
@@ -230,13 +207,11 @@ export default function ConversationList({
                   {floatingUserMessage.message.content}
                 </p>
               </div>
-
-              {/* Navigation buttons - icon only for compact display */}
               <div className="flex-shrink-0 flex items-center gap-1">
                 <button
                   onClick={() => {
-                    const element = userMessageRefs.current.get(floatingUserMessage.groupIndex);
-                    if (element) scrollToElement(element);
+                    const el = userMessageRefs.current.get(floatingUserMessage.groupIndex);
+                    if (el) scrollToElement(el);
                   }}
                   className="flex items-center justify-center w-8 h-8 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors cursor-pointer"
                   title={t('backToQuestion')}
@@ -246,8 +221,8 @@ export default function ConversationList({
                 </button>
                 <button
                   onClick={() => {
-                    const element = lastAssistantMessageRefs.current.get(floatingUserMessage.groupIndex);
-                    if (element) scrollToElement(element);
+                    const el = lastAssistantMessageRefs.current.get(floatingUserMessage.groupIndex);
+                    if (el) scrollToElement(el);
                   }}
                   className="flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-pointer"
                   title={t('jumpToLatest')}
@@ -284,7 +259,7 @@ export default function ConversationList({
                 }}
               >
                 <ConversationItem
-                  displayMessages={getDisplayMessages(threadGroup, threadIndex)}
+                  displayMessages={getDisplayMessages(threadGroup)}
                   threadIndex={threadIndex}
                   expandedItems={expandedItems}
                   userMessageRef={(el) => {
@@ -296,8 +271,8 @@ export default function ConversationList({
                     else lastAssistantMessageRefs.current.delete(threadIndex);
                   }}
                   onToggleExpand={toggleExpand}
-                  showNewMessageButton={shouldShowNewMessageButton(threadGroup, threadIndex)}
-                  unreadCount={getUnreadMessageCount(threadGroup, threadIndex)}
+                  showNewMessageButton={newMessageManager ? newMessageManager.hasUnreadMessages(threadGroup) : false}
+                  unreadCount={newMessageManager ? newMessageManager.getUnreadCount(threadGroup) : 0}
                   onShowNewMessages={() => onShowNewMessages?.({ group: threadGroup, groupIndex: threadIndex })}
                   highlightedMessageId={highlightedMessageId}
                   onMessageHover={handleMessageHover}
