@@ -1,10 +1,17 @@
 # Claude Conversations History Viewer
 
+[![GitHub Stars](https://img.shields.io/github/stars/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory)
+[![GitHub Forks](https://img.shields.io/github/forks/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory/fork)
+[![GitHub Watchers](https://img.shields.io/github/watchers/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory)
+[![GitHub Issues](https://img.shields.io/github/issues/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory/issues)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory/commits)
+[![GitHub Repo Size](https://img.shields.io/github/repo-size/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
+[![Mermaid](https://img.shields.io/badge/Mermaid-Diagrams-FF3670.svg)](https://mermaid.js.org/)
 
 A web-based viewer for browsing and searching your Claude Code conversation history with real-time sync, multi-project support, and powerful filtering.
 
@@ -50,6 +57,7 @@ A web-based viewer for browsing and searching your Claude Code conversation hist
 - **Responsive Design** - Modern UI built with Tailwind CSS v4 for comfortable browsing experience
 - **Dark/Light Mode** - Theme switcher with system preference support (toggle in bottom-right corner)
 - **Multi-language Support** - Full internationalization with English, Japanese, Chinese, and Korean
+- **Mermaid Diagrams** - Automatic rendering of mermaid code blocks as interactive diagrams
 - **Flexible Search** - Filter by date, project, and keywords with quick filter buttons
 - **Real-time Updates** - Automatic updates via WebSocket with streaming Server Components
 - **Multi-project Support** - Integrated display of multiple Claude projects with project tabs
@@ -97,6 +105,7 @@ A web-based viewer for browsing and searching your Claude Code conversation hist
 - TanStack React Query v5 (Server state management)
 - Zustand (Client state management)
 - next-intl (Internationalization - EN, JA, ZH, KO)
+- Mermaid (Diagram rendering for code blocks)
 
 **Backend:**
 - FastAPI (High-performance Python web framework)
@@ -394,20 +403,11 @@ docker compose logs -f frontend-nextjs  # Frontend only
 ### Local Development Setup
 
 ```bash
-# Start with hot reload
+# Start with hot reload (all services run in Docker)
 docker compose up --build
 
-# Frontend development
-cd frontend-nextjs
-npm install
-npm run dev  # Starts Next.js with Turbopack on port 3000
-
-# Backend development
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
+# Rebuild after dependency changes
+docker compose down -v && ./start.sh
 ```
 
 ## Contributing

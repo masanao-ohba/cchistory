@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  transpilePackages: ['mermaid'],
   // Disable dev indicators (Next.js 15+)
   devIndicators: false,
   async rewrites() {

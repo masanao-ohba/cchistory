@@ -6,6 +6,8 @@ import { CheckIcon, ClipboardIcon } from './icons';
 import { Message } from '@/lib/types/message';
 import { markdownWorkerPool } from '@/lib/workers/markdownWorkerPool';
 import { isWorkerCancellation } from '@/lib/utils/workerErrors';
+import { useThemeStore, getEffectiveTheme } from '@/lib/stores/themeStore';
+import { hasMermaidBlocks, renderMermaidBlocks } from '@/lib/utils/mermaid';
 import { VIEWPORT_PRERENDER_MARGIN_PX, COPY_CONFIRM_DURATION_MS } from '@/lib/constants/ui';
 import { Avatar, formatTimestamp } from '@/lib/utils/messageDisplay';
 import {
@@ -61,12 +63,14 @@ const MessageItem = memo(function MessageItem({
   const t = useTranslations('conversations');
   const isUser = conversation.type === 'user';
   const isExpanded = expandedItems.has(index);
+  const [workerHtml, setWorkerHtml] = useState<string>('');
   const [renderedContent, setRenderedContent] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const mountedRef = useRef(true);
+  const theme = useThemeStore((s) => s.theme);
 
   const containerClasses = messageContainerStyles({ isHighlighted, contentOnly });
   const contentClasses = contentStyles(isExpanded);
@@ -120,6 +124,7 @@ const MessageItem = memo(function MessageItem({
       )
       .then((html) => {
         if (mountedRef.current) {
+          setWorkerHtml(html);
           setRenderedContent(html);
           setIsProcessing(false);
         }
@@ -133,6 +138,23 @@ const MessageItem = memo(function MessageItem({
         }
       });
   }, [isNearViewport, conversation.content, messageId, conversation.is_search_match, conversation.search_keyword]);
+
+  // Mermaid diagram rendering (string-based to survive React re-renders)
+  useEffect(() => {
+    if (isProcessing || !hasMermaidBlocks(workerHtml)) return;
+
+    const signal = { cancelled: false };
+
+    renderMermaidBlocks(workerHtml, getEffectiveTheme(theme), signal).then((html) => {
+      if (!signal.cancelled && mountedRef.current) {
+        setRenderedContent(html);
+      }
+    });
+
+    return () => {
+      signal.cancelled = true;
+    };
+  }, [workerHtml, isProcessing, theme]);
 
   // --- Shared rendering fragments ---
   const contentHtml = isProcessing

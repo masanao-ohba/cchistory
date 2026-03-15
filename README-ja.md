@@ -1,10 +1,17 @@
 # Claude Conversations History Viewer
 
+[![GitHub Stars](https://img.shields.io/github/stars/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory)
+[![GitHub Forks](https://img.shields.io/github/forks/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory/fork)
+[![GitHub Watchers](https://img.shields.io/github/watchers/masanao-ohba/cchistory?style=social)](https://github.com/masanao-ohba/cchistory)
+[![GitHub Issues](https://img.shields.io/github/issues/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory/issues)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory/commits)
+[![GitHub Repo Size](https://img.shields.io/github/repo-size/masanao-ohba/cchistory)](https://github.com/masanao-ohba/cchistory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com/)
+[![Mermaid](https://img.shields.io/badge/Mermaid-Diagrams-FF3670.svg)](https://mermaid.js.org/)
 
 Claude Codeの会話履歴をリアルタイム同期で閲覧・検索できるWebビューアー。マルチプロジェクト対応、強力なフィルタリング機能搭載。
 
@@ -46,6 +53,7 @@ cp .env.example .env
 - **レスポンシブデザイン** - Tailwind CSS v4によるモダンなUIで快適な閲覧体験
 - **ダーク/ライトモード** - システム設定に連動するテーマ切り替え（右下のトグルで切り替え）
 - **多言語対応** - 英語、日本語、中国語、韓国語の完全な国際化
+- **Mermaidダイアグラム** - mermaidコードブロックをダイアグラムとして自動レンダリング
 - **柔軟な検索** - 日付・プロジェクト・キーワードでフィルタリング、クイックフィルターボタン
 - **リアルタイム更新** - WebSocketによる自動更新、ストリーミングServer Components
 - **マルチプロジェクト対応** - 複数のClaude Projectsをタブで統合表示
@@ -93,6 +101,7 @@ cp .env.example .env
 - TanStack React Query v5 (サーバー状態管理)
 - Zustand (クライアント状態管理)
 - next-intl (国際化 - EN, JA, ZH, KO)
+- Mermaid (コードブロックのダイアグラムレンダリング)
 
 **バックエンド:**
 - FastAPI (高性能Python Webフレームワーク)
@@ -378,20 +387,11 @@ docker compose logs -f nginx
 ### 開発環境のセットアップ
 
 ```bash
-# ホットリロードで起動
+# ホットリロードで起動（全サービスはDocker内で実行）
 docker compose up --build
 
-# フロントエンド開発
-cd frontend-nextjs
-npm install
-npm run dev  # Next.js with Turbopackをポート3000で起動
-
-# バックエンド開発
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
+# 依存関係変更後の再ビルド
+docker compose down -v && ./start.sh
 ```
 
 ## 貢献方法

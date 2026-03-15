@@ -12,28 +12,43 @@ const md = new MarkdownIt({
   typographer: true,
 });
 
+// --- SVG icon definitions ---
+const ICON_COPY = '<svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+const ICON_CHECK = '<svg class="check-icon hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+
+// --- HTML builders ---
+const copyButton = (codeId: string) =>
+  `<button class="copy-button" data-code-id="${codeId}" title="Copy">${ICON_COPY}${ICON_CHECK}</button>`;
+
+const blockHeader = (lang: string, codeId: string) =>
+  `<div class="code-block-header">
+    <span class="code-language">${lang || 'text'}</span>
+    ${copyButton(codeId)}
+  </div>`;
+
+const codeBlockBody = (id: string, lang: string, escaped: string) =>
+  `<pre class="code-block-content"><code id="${id}" class="language-${lang}">${escaped}</code></pre>`;
+
+const mermaidBlockBody = (id: string, escaped: string) =>
+  `<code id="${id}" class="hidden">${escaped}</code>
+  <div class="mermaid-block" data-mermaid-source="${escaped}">${escaped}</div>`;
+
+const blockContainer = (header: string, body: string) =>
+  `<div class="code-block-container">${header}${body}</div>`;
+
 // Custom code block renderer with copy functionality
 md.renderer.rules.fence = function (tokens, idx) {
   const token = tokens[idx];
-  const code = token.content;
-  const lang = token.info ? token.info.trim() : '';
+  const lang = token.info?.trim() ?? '';
   const id = `code-block-${Math.random().toString(36).substr(2, 9)}`;
+  const escaped = md.utils.escapeHtml(token.content);
 
-  return `<div class="code-block-container relative rounded-lg overflow-hidden border border-gray-300">
-    <div class="code-block-header flex items-center justify-between bg-gray-50 px-3 py-1 border-b border-gray-200">
-      <span class="code-language text-xs font-medium text-gray-600">${lang || 'text'}</span>
-      <button class="copy-button flex items-center justify-center w-6 h-6 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200" data-code-id="${id}" title="Copy">
-        <svg class="copy-icon text-gray-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <svg class="check-icon hidden text-gray-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20,6 9,17 4,12"></polyline>
-        </svg>
-      </button>
-    </div>
-    <pre class="code-block-content m-0 bg-gray-100"><code id="${id}" class="block p-4 bg-transparent text-sm font-mono leading-relaxed language-${lang}">${md.utils.escapeHtml(code)}</code></pre>
-  </div>`;
+  const header = blockHeader(lang, id);
+  const body = lang === 'mermaid'
+    ? mermaidBlockBody(id, escaped)
+    : codeBlockBody(id, lang, escaped);
+
+  return blockContainer(header, body);
 };
 
 md.renderer.rules.code_block = md.renderer.rules.fence;

@@ -110,7 +110,7 @@ Session: test-session-123
 ### 詳細が表示されない場合
 1. Hookスクリプトが最新版か確認
 2. ブラウザのキャッシュをクリア
-3. Docker再起動: `docker-compose restart`
+3. Docker再起動: `docker compose restart`
 
 ### テストスクリプトが動作しない場合
 1. ポート18080でアプリケーションが起動しているか確認

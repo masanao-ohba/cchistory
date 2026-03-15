@@ -421,7 +421,7 @@ main() {
     echo ""
     echo "📝 Next steps:"
     echo "1. Restart your Claude Code session to apply the changes"
-    echo "2. Make sure notification receiver is running (docker-compose up in $NOTIFICATION_RECEIVER_PATH)"
+    echo "2. Make sure notification receiver is running (docker compose up in $NOTIFICATION_RECEIVER_PATH)"
     echo "3. Test by triggering a permission request in Claude Code"
     echo "4. Check the notification bell in the web interface"
 

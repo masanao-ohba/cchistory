@@ -72,6 +72,28 @@
   @apply bg-gray-900;
 }
 
+/* Mermaid diagram blocks (inside code-block-container) */
+.prose .mermaid-block {
+  @apply flex justify-center overflow-x-auto bg-gray-100 p-4;
+}
+
+.dark .prose .mermaid-block {
+  @apply bg-gray-900;
+}
+
+/* Mermaid fallback (pre/code shown on render error) */
+.prose .mermaid-block pre {
+  @apply m-0 bg-gray-100;
+}
+
+.prose .mermaid-block pre code {
+  @apply block p-4 bg-transparent text-sm font-mono leading-relaxed whitespace-pre overflow-x-auto;
+}
+
+.dark .prose .mermaid-block pre {
+  @apply bg-gray-800;
+}
+
 /* Table and code block horizontal scroll support */
 .prose pre {
   @apply overflow-x-auto;

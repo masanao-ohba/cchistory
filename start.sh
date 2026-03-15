@@ -1,6 +1,6 @@
 #!/bin/bash
 # Start cchistory-next with OAuth token refresh
-# Usage: ./start.sh [docker-compose args]
+# Usage: ./start.sh [docker compose args]
 #
 # Examples:
 #   ./start.sh              # Start all services
@@ -30,9 +30,9 @@ if ! pgrep -f "token-refresh-server.sh" > /dev/null; then
     sleep 1
 fi
 
-# Run docker-compose with any passed arguments
+# Run docker compose with any passed arguments
 if [[ $# -eq 0 ]]; then
-    docker compose up -d
+    docker compose up --build -d
 else
     docker compose "$@"
 fi
